@@ -15,27 +15,35 @@ import {
   List,
   LayoutGrid,
   ChevronDown,
+  ChevronUp,
   Activity,
+  Gauge,
   Zap,
   ArrowDown,
   CheckSquare,
   Square,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
-import { useRef } from "react";
+  type DownloadSortKey as SortKey,
+  useDownloadViewPreferences,
+} from "../hooks/useDownloadViewPreferences";
 import { invoke } from "@tauri-apps/api/core";
+import { useContextMenu } from "../hooks/useContextMenu";
+import { useDownloadSelection } from "../hooks/useDownloadSelection";
 import { listen } from "@tauri-apps/api/event";
 import type { AppSettings } from "../domain/settings";
 import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
 import type { DownloadTask } from "../domain/download";
+import { sortDownloads } from "../domain/downloadOrdering";
+import { ipcErrorMessage } from "../domain/ipcErrors";
+import { queuePositions } from "../domain/downloadQueue";
+import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
 import { CircularProgress } from "../components/downloads/CircularProgress";
 import { FileIcon } from "../components/downloads/FileIcon";
+import { DownloadsToolbar } from "../components/downloads/DownloadsToolbar";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { useTranslation } from "../i18n";
 
@@ -76,14 +84,54 @@ const labels: Record<string, string> = {
   cancelled: "Cancelado",
 };
 
-
 import { categoryForFile, cleanExtension } from "../domain/categories";
 
 const groups: Record<string, string[]> = {
-  documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "rtf", "odt", "epub"],
+  documents: [
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "txt",
+    "csv",
+    "rtf",
+    "odt",
+    "epub",
+  ],
   music: ["mp3", "wav", "flac", "ogg", "m4a", "aac", "wma", "opus", "alac"],
-  videos: ["mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v", "3gp", "ts"],
-  archives: ["zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "cab", "img", "dmg", "z01", "z02", "r00", "r01", "001"],
+  videos: [
+    "mp4",
+    "mkv",
+    "mov",
+    "avi",
+    "webm",
+    "flv",
+    "wmv",
+    "m4v",
+    "3gp",
+    "ts",
+  ],
+  archives: [
+    "zip",
+    "rar",
+    "7z",
+    "tar",
+    "gz",
+    "tgz",
+    "bz2",
+    "xz",
+    "cab",
+    "img",
+    "dmg",
+    "z01",
+    "z02",
+    "r00",
+    "r01",
+    "001",
+  ],
   applications: [
     "exe",
     "msi",
@@ -107,86 +155,192 @@ const groups: Record<string, string[]> = {
   ],
 };
 
-type SortKey = "status" | "size" | "date";
-
-const SORT_PREF_KEY = "sf-downloader.sort_preference";
-const VIEW_PREF_KEY = "sf-downloader.view_preference";
-
-const loadSortPref = (): { key: SortKey; direction: "asc" | "desc" } => {
-  try {
-    const raw = localStorage.getItem(SORT_PREF_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && ["status", "size", "date"].includes(parsed.key)) {
-        return {
-          key: parsed.key as SortKey,
-          direction: parsed.direction === "asc" ? "asc" : "desc",
-        };
-      }
-    }
-  } catch {}
-  return { key: "date", direction: "desc" };
-};
-
-const loadViewPref = (): "list" | "grid" => {
-  try {
-    const raw = localStorage.getItem(VIEW_PREF_KEY);
-    if (raw === "grid" || raw === "list") return raw;
-  } catch {}
-  return "list";
-};
-
 export function DownloadsPage({
-   settings,
-   onSave,
-   filter,
- }: {
-   settings: AppSettings;
-   onSave: (settings: AppSettings) => void;
-   filter: PageId;
-  }) {
+  settings,
+  onSave,
+  filter,
+}: {
+  settings: AppSettings;
+  onSave: (settings: AppSettings) => void;
+  filter: PageId;
+}) {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const lastSelectedRef = useRef<string | null>(null);
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; item: DownloadTask } | null>(null);
-  const ctxMenuRef = useRef<HTMLDivElement | null>(null);
-  const [view, setView] = useState<"list" | "grid">(loadViewPref);
-  const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>(loadSortPref);
+  const {
+    contextMenu: ctxMenu,
+    setContextMenu: setCtxMenu,
+    contextMenuRef: ctxMenuRef,
+    openContextMenu,
+  } = useContextMenu<DownloadTask>();
+  const { view, sort, changeSort, changeView } = useDownloadViewPreferences();
 
-  const { downloads, loading, error, setError, remove, cancel, pause, resume } =
-    useDownloads(settings);
+  const {
+    downloads,
+    loading,
+    error,
+    setError,
+    remove,
+    cancel,
+    pause,
+    resume,
+    setSpeedLimit,
+    setPriority,
+    setSchedule,
+    bypassSchedule,
+    moveQueueItem,
+    prioritize,
+  } = useDownloads(settings);
 
   const handleMenuAction = useCallback(
-    (action: string, downloadId: string) => {
+    async (action: string, downloadId: string) => {
       const dl = downloads.find((d) => d.id === downloadId);
       switch (action) {
-        case "pause": pause(downloadId); break;
-        case "resume": resume(downloadId); break;
-        case "cancel": cancel(downloadId); break;
-        case "folder": if (dl) service.revealInFolder(dl.finalPath); break;
-        case "open": if (dl) service.openFile(dl.finalPath); break;
-        case "delete": if (window.confirm("Tem certeza que deseja excluir este download?")) remove([downloadId]); break;
+        case "pause":
+          pause(downloadId);
+          break;
+        case "resume":
+          resume(downloadId);
+          break;
+        case "limit": {
+          const current = dl?.speedLimitDownload ?? 0;
+          const initialValue =
+            current > 0 ? String(current / 1024 / 1024) : "0";
+          const value = window.prompt(
+            t.downloads.speedLimitPrompt,
+            initialValue,
+          );
+          if (value === null) break;
+          const mebibytes = parseSpeedLimitMebibytesPerSecond(value);
+          if (mebibytes === null) {
+            setError(t.downloads.speedLimitInvalid);
+            break;
+          }
+          await setSpeedLimit(downloadId, Math.round(mebibytes * 1024 * 1024));
+          break;
+        }
+        case "schedule": {
+          const value = window.prompt(
+            t.downloads.schedulePrompt,
+            dl?.scheduledStartAt
+              ? new Date(dl.scheduledStartAt).toLocaleString()
+              : "",
+          );
+          if (value === null) break;
+          if (!value.trim()) {
+            await setSchedule(downloadId, {});
+            break;
+          }
+          const scheduledAt = new Date(value);
+          if (Number.isNaN(scheduledAt.getTime())) {
+            setError(t.downloads.scheduleInvalid);
+            break;
+          }
+          await setSchedule(downloadId, {
+            scheduledStartAt: scheduledAt.toISOString(),
+            scheduledWeekdays: 127,
+          });
+          break;
+        }
+        case "daily-schedule": {
+          const value = window.prompt(t.downloads.dailySchedulePrompt, "");
+          if (value === null) break;
+          if (!value.trim()) {
+            await setSchedule(downloadId, {});
+            break;
+          }
+          const match = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(value.trim());
+          if (!match) {
+            setError(t.downloads.dailyScheduleInvalid);
+            break;
+          }
+          const [, startHour, startMinute, endHour, endMinute] = match;
+          const start = Number(startHour) * 60 + Number(startMinute);
+          const end = Number(endHour) * 60 + Number(endMinute);
+          if (start >= 1_440 || end >= 1_440) {
+            setError(t.downloads.dailyScheduleInvalid);
+            break;
+          }
+          await setSchedule(downloadId, {
+            dailyScheduleStartMinute: start,
+            dailyScheduleEndMinute: end,
+            scheduledWeekdays: 127,
+          });
+          break;
+        }
+        case "bypass-schedule":
+          await bypassSchedule(downloadId);
+          break;        case "priority": {
+          const value = window.prompt(
+            t.downloads.priorityPrompt,
+            String(dl?.priority ?? 1),
+          );
+          if (value === null) break;
+          const priority = Number(value.trim());
+          if (!Number.isInteger(priority) || priority < 0 || priority > 3) {
+            setError(t.downloads.priorityInvalid);
+            break;
+          }
+          await setPriority(downloadId, priority);
+          break;
+        }
+        case "move-up":
+          await moveQueueItem(downloadId, "up");
+          break;
+        case "move-down":
+          await moveQueueItem(downloadId, "down");
+          break;
+        case "prioritize":
+          await prioritize(downloadId);
+          break;
+        case "cancel":
+          cancel(downloadId);
+          break;
+        case "folder":
+          if (dl) service.revealInFolder(dl.finalPath);
+          break;
+        case "open":
+          if (dl) service.openFile(dl.finalPath);
+          break;
+        case "delete":
+          if (window.confirm("Tem certeza que deseja excluir este download?"))
+            remove([downloadId]);
+          break;
       }
     },
-    [downloads, pause, resume, cancel, remove],
+    [
+      downloads,
+      pause,
+      resume,
+      cancel,
+      remove,
+      setError,
+      setSpeedLimit,
+      setPriority,
+      moveQueueItem,
+      prioritize,
+      t.downloads.priorityInvalid,
+      t.downloads.priorityPrompt,
+      t.downloads.speedLimitInvalid,
+      t.downloads.speedLimitPrompt,
+    ],
   );
 
   useEffect(() => {
-    const unlisten = listen<{ action: string; downloadId: string }>("context-menu-action", (event) => {
-      handleMenuAction(event.payload.action, event.payload.downloadId);
-    });
-    return () => { void unlisten.then((fn) => fn()); };
+    const unlisten = listen<{ action: string; downloadId: string }>(
+      "context-menu-action",
+      (event) => {
+        handleMenuAction(event.payload.action, event.payload.downloadId);
+      },
+    );
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
   }, [handleMenuAction]);
 
-  const handleContextMenu = (e: React.MouseEvent, item: DownloadTask) => {
-    e.preventDefault();
-    if (!selected.has(item.id)) {
-      lastSelectedRef.current = item.id;
-      setSelected(new Set([item.id]));
-    }
-    setCtxMenu({ x: e.clientX, y: e.clientY, item });
+  const handleContextMenu = (event: React.MouseEvent, item: DownloadTask) => {
+    if (!selected.has(item.id)) selectOnly(item.id);
+    openContextMenu(event, item);
   };
 
   const runMenuAction = (action: string, item: DownloadTask) => {
@@ -194,51 +348,51 @@ export function DownloadsPage({
     if (selected.size > 1 && selected.has(item.id)) {
       const selectedIds = Array.from(selected);
       switch (action) {
-        case "pause": selectedIds.forEach(id => pause(id)); break;
-        case "resume": selectedIds.forEach(id => resume(id)); break;
-        case "cancel": selectedIds.forEach(id => cancel(id)); break;
+        case "pause":
+          selectedIds.forEach((id) => pause(id));
+          break;
+        case "resume":
+          selectedIds.forEach((id) => resume(id));
+          break;
+        case "cancel":
+          selectedIds.forEach((id) => cancel(id));
+          break;
         case "delete":
-          if (window.confirm(`Tem certeza que deseja excluir os ${selectedIds.length} downloads selecionados?`)) {
+          if (
+            window.confirm(
+              `Tem certeza que deseja excluir os ${selectedIds.length} downloads selecionados?`,
+            )
+          ) {
             remove(selectedIds);
             setSelected(new Set());
           }
           break;
-        case "folder": if (item) service.revealInFolder(item.finalPath); break;
-        case "open": if (item) service.openFile(item.finalPath); break;
+        case "folder":
+          if (item) service.revealInFolder(item.finalPath);
+          break;
+        case "open":
+          if (item) service.openFile(item.finalPath);
+          break;
+        case "limit":
+          void handleMenuAction(action, item.id);
+          break;
+        case "priority":
+          void handleMenuAction(action, item.id);
+          break;
+        case "move-up":
+          void handleMenuAction(action, item.id);
+          break;
+        case "move-down":
+          void handleMenuAction(action, item.id);
+          break;
+        case "prioritize":
+          void handleMenuAction(action, item.id);
+          break;
       }
     } else {
       handleMenuAction(action, item.id);
     }
   };
-
-  useEffect(() => {
-    if (!ctxMenu) return;
-    const close = () => setCtxMenu(null);
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setCtxMenu(null); };
-    window.addEventListener("mousedown", close);
-    window.addEventListener("resize", close);
-    window.addEventListener("blur", close);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", close);
-      window.removeEventListener("resize", close);
-      window.removeEventListener("blur", close);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [ctxMenu]);
-
-  useEffect(() => {
-    if (!ctxMenu || !ctxMenuRef.current) return;
-    const el = ctxMenuRef.current;
-    const rect = el.getBoundingClientRect();
-    const pad = 8;
-    let x = ctxMenu.x;
-    let y = ctxMenu.y;
-    if (x + rect.width + pad > window.innerWidth) x = window.innerWidth - rect.width - pad;
-    if (y + rect.height + pad > window.innerHeight) y = window.innerHeight - rect.height - pad;
-    el.style.left = `${Math.max(pad, x)}px`;
-    el.style.top = `${Math.max(pad, y)}px`;
-  }, [ctxMenu]);
 
   const inspect = async (raw: string) => {
     const url = raw.trim();
@@ -254,7 +408,7 @@ export function DownloadsPage({
       );
       await service.openDownloadConfirmation(token, url);
     } catch (cause) {
-      setError(String(cause));
+      setError(ipcErrorMessage(cause, "Não foi possível abrir a confirmação do download."));
     } finally {
       setStarting(false);
     }
@@ -262,74 +416,91 @@ export function DownloadsPage({
 
   useEffect(() => {
     const receive = (event: Event) => {
-      const value = (event as CustomEvent<string>).detail || localStorage.getItem("sf-downloader.pending-browser-url");
+      const value =
+        (event as CustomEvent<string>).detail ||
+        localStorage.getItem("sf-downloader.pending-browser-url");
       if (!value) return;
       localStorage.removeItem("sf-downloader.pending-browser-url");
       void inspect(value);
     };
     window.addEventListener("sf-download-request", receive);
     const pending = localStorage.getItem("sf-downloader.pending-browser-url");
-    if (pending) receive(new CustomEvent("sf-download-request", { detail: pending }));
+    if (pending)
+      receive(new CustomEvent("sf-download-request", { detail: pending }));
     return () => window.removeEventListener("sf-download-request", receive);
   }, [settings.rootDownloadFolder]);
 
-  const visible = downloads
-    .filter((item) => {
-      if (filter === "active" && !["pending", "checking_files", "downloading", "paused", "assembling", "extracting", "failed"].includes(item.status)) return false;
-      if (filter === "completed" && item.status !== "completed") return false;
-      const ext =
-        cleanExtension(item.fileName) ||
-        (item.extension ? item.extension.toLowerCase().trim() : "") ||
-        cleanExtension(item.finalPath) ||
-        cleanExtension(item.originalUrl);
-      if (filter === "torrents") {
-        if (item.downloadType !== "torrent" && !item.originalUrl.startsWith("magnet:") && ext !== "torrent") return false;
-      } else if (filter === "calculator") {
-        const allKnown = Object.values(groups).flat();
-        const cat = categoryForFile(item.fileName, settings.customCategories, item.finalPath, item.originalUrl);
-        if (allKnown.includes(ext) || cat !== "Outros") return false;
-      } else if (filter in groups) {
-        const extensions = groups[filter];
-        const catName = categoryForFile(item.fileName, settings.customCategories, item.finalPath, item.originalUrl);
-        const matchesCategoryName =
-          (filter === "archives" && catName === "Compactados") ||
-          (filter === "videos" && catName === "Vídeos") ||
-          (filter === "music" && catName === "Áudios") ||
-          (filter === "documents" && catName === "Documentos") ||
-          (filter === "applications" && catName === "Aplicativos");
+  const filtered = downloads.filter((item) => {
+    if (
+      filter === "active" &&
+      ![
+        "pending",
+        "checking_files",
+        "downloading",
+        "paused",
+        "assembling",
+        "extracting",
+        "failed",
+      ].includes(item.status)
+    )
+      return false;
+    if (filter === "completed" && item.status !== "completed") return false;
+    const ext =
+      cleanExtension(item.fileName) ||
+      (item.extension ? item.extension.toLowerCase().trim() : "") ||
+      cleanExtension(item.finalPath) ||
+      cleanExtension(item.originalUrl);
+    if (filter === "torrents") {
+      if (
+        item.downloadType !== "torrent" &&
+        !item.originalUrl.startsWith("magnet:") &&
+        ext !== "torrent"
+      )
+        return false;
+    } else if (filter === "others") {
+      const allKnown = Object.values(groups).flat();
+      const cat = categoryForFile(
+        item.fileName,
+        settings.customCategories,
+        item.finalPath,
+        item.originalUrl,
+      );
+      if (allKnown.includes(ext) || cat !== "Outros") return false;
+    } else if (filter in groups) {
+      const extensions = groups[filter];
+      const catName = categoryForFile(
+        item.fileName,
+        settings.customCategories,
+        item.finalPath,
+        item.originalUrl,
+      );
+      const matchesCategoryName =
+        (filter === "archives" && catName === "Compactados") ||
+        (filter === "videos" && catName === "Vídeos") ||
+        (filter === "music" && catName === "Áudios") ||
+        (filter === "documents" && catName === "Documentos") ||
+        (filter === "applications" && catName === "Aplicativos");
 
-        if (!matchesCategoryName && !extensions.includes(ext)) return false;
-      }
-      return item.fileName.toLowerCase().includes(search.toLowerCase());
-    })
-    .sort((a, b) => {
-      const direction = sort.direction === "asc" ? 1 : -1;
-      const statusOrder: Record<string, number> = {
-        downloading: 0, assembling: 1, extracting: 2, paused: 3, pending: 4,
-        checking_files: 5, failed: 6, cancelled: 7, completed: 8,
-      };
-      const values: Record<SortKey, [string | number, string | number]> = {
-        status: [statusOrder[a.status] ?? 9, statusOrder[b.status] ?? 9],
-        size: [a.fileSize ?? -1, b.fileSize ?? -1],
-        date: [new Date(a.createdAt).getTime(), new Date(b.createdAt).getTime()],
-      };
-      const [left, right] = values[sort.key];
-      return (left < right ? -1 : left > right ? 1 : 0) * direction;
-    });
+      if (!matchesCategoryName && !extensions.includes(ext)) return false;
+    }
+    return item.fileName.toLowerCase().includes(search.toLowerCase());
+  });
+  const visible = sortDownloads(filtered, sort);
 
+  const {
+    selected,
+    setSelected,
+    selectAll,
+    deselectAll,
+    selectOnly,
+    handleSelect,
+  } = useDownloadSelection(visible.map((item) => item.id));
   const sortOptions: { key: SortKey; label: string }[] = [
     { key: "status", label: t.downloads.sortStatus },
     { key: "size", label: t.downloads.sortSize },
     { key: "date", label: t.downloads.sortDate },
+    { key: "queue", label: t.downloads.sortQueue },
   ];
-
-  const selectAll = useCallback(() => {
-    setSelected(new Set(visible.map((item) => item.id)));
-  }, [visible]);
-
-  const deselectAll = useCallback(() => {
-    setSelected(new Set());
-  }, []);
 
   const pauseSelected = useCallback(() => {
     selected.forEach((id) => pause(id));
@@ -342,7 +513,11 @@ export function DownloadsPage({
   const deleteSelected = useCallback(() => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (window.confirm(`Tem certeza que deseja excluir os ${ids.length} downloads selecionados?`)) {
+    if (
+      window.confirm(
+        `Tem certeza que deseja excluir os ${ids.length} downloads selecionados?`,
+      )
+    ) {
       remove(ids);
       setSelected(new Set());
     }
@@ -351,7 +526,12 @@ export function DownloadsPage({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
@@ -367,51 +547,6 @@ export function DownloadsPage({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [selectAll, deselectAll, deleteSelected]);
 
-  const changeSort = (key: SortKey) => {
-    setSort((current) => {
-      const next: { key: SortKey; direction: "asc" | "desc" } = {
-        key,
-        direction: current.key === key ? (current.direction === "asc" ? "desc" : "asc") : "desc",
-      };
-      try {
-        localStorage.setItem(SORT_PREF_KEY, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  };
-
-  const changeView = (nextView: "list" | "grid") => {
-    setView(nextView);
-    try {
-      localStorage.setItem(VIEW_PREF_KEY, nextView);
-    } catch {}
-  };
-
-  const handleSelect = (id: string, event: React.MouseEvent) => {
-    setSelected((value) => {
-      if (event.shiftKey && lastSelectedRef.current) {
-        const ids = visible.map((item) => item.id);
-        const anchor = ids.indexOf(lastSelectedRef.current);
-        const target = ids.indexOf(id);
-        if (anchor !== -1 && target !== -1) {
-          const [start, end] = anchor < target ? [anchor, target] : [target, anchor];
-          const next = new Set(value);
-          for (let i = start; i <= end; i++) next.add(ids[i]);
-          return next;
-        }
-      }
-      if (event.ctrlKey || event.metaKey) {
-        const next = new Set(value);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        lastSelectedRef.current = id;
-        return next;
-      }
-      lastSelectedRef.current = id;
-      return new Set([id]);
-    });
-  };
-
   const openDetails = (id: string, status: string) => {
     if (status === "completed") service.openCompleteWindow(id);
     else service.openProgressWindow(id);
@@ -420,12 +555,23 @@ export function DownloadsPage({
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
-    return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return (
+      d.toLocaleDateString("pt-BR") +
+      " " +
+      d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const getCompletedElapsed = (item: DownloadTask) => {
     if (!item.createdAt || !item.completedAt) return "";
-    const seconds = Math.max(0, Math.floor((new Date(item.completedAt).getTime() - new Date(item.createdAt).getTime()) / 1000));
+    const seconds = Math.max(
+      0,
+      Math.floor(
+        (new Date(item.completedAt).getTime() -
+          new Date(item.createdAt).getTime()) /
+          1000,
+      ),
+    );
     if (seconds < 60) return `${seconds}s`;
     const minutes = Math.floor(seconds / 60);
     const remSeconds = seconds % 60;
@@ -433,10 +579,14 @@ export function DownloadsPage({
   };
 
   const formatTimeRemaining = (item: DownloadTask) => {
-    if (item.status !== "downloading" || !item.speedCurrent || !item.fileSize) return "";
-    const remainingSeconds = Math.ceil((item.fileSize - item.totalDownloaded) / item.speedCurrent);
+    if (item.status !== "downloading" || !item.speedCurrent || !item.fileSize)
+      return "";
+    const remainingSeconds = Math.ceil(
+      (item.fileSize - item.totalDownloaded) / item.speedCurrent,
+    );
     if (remainingSeconds <= 0) return "—";
-    if (remainingSeconds < 60) return `${remainingSeconds}s ${t.downloads.remaining}`;
+    if (remainingSeconds < 60)
+      return `${remainingSeconds}s ${t.downloads.remaining}`;
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
     if (minutes < 60) return `${minutes}m ${seconds}s ${t.downloads.remaining}`;
@@ -444,70 +594,28 @@ export function DownloadsPage({
   };
 
   const activeDownloads = downloads.filter((d) => d.status === "downloading");
-  const totalSpeed = activeDownloads.reduce((sum, d) => sum + d.speedCurrent, 0);
+  const totalSpeed = activeDownloads.reduce(
+    (sum, d) => sum + d.speedCurrent,
+    0,
+  );
+  const pendingPositions = useMemo(
+    () => queuePositions(downloads),
+    [downloads],
+  );
 
   return (
     <>
-      <header className="flux-header" data-tauri-drag-region>
-        <div className="search-container" data-tauri-drag-region>
-          <Search />
-          <input
-            className="search-input"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                const value = search.trim();
-                if (/^(https?:\/\/|magnet:\?)/i.test(value) || value.toLowerCase().endsWith(".torrent")) void inspect(value);
-              }
-            }}
-            onPaste={(event) => {
-              const text = event.clipboardData.getData("text").trim();
-              if (/^(https?:\/\/|magnet:\?)/i.test(text) || text.toLowerCase().endsWith(".torrent")) {
-                event.preventDefault();
-                void inspect(text);
-              }
-            }}
-            placeholder={t.common.searchPlaceholder}
-          />
-        </div>
-
-        <div className="header-right-group" data-tauri-drag-region>
-          <div className="sort-dropdown">
-            <CustomSelect
-              value={sort.key}
-              options={sortOptions.map((opt) => ({ value: opt.key, label: opt.label }))}
-              onChange={(val) => changeSort(val as SortKey)}
-            />
-            <button
-              type="button"
-              className="sort-direction"
-              onClick={() => changeSort(sort.key)}
-              title={sort.direction === "asc" ? "Ascending" : "Descending"}
-            >
-              <ArrowDown
-                size={15}
-                style={{ transform: sort.direction === "asc" ? "rotate(180deg)" : "none" }}
-              />
-            </button>
-          </div>
-
-          <button
-            className={`btn-layout-switcher ${view === "list" ? "active" : ""}`}
-            title="List View"
-            onClick={() => changeView("list")}
-          >
-            <List size={20} />
-          </button>
-          <button
-            className={`btn-layout-switcher ${view === "grid" ? "active" : ""}`}
-            title="Grid View"
-            onClick={() => changeView("grid")}
-          >
-            <LayoutGrid size={20} />
-          </button>
-        </div>
-      </header>
+      <DownloadsToolbar
+        search={search}
+        onSearchChange={setSearch}
+        onInspect={(value) => void inspect(value)}
+        placeholder={t.common.searchPlaceholder}
+        sort={sort}
+        sortOptions={sortOptions}
+        onSortChange={changeSort}
+        view={view}
+        onViewChange={changeView}
+      />
 
       {/* Main Content Area */}
       <section className="downloads-workspace">
@@ -531,7 +639,15 @@ export function DownloadsPage({
         )}
 
         {loading ? (
-          <div style={{ textAlign: "center", color: "var(--muted)", padding: "40px" }}>{t.common.loading}</div>
+          <div
+            style={{
+              textAlign: "center",
+              color: "var(--muted)",
+              padding: "40px",
+            }}
+          >
+            {t.common.loading}
+          </div>
         ) : visible.length === 0 ? (
           <div className="empty-downloads-state">
             <FolderOpen size={48} />
@@ -543,25 +659,50 @@ export function DownloadsPage({
               const progress = item.fileSize
                 ? Math.min(100, (item.totalDownloaded / item.fileSize) * 100)
                 : 0;
+              const queuePosition = pendingPositions.get(item.id);
+              const scheduleLabel = item.scheduledStartAt
+                ? t.downloads.scheduledFor.replace(
+                    "{time}",
+                    new Date(item.scheduledStartAt).toLocaleString(),
+                  )
+                : item.dailyScheduleStartMinute !== undefined &&
+                    item.dailyScheduleStartMinute !== null
+                  ? t.downloads.scheduledDaily
+                  : null;
 
-  const isCompleted = item.status === "completed";
-  const isFailed = item.status === "failed" || item.status === "cancelled";
-  const isWaiting = item.status === "pending" || item.status === "checking_files" || item.status === "assembling" || item.status === "extracting";
-  const isPaused = item.status === "paused";
-  const isDownloading = item.status === "downloading";
+              const isCompleted = item.status === "completed";
+              const isFailed =
+                item.status === "failed" || item.status === "cancelled";
+              const isWaiting =
+                item.status === "pending" ||
+                item.status === "checking_files" ||
+                item.status === "assembling" ||
+                item.status === "extracting";
+              const isPaused = item.status === "paused";
+              const isDownloading = item.status === "downloading";
 
-  const statusClass = isDownloading ? "downloading"
-    : isPaused ? "paused"
-    : isCompleted ? "completed"
-    : item.status === "cancelled" ? "cancelled"
-    : item.status === "failed" ? "failed"
-    : "waiting";
-  const statusLabel = isDownloading ? t.downloads.statusDownloading
-    : isPaused ? t.downloads.statusPaused
-    : isCompleted ? t.downloads.statusCompleted
-    : item.status === "cancelled" ? t.downloads.statusCancelled
-    : item.status === "failed" ? t.downloads.statusFailed
-    : t.downloads.statusWaiting;
+              const statusClass = isDownloading
+                ? "downloading"
+                : isPaused
+                  ? "paused"
+                  : isCompleted
+                    ? "completed"
+                    : item.status === "cancelled"
+                      ? "cancelled"
+                      : item.status === "failed"
+                        ? "failed"
+                        : "waiting";
+              const statusLabel = isDownloading
+                ? t.downloads.statusDownloading
+                : isPaused
+                  ? t.downloads.statusPaused
+                  : isCompleted
+                    ? t.downloads.statusCompleted
+                    : item.status === "cancelled"
+                      ? t.downloads.statusCancelled
+                      : item.status === "failed"
+                        ? t.downloads.statusFailed
+                        : t.downloads.statusWaiting;
 
               const isSelected = selected.has(item.id);
               const isMultiSelected = isSelected && selected.size > 1;
@@ -571,17 +712,29 @@ export function DownloadsPage({
                 <article
                   key={item.id}
                   className={`download-card status-${statusClass} ${isSelected ? "selected" : ""} ${isMultiSelected ? "selected-multi" : ""} ${isSingleSelected ? "selected-single" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${item.fileName}: ${statusLabel}`}
                   onClick={(event) => handleSelect(item.id, event)}
                   onDoubleClick={() => openDetails(item.id, item.status)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleSelect(item.id, event as unknown as React.MouseEvent);
+                    }
+                  }}
                   onContextMenu={(event) => handleContextMenu(event, item)}
                 >
-
                   {/* Left Column: Status Indicator */}
                   <div className="card-indicator-col">
                     {(isDownloading || isPaused || isFailed) && progress > 0 ? (
                       <CircularProgress
                         value={progress}
-                        color={isDownloading ? "var(--ember)" : `var(--st-${statusClass})`}
+                        color={
+                          isDownloading
+                            ? "var(--ember)"
+                            : `var(--st-${statusClass})`
+                        }
                       />
                     ) : isCompleted ? (
                       <div className="indicator-icon-wrapper success">
@@ -589,7 +742,11 @@ export function DownloadsPage({
                           <CheckCircle2 />
                         </div>
                         <div className="completed-file-icon">
-                          <FileIcon extension={fileExtension(item.fileName)} width={38} height={44} />
+                          <FileIcon
+                            extension={fileExtension(item.fileName)}
+                            width={38}
+                            height={44}
+                          />
                         </div>
                       </div>
                     ) : isFailed ? (
@@ -609,8 +766,29 @@ export function DownloadsPage({
                       <h3 className="card-file-name" title={item.fileName}>
                         {item.fileName}
                       </h3>
-                      <span className={`status-tag ${statusClass}`}>{statusLabel}</span>
-                      <span className="card-date">{formatDate(item.createdAt)}</span>
+                      <span className={`status-tag ${statusClass}`}>
+                        {statusLabel}
+                      </span>
+                      {isWaiting && (
+                        <span className="card-date">
+                          {
+                            [
+                              t.downloads.priorityLow,
+                              t.downloads.priorityNormal,
+                              t.downloads.priorityHigh,
+                              t.downloads.priorityUrgent,
+                            ][Math.max(0, Math.min(3, item.priority ?? 1))]
+                          }
+                        </span>
+                      )}
+                      {isDownloading && item.speedLimitDownload > 0 && (
+                        <span className="card-date" title={t.downloads.speedLimit}>
+                          {t.downloads.speedLimit}: {bytes(item.speedLimitDownload)}/s
+                        </span>
+                      )}
+                      <span className="card-date">
+                        {formatDate(item.createdAt)}
+                      </span>
                     </div>
 
                     {item.originalUrl && (
@@ -631,36 +809,78 @@ export function DownloadsPage({
                     <div className="card-info-row">
                       {isDownloading ? (
                         <>
-                          <span className="meta-size">{bytes(item.totalDownloaded)} / {bytes(item.fileSize)}</span>
-                          <span className="meta-sep" aria-hidden>·</span>
-                          <span className="meta-speed">{bytes(item.speedCurrent)}/s</span>
-                          <span className="meta-sep" aria-hidden>·</span>
-                          <span className="meta-eta accent">{formatTimeRemaining(item)}</span>
+                          <span className="meta-size">
+                            {bytes(item.totalDownloaded)} /{" "}
+                            {bytes(item.fileSize)}
+                          </span>
+                          <span className="meta-sep" aria-hidden>
+                            ·
+                          </span>
+                          <span className="meta-speed">
+                            {bytes(item.speedCurrent)}/s
+                          </span>
+                          <span className="meta-sep" aria-hidden>
+                            ·
+                          </span>
+                          <span className="meta-eta accent">
+                            {formatTimeRemaining(item)}
+                          </span>
                         </>
                       ) : isCompleted ? (
                         <>
-                          <span className="meta-size">{bytes(item.fileSize)}</span>
-                          <span className="meta-sep" aria-hidden>·</span>
-                          <span className="meta-done">{t.downloads.completedIn} {getCompletedElapsed(item)}</span>
+                          <span className="meta-size">
+                            {bytes(item.fileSize)}
+                          </span>
+                          <span className="meta-sep" aria-hidden>
+                            ·
+                          </span>
+                          <span className="meta-done">
+                            {t.downloads.completedIn}{" "}
+                            {getCompletedElapsed(item)}
+                          </span>
                         </>
                       ) : isFailed ? (
                         <>
-                          <span className="meta-status err">{item.status === "cancelled" ? t.downloads.statusCancelled : t.downloads.statusFailed}</span>
+                          <span className="meta-status err">
+                            {item.status === "cancelled"
+                              ? t.downloads.statusCancelled
+                              : t.downloads.statusFailed}
+                          </span>
                           {item.fileSize && (
                             <>
-                              <span className="meta-sep" aria-hidden>·</span>
-                              <span className="meta-size">{bytes(item.totalDownloaded)} {t.downloads.of} {bytes(item.fileSize)}</span>
+                              <span className="meta-sep" aria-hidden>
+                                ·
+                              </span>
+                              <span className="meta-size">
+                                {bytes(item.totalDownloaded)} {t.downloads.of}{" "}
+                                {bytes(item.fileSize)}
+                              </span>
                             </>
                           )}
                         </>
                       ) : isPaused ? (
                         <>
-                          <span className="meta-status paused">{t.downloads.statusPaused}</span>
-                          <span className="meta-sep" aria-hidden>·</span>
-                          <span className="meta-size">{bytes(item.totalDownloaded)} {t.downloads.of} {bytes(item.fileSize)}</span>
+                          <span className="meta-status paused">
+                            {t.downloads.statusPaused}
+                          </span>
+                          <span className="meta-sep" aria-hidden>
+                            ·
+                          </span>
+                          <span className="meta-size">
+                            {bytes(item.totalDownloaded)} {t.downloads.of}{" "}
+                            {bytes(item.fileSize)}
+                          </span>
                         </>
                       ) : (
-                        <span className="meta-status">{t.downloads.statusWaiting}</span>
+                        <span className="meta-status">
+                          {scheduleLabel ??
+                            (item.status === "pending" && queuePosition
+                              ? t.downloads.waitingForSlot.replace(
+                                  "{position}",
+                                  String(queuePosition),
+                                )
+                              : t.downloads.statusWaiting)}
+                        </span>
                       )}
                     </div>
 
@@ -669,7 +889,7 @@ export function DownloadsPage({
                         <div
                           className="card-progress-bar-fill"
                           style={{
-                            width: `${progress}%`
+                            width: `${progress}%`,
                           }}
                         />
                       </div>
@@ -765,7 +985,9 @@ export function DownloadsPage({
       <footer className="flux-footer">
         <div className="footer-left">
           <ArrowDown />
-          <span><strong>{bytes(totalSpeed)}/s</strong> {t.downloads.currentSpeed}</span>
+          <span>
+            <strong>{bytes(totalSpeed)}/s</strong> {t.downloads.currentSpeed}
+          </span>
         </div>
 
         <div className="footer-center">
@@ -773,7 +995,11 @@ export function DownloadsPage({
             type="button"
             className="footer-action-btn pause"
             title={t.downloads.pauseAll}
-            onClick={() => downloads.filter((d) => d.status === "downloading").forEach((d) => void pause(d.id))}
+            onClick={() =>
+              downloads
+                .filter((d) => d.status === "downloading")
+                .forEach((d) => void pause(d.id))
+            }
           >
             <Pause size={13} />
             <span>{t.downloads.pauseAll}</span>
@@ -782,7 +1008,11 @@ export function DownloadsPage({
             type="button"
             className="footer-action-btn resume"
             title={t.downloads.resumeAll}
-            onClick={() => downloads.filter((d) => d.status === "paused").forEach((d) => void resume(d.id))}
+            onClick={() =>
+              downloads
+                .filter((d) => d.status === "paused")
+                .forEach((d) => void resume(d.id))
+            }
           >
             <Play size={13} />
             <span>{t.downloads.resumeAll}</span>
@@ -794,9 +1024,15 @@ export function DownloadsPage({
           <span>{t.downloads.maxSimultaneous}</span>
           <CustomSelect
             value={String(settings.maxParallelDownloads)}
-            options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({ value: String(n), label: String(n) }))}
+            options={[1, 2, 3, 4, 5, 6, 8, 10].map((n) => ({
+              value: String(n),
+              label: String(n),
+            }))}
             onChange={(val) => {
-              const next = { ...settings, maxParallelDownloads: parseInt(val, 10) };
+              const next = {
+                ...settings,
+                maxParallelDownloads: parseInt(val, 10),
+              };
               onSave(next);
             }}
             className="footer-custom-select"
@@ -813,32 +1049,114 @@ export function DownloadsPage({
           onContextMenu={(e) => e.preventDefault()}
         >
           {ctxMenu.item.status === "downloading" && (
-            <button className="ctx-item" onClick={() => runMenuAction("pause", ctxMenu.item)}>
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("pause", ctxMenu.item)}
+            >
               <Pause size={15} /> {t.downloads.pauseDownload}
             </button>
           )}
+          <button
+            className="ctx-item"
+            onClick={() => runMenuAction("limit", ctxMenu.item)}
+          >
+            <Gauge size={15} /> {t.downloads.speedLimit}
+          </button>
+          {!["completed", "cancelled"].includes(ctxMenu.item.status) && (
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("priority", ctxMenu.item)}
+            >
+              <Activity size={15} /> {t.downloads.priority}
+            </button>
+          )}
+          {["paused", "pending"].includes(ctxMenu.item.status) && (
+            <>
+              <button
+                className="ctx-item"
+                onClick={() => runMenuAction("schedule", ctxMenu.item)}
+              >
+                <Clock size={15} /> {t.downloads.schedule}
+              </button>
+              <button
+                className="ctx-item"
+                onClick={() => runMenuAction("daily-schedule", ctxMenu.item)}
+              >
+                <Clock size={15} /> {t.downloads.dailySchedule}
+              </button>
+              {(ctxMenu.item.scheduledStartAt ||
+                ctxMenu.item.dailyScheduleStartMinute !== undefined) && (
+                <button
+                  className="ctx-item"
+                  onClick={() => runMenuAction("bypass-schedule", ctxMenu.item)}
+                >
+                  <Play size={15} /> {t.downloads.scheduleBypass}
+                </button>
+              )}
+            </>
+          )}          {ctxMenu.item.status === "pending" && (
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("prioritize", ctxMenu.item)}
+            >
+              <Zap size={15} /> {t.downloads.downloadNext}
+            </button>
+          )}
+          {["pending", "paused"].includes(ctxMenu.item.status) && (
+            <>
+              <button
+                className="ctx-item"
+                onClick={() => runMenuAction("move-up", ctxMenu.item)}
+              >
+                <ChevronUp size={15} /> {t.downloads.moveQueueUp}
+              </button>
+              <button
+                className="ctx-item"
+                onClick={() => runMenuAction("move-down", ctxMenu.item)}
+              >
+                <ChevronDown size={15} /> {t.downloads.moveQueueDown}
+              </button>
+            </>
+          )}
           {["paused", "failed", "cancelled"].includes(ctxMenu.item.status) && (
-            <button className="ctx-item" onClick={() => runMenuAction("resume", ctxMenu.item)}>
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("resume", ctxMenu.item)}
+            >
               <Play size={15} /> {t.downloads.resumeDownload}
             </button>
           )}
-          {["pending", "downloading", "paused"].includes(ctxMenu.item.status) && (
-            <button className="ctx-item" onClick={() => runMenuAction("cancel", ctxMenu.item)}>
+          {["pending", "downloading", "paused"].includes(
+            ctxMenu.item.status,
+          ) && (
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("cancel", ctxMenu.item)}
+            >
               <X size={15} /> {t.common.cancel}
             </button>
           )}
 
           <div className="ctx-sep" />
 
-          <button className="ctx-item" onClick={() => runMenuAction("folder", ctxMenu.item)}>
+          <button
+            className="ctx-item"
+            onClick={() => runMenuAction("folder", ctxMenu.item)}
+          >
             <FolderOpen size={15} /> {t.downloads.openFolder}
           </button>
           {ctxMenu.item.status === "completed" && (
-            <button className="ctx-item" onClick={() => runMenuAction("open", ctxMenu.item)}>
+            <button
+              className="ctx-item"
+              onClick={() => runMenuAction("open", ctxMenu.item)}
+            >
               <FileText size={15} /> {t.common.openFile}
             </button>
           )}
-          <button className="ctx-item ctx-item--danger" onClick={() => runMenuAction("delete", ctxMenu.item)}>
+          <button
+            className="ctx-item ctx-item--danger"
+            onClick={() => runMenuAction("delete", ctxMenu.item)}
+          >
             <Trash2 size={15} /> {t.downloads.deleteDownload}
           </button>
         </div>

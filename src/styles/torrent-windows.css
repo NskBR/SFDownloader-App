@@ -1,0 +1,716 @@
+/* ==========================================
+   ESTILOS DEDICADOS: JANELAS DE TORRENT
+   ========================================== */
+
+.torrent-confirm-window, .torrent-live-window {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-fill, var(--panel, #0d1117)) !important;
+  color: var(--text, var(--text-strong));
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  overflow: hidden;
+  user-select: none;
+  border-radius: var(--radius-lg, 12px);
+}
+
+/* Contratos de layout separados: alterações de torrent não devem vazar para HTTP. */
+.http-confirm-window { width: 100%; height: 100%; }
+.http-download-window { width: 100%; height: 100%; }
+.torrent-download-window { width: 100%; height: 100%; }
+
+.torrent-confirm-window [data-tauri-drag-region],
+.torrent-live-window [data-tauri-drag-region] {
+  cursor: grab;
+}
+
+/* --- JANELA 1: ADICIONAR TORRENT (CONFIRMAÇÃO) --- */
+.tc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line, var(--white-08));
+  flex-shrink: 0;
+}
+.tc-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.tc-header-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
+  color: var(--ember-solid, var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tc-header-title h1 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text, var(--white));
+}
+.tc-header-title p {
+  font-size: 11px;
+  color: var(--text-2, var(--text-3));
+  margin: 2px 0 0 0;
+}
+.tc-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-2, var(--text-3));
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 8px;
+  transition: 0.15s;
+}
+.tc-close-btn:hover { background: var(--white-10); color: var(--white); }
+
+.tc-error-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.tc-body-grid {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.tc-left-col, .tc-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.tc-card {
+  background: var(--surface, var(--white-03));
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tc-options-card {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.tc-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2, var(--text-3));
+}
+.tc-path-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tc-path-box {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tc-input-name {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  color: var(--white);
+  outline: none;
+}
+.tc-input-name:focus { border-color: var(--ember-solid, var(--cyan)); }
+
+.tc-toggle-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text, var(--text-strong));
+}
+
+.tc-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--white);
+}
+.tc-icon-cyan { color: var(--ember-solid, var(--cyan)); }
+
+/* A classe utilitária animate-spin não existe neste projeto (não há Tailwind).
+   Mantenha a animação definida junto da janela para que o estado de busca de
+   metadados sempre dê feedback visual. */
+.tc-metadata-spinner {
+  animation: tc-metadata-spin 0.85s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes tc-metadata-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tc-metadata-spinner { animation-duration: 2.5s; }
+}
+
+.tc-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+}
+.tc-option-row div { display: flex; flex-direction: column; gap: 1px; }
+.tc-option-row strong { color: var(--white); font-weight: 600; }
+.tc-option-row span { color: var(--text-2, var(--text-3)); font-size: 10px; }
+.tc-info-icon { color: var(--text-2); cursor: help; margin-left: 2px; }
+
+.tc-select-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-2, var(--text-3));
+}
+.tc-select-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 140px;
+}
+
+.tc-speed-inputs {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.tc-speed-inputs div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.tc-speed-inputs label { font-size: 10px; color: var(--text-2); }
+.tc-speed-inputs input {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--white);
+  outline: none;
+}
+
+.tc-content-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tc-stats-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.05));
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.tc-stat-pair {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+.tc-stat-pair div { display: flex; flex-direction: column; min-width: 0; }
+.tc-stat-label { font-size: 10px; color: var(--text-2, var(--text-3)); }
+.tc-stat-val { color: var(--white); font-weight: 600; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.tc-actions-bar {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.tc-table-wrap {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  min-height: 0;
+}
+.tc-table-header-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--white-04);
+  border-bottom: 1px solid var(--line, var(--white-08));
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2, var(--text-3));
+}
+.tc-table-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.tc-file-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--white-03);
+  font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tc-file-row:hover { background: var(--white-04); }
+.tc-file-row.folder-root { font-weight: 700; color: var(--white); }
+.tc-file-row.child { padding-left: 20px; color: var(--text, var(--text-strong)); }
+.tc-file-row.single-file { color: var(--text, var(--text-strong)); }
+.tc-folder-icon { color: var(--accent-warning); }
+.tc-file-icon { color: var(--text-2); }
+.tc-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-file-size { color: var(--text-2); font-size: 10.5px; white-space: nowrap; text-align: right; flex-shrink: 0; }
+
+.tc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, var(--white-08));
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.tc-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tc-layers-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  color: var(--ember-solid, var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tc-footer-left div { display: flex; flex-direction: column; }
+.tc-footer-left strong { font-size: 11.5px; color: var(--white); }
+.tc-footer-left span { font-size: 10.5px; color: var(--text-2); }
+
+.tc-footer-right { display: flex; gap: 8px; }
+.tc-btn-outline {
+  background: transparent;
+  border: 1px solid var(--ember-solid, var(--cyan));
+  color: var(--ember-solid, var(--cyan));
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-outline:hover { background: var(--ember-soft, rgba(6, 182, 212, 0.15)); }
+
+.tc-btn-dark {
+  background: var(--white-06);
+  border: 1px solid var(--line, var(--white-12));
+  color: var(--white);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-dark:hover { background: var(--white-12); }
+
+.tc-btn-cyan-solid {
+  background: var(--ember-solid, var(--cyan));
+  border: none;
+  color: #000000;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.15s;
+}
+.tc-btn-cyan-solid:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* --- JANELA 2: DOWNLOAD EM PROGRESSO TORRENT --- */
+.tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tl-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-folder-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tl-folder-icon { color: var(--ember-solid, var(--cyan)); }
+.tl-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  margin: 0;
+}
+
+.tl-donut-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.tl-donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.tl-donut-bg {
+  fill: none;
+  stroke: var(--white-08);
+}
+.tl-donut-fg {
+  fill: none;
+  stroke: var(--ember-solid, var(--cyan));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
+}
+.tl-donut-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tl-donut-text strong { font-size: 14px; font-weight: 800; color: var(--white); line-height: 1; }
+.tl-donut-text span { font-size: 9.5px; color: var(--text-2, var(--text-3)); margin-top: 1px; }
+
+.tl-progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+.tl-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--white-08);
+  overflow: hidden;
+}
+.tl-progress-bar-fill {
+  height: 100%;
+  background: var(--ember-solid, var(--cyan));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.torrent-live-window.status-failed .tl-progress-bar-fill,
+.torrent-live-window.status-cancelled .tl-progress-bar-fill {
+  background: var(--st-failed, var(--accent-danger)) !important;
+}
+.torrent-live-window.status-paused .tl-progress-bar-fill {
+  background: var(--st-paused, var(--accent-warning)) !important;
+}
+.torrent-live-window.status-completed .tl-progress-bar-fill {
+  background: var(--st-completed, var(--accent-primary)) !important;
+}
+.tl-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-2, var(--text-3));
+}
+.tl-percent-cyan { color: var(--ember-solid, var(--cyan)); font-weight: 700; }
+
+.tl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.tl-metric-card {
+  background: var(--surface, var(--white-03));
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.tc-file-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--white-03);
+  font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tc-file-row:hover { background: var(--white-04); }
+.tc-file-row.folder-root { font-weight: 700; color: var(--white); }
+.tc-file-row.child { padding-left: 20px; color: var(--text, var(--text-strong)); }
+.tc-file-row.single-file { color: var(--text, var(--text-strong)); }
+.tc-folder-icon { color: var(--accent-warning); }
+.tc-file-icon { color: var(--text-2); }
+.tc-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tc-file-size { color: var(--text-2); font-size: 10.5px; white-space: nowrap; text-align: right; flex-shrink: 0; }
+
+.tc-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, var(--white-08));
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+.tc-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tc-layers-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  color: var(--ember-solid, var(--cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tc-footer-left div { display: flex; flex-direction: column; }
+.tc-footer-left strong { font-size: 11.5px; color: var(--white); }
+.tc-footer-left span { font-size: 10.5px; color: var(--text-2); }
+
+.tc-footer-right { display: flex; gap: 8px; }
+.tc-btn-outline {
+  background: transparent;
+  border: 1px solid var(--ember-solid, var(--cyan));
+  color: var(--ember-solid, var(--cyan));
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-outline:hover { background: var(--ember-soft, rgba(6, 182, 212, 0.15)); }
+
+.tc-btn-dark {
+  background: var(--white-06);
+  border: 1px solid var(--line, var(--white-12));
+  color: var(--white);
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tc-btn-dark:hover { background: var(--white-12); }
+
+.tc-btn-cyan-solid {
+  background: var(--ember-solid, var(--cyan));
+  border: none;
+  color: #000000;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: 0.15s;
+}
+.tc-btn-cyan-solid:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* --- JANELA 2: DOWNLOAD EM PROGRESSO TORRENT --- */
+.tl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tl-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-folder-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ember-soft, rgba(6, 182, 212, 0.15));
+  border: 1px solid var(--ember-soft, rgba(6, 182, 212, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tl-folder-icon { color: var(--ember-solid, var(--cyan)); }
+.tl-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--white);
+  margin: 0;
+}
+
+.tl-donut-wrap {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.tl-donut-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.tl-donut-bg {
+  fill: none;
+  stroke: var(--white-08);
+}
+.tl-donut-fg {
+  fill: none;
+  stroke: var(--ember-solid, var(--cyan));
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
+}
+.tl-donut-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.tl-donut-text strong { font-size: 14px; font-weight: 800; color: var(--white); line-height: 1; }
+.tl-donut-text span { font-size: 9.5px; color: var(--text-2, var(--text-3)); margin-top: 1px; }
+
+.tl-progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+.tl-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--white-08);
+  overflow: hidden;
+}
+.tl-progress-bar-fill {
+  height: 100%;
+  background: var(--ember-solid, var(--cyan));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.tl-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-2, var(--text-3));
+}
+.tl-percent-cyan { color: var(--ember-solid, var(--cyan)); font-weight: 700; }
+
+.tl-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.tl-metric-card {
+  background: var(--surface, var(--white-03));
+  border: 1px solid var(--line, var(--white-08));
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tl-m-icon { color: var(--ember-solid, var(--cyan)); flex-shrink: 0; }
+.tl-m-text { display: flex; flex-direction: column; }
+.tl-m-label { font-size: 9.5px; color: var(--text-2, var(--text-3)); }
+.tl-m-val { font-size: 11.5px; font-weight: 700; color: var(--white); }
+
+.tl-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tl-btn-pause, .tl-btn-cancel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line, var(--white-12));
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tl-btn-pause:hover { background: var(--white-12); border-color: rgba(255, 255, 255, 0.25); }
+.tl-btn-cancel:hover { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
+

@@ -146,6 +146,90 @@ export function useDownloads(settings: AppSettings) {
       );
     }
   };
+  const setSpeedLimit = async (id: string, speedLimit: number) => {
+    try {
+      await service.updateSpeedLimit(id, speedLimit);
+      setDownloads((items) =>
+        items.map((item) =>
+          item.id === id
+            ? { ...item, speedLimitDownload: speedLimit, speedLimitInherited: false }
+            : item,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        typeof cause === "string"
+          ? cause
+          : "Não foi possível atualizar o limite de velocidade.",
+      );
+    }
+  };
+  const setSchedule = async (id: string, schedule: import("../domain/download").DownloadScheduleInput) => {
+    try {
+      const task = await service.updateDownloadSchedule(id, schedule);
+      setDownloads((items) => items.map((item) => (item.id === id ? { ...item, ...task } : item)));
+    } catch (cause) {
+      setError(typeof cause === "string" ? cause : "Não foi possível salvar a agenda do download.");
+    }
+  };
+  const bypassSchedule = async (id: string) => {
+    try {
+      const task = await service.bypassDownloadSchedule(id);
+      setDownloads((items) => items.map((item) => (item.id === id ? { ...item, ...task, status: "downloading" } : item)));
+    } catch (cause) {
+      setError(typeof cause === "string" ? cause : "Não foi possível ignorar a agenda.");
+    }
+  };
+  const setPriority = async (id: string, priority: number) => {
+    try {
+      const task = await service.updateDownloadPriority(id, priority);
+      setDownloads((items) =>
+        items.map((item) => (item.id === id ? { ...item, priority: task.priority } : item)),
+      );
+    } catch (cause) {
+      setError(
+        typeof cause === "string"
+          ? cause
+          : "Não foi possível atualizar a prioridade do download.",
+      );
+    }
+  };
+  const moveQueueItem = async (id: string, direction: "up" | "down") => {
+    try {
+      const updated = await service.moveDownloadQueueItem(id, direction);
+      const byId = new Map(updated.map((item) => [item.id, item]));
+      setDownloads((items) =>
+        items.map((item) => {
+          const next = byId.get(item.id);
+          return next ? { ...item, queueOrder: next.queueOrder } : item;
+        }),
+      );
+    } catch (cause) {
+      setError(
+        typeof cause === "string"
+          ? cause
+          : "Não foi possível reordenar a fila de downloads.",
+      );
+    }
+  };
+  const prioritize = async (id: string) => {
+    try {
+      const task = await service.prioritizeDownload(id);
+      setDownloads((items) =>
+        items.map((item) =>
+          item.id === id
+            ? { ...item, priority: task.priority, queueOrder: task.queueOrder }
+            : item,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        typeof cause === "string"
+          ? cause
+          : "Não foi possível priorizar o download na fila.",
+      );
+    }
+  };
   return {
     downloads,
     loading,
@@ -157,6 +241,12 @@ export function useDownloads(settings: AppSettings) {
     cancel,
     pause,
     resume,
+    setSpeedLimit,
+    setPriority,
+    setSchedule,
+    bypassSchedule,
+    moveQueueItem,
+    prioritize,
     completed,
     dismissCompleted: () => setCompleted(null),
   };

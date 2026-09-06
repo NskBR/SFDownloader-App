@@ -1,1 +1,53 @@
-{"$schema":"https://schema.tauri.app/config/2","productName":"SFDownloader","version":"0.3.8","identifier":"com.sfdownloader.app","build":{"beforeDevCommand":"npm run dev","devUrl":"http://localhost:1420","beforeBuildCommand":"npm run build","frontendDist":"../dist"},"app":{    "windows":[{"label":"main","title":"SFDownloader","width":980,"height":480,"minWidth":1104,"minHeight":611,"resizable":true,"fullscreen":false,"center":true,"visible":false,"decorations":false,"backgroundColor":"#0b0d12"}],"security":{"csp":null}},"bundle":{"active":true,"targets":"all","icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"]},"plugins":{"deep-link":{"desktop":{"schemes":["sfdownloader"]}}}}
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SFDownloader",
+  "version": "1.0.0",
+  "identifier": "com.sfdownloader.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "SFDownloader",
+        "width": 1104,
+        "height": 611,
+        "minWidth": 1104,
+        "minHeight": 611,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "backgroundColor": "#0b0d12"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "sfdownloader"
+        ]
+      }
+    }
+  }
+}

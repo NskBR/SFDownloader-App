@@ -18,11 +18,14 @@ import {
   ChevronDown,
   ChevronRight,
   RefreshCw,
+  Download,
 } from "lucide-react";
 import * as service from "../services/downloadService";
 import type { DebugLogEntry } from "../services/downloadService";
+import { useTranslation } from "../i18n";
 
 export function DebugLogsWindow() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<DebugLogEntry[]>([]);
   const [search, setSearch] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("all");
@@ -94,6 +97,18 @@ export function DebugLogsWindow() {
       setCopiedId(entry.id);
       setTimeout(() => setCopiedId(null), 2000);
     });
+  };
+
+  const handleExportDiagnostics = async () => {
+    const report = await service.getDiagnosticReport();
+    const contents = JSON.stringify(report, null, 2);
+    const blob = new Blob([contents], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `sfdownloader-diagnostico-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleExpand = (id: string) => {
@@ -175,7 +190,8 @@ export function DebugLogsWindow() {
             type="button"
             className="dbg-ctrl-btn"
             onClick={() => void appWindow.minimize()}
-            title="Minimizar"
+            title={t.common.minimize}
+            aria-label={t.common.minimize}
           >
             <Minus size={14} />
           </button>
@@ -183,7 +199,8 @@ export function DebugLogsWindow() {
             type="button"
             className="dbg-ctrl-btn"
             onClick={() => void appWindow.toggleMaximize()}
-            title="Maximizar"
+            title={t.common.maximize}
+            aria-label={t.common.maximize}
           >
             <Maximize2 size={13} />
           </button>
@@ -191,7 +208,8 @@ export function DebugLogsWindow() {
             type="button"
             className="dbg-ctrl-btn close"
             onClick={() => void appWindow.close()}
-            title="Fechar"
+            title={t.common.close}
+            aria-label={t.common.close}
           >
             <X size={15} />
           </button>
@@ -245,6 +263,14 @@ export function DebugLogsWindow() {
           </div>
 
           <div className="dbg-actions-group">
+            <button
+              className="dbg-btn-action"
+              onClick={() => void handleExportDiagnostics()}
+              title="Exportar diagnóstico anonimizado"
+            >
+              <Download size={13} />
+              <span>Exportar diagnóstico</span>
+            </button>
             <button
               className={`dbg-btn-action ${copiedAll ? "copied" : ""}`}
               onClick={handleCopyAll}

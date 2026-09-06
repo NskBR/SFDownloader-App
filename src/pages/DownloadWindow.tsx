@@ -24,7 +24,12 @@ import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
 import { FileIcon } from "../components/downloads/FileIcon";
 import * as service from "../services/downloadService";
-import type { DownloadProgress, DownloadStatus, DownloadTask } from "../domain/download";
+import type {
+  DownloadProgress,
+  DownloadStatus,
+  DownloadTask,
+} from "../domain/download";
+import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
 import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
 import { useTranslation } from "../i18n";
 
@@ -91,16 +96,22 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
     status === "completed"
       ? "var(--st-completed)"
       : status === "failed" || status === "cancelled"
-      ? "var(--st-failed)"
-      : status === "paused"
-      ? "var(--st-paused)"
-      : "url(#dw-donut-gradient)";
+        ? "var(--st-failed)"
+        : status === "paused"
+          ? "var(--st-paused)"
+          : "url(#dw-donut-gradient)";
 
   return (
     <div className="dw-donut" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
-          <linearGradient id="dw-donut-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient
+            id="dw-donut-gradient"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
             <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
             <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
           </linearGradient>
@@ -124,7 +135,9 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.2s ease" }}
+          style={{
+            transition: "stroke-dashoffset 0.4s ease, stroke 0.2s ease",
+          }}
         />
       </svg>
       <div className="dw-donut-center">
@@ -140,10 +153,10 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
     status === "completed"
       ? "var(--st-completed)"
       : status === "failed" || status === "cancelled"
-      ? "var(--st-failed)"
-      : status === "paused"
-      ? "var(--st-paused)"
-      : "url(#dw-title-gradient)";
+        ? "var(--st-failed)"
+        : status === "paused"
+          ? "var(--st-paused)"
+          : "url(#dw-title-gradient)";
 
   return (
     <svg
@@ -159,7 +172,13 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
       style={{ transition: "stroke 0.25s ease", flexShrink: 0 }}
     >
       <defs>
-        <linearGradient id="dw-title-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="dw-title-gradient"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
           <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
         </linearGradient>
@@ -214,14 +233,22 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       fitted = true;
       const targetHeight = cancelOpen ? 290 : detailsOpen ? 370 : 205;
       const targetWidth = 460;
-      void appWindow.setSize(new LogicalSize(targetWidth, targetHeight)).catch(() => {});
+      void appWindow
+        .setSize(new LogicalSize(targetWidth, targetHeight))
+        .catch(() => {});
     };
     void fit();
   }, [detailsOpen, cancelOpen]);
 
   useEffect(() => {
     let active = true;
-    const activeStatuses = ["downloading", "checking_files", "assembling", "extracting", "completed"];
+    const activeStatuses = [
+      "downloading",
+      "checking_files",
+      "assembling",
+      "extracting",
+      "completed",
+    ];
 
     const fetchTask = () => {
       void Promise.all([
@@ -229,7 +256,9 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         service.extractionStatus(downloadId),
       ]).then(([list, result]) => {
         if (!active) return;
-        const found = list.find((item) => item.id === downloadId || item.infoHash === downloadId);
+        const found = list.find(
+          (item) => item.id === downloadId || item.infoHash === downloadId,
+        );
         if (found) {
           notFoundCount.current = 0;
           setTask((current) => {
@@ -240,15 +269,18 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               totalDownloaded: isDownloading
                 ? Math.max(current.totalDownloaded, found.totalDownloaded)
                 : found.totalDownloaded,
-              speedCurrent: found.status === "downloading" && found.speedCurrent === 0
-                ? current.speedCurrent
-                : found.speedCurrent,
+              speedCurrent:
+                found.status === "downloading" && found.speedCurrent === 0
+                  ? current.speedCurrent
+                  : found.speedCurrent,
             };
           });
 
           setDownloaded((prev) => {
             const isDownloading = activeStatuses.includes(found.status);
-            return isDownloading ? Math.max(prev, found.totalDownloaded) : found.totalDownloaded;
+            return isDownloading
+              ? Math.max(prev, found.totalDownloaded)
+              : found.totalDownloaded;
           });
 
           setSpeed((prev) => {
@@ -272,44 +304,50 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     fetchTask();
     const interval = setInterval(fetchTask, task ? 2000 : 400);
 
-    const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
-      if (payload.id !== downloadId) return;
+    const listener = listen<DownloadProgress>(
+      "download-progress",
+      ({ payload }) => {
+        if (payload.id !== downloadId) return;
 
-      setStatus(payload.status);
+        setStatus(payload.status);
 
-      setDownloaded((prev) => {
-        const isDownloading = activeStatuses.includes(payload.status);
-        return isDownloading ? Math.max(prev, payload.downloaded) : payload.downloaded;
-      });
+        setDownloaded((prev) => {
+          const isDownloading = activeStatuses.includes(payload.status);
+          return isDownloading
+            ? Math.max(prev, payload.downloaded)
+            : payload.downloaded;
+        });
 
-      setSpeed((prev) => {
-        if (payload.status === "downloading" && payload.speed === 0) {
-          return prev;
+        setSpeed((prev) => {
+          if (payload.status === "downloading" && payload.speed === 0) {
+            return prev;
+          }
+          return payload.speed;
+        });
+
+        setTask((current) => {
+          if (!current) {
+            fetchTask();
+            return current;
+          }
+          const isDownloading = activeStatuses.includes(payload.status);
+          return {
+            ...current,
+            status: payload.status,
+            totalDownloaded: isDownloading
+              ? Math.max(current.totalDownloaded, payload.downloaded)
+              : payload.downloaded,
+            speedCurrent:
+              payload.status === "downloading" && payload.speed === 0
+                ? current.speedCurrent
+                : payload.speed,
+          };
+        });
+        if (payload.error) {
+          setError(payload.error);
         }
-        return payload.speed;
-      });
-
-      setTask((current) => {
-        if (!current) {
-          fetchTask();
-          return current;
-        }
-        const isDownloading = activeStatuses.includes(payload.status);
-        return {
-          ...current,
-          status: payload.status,
-          totalDownloaded: isDownloading
-            ? Math.max(current.totalDownloaded, payload.downloaded)
-            : payload.downloaded,
-          speedCurrent: payload.status === "downloading" && payload.speed === 0
-            ? current.speedCurrent
-            : payload.speed,
-        };
-      });
-      if (payload.error) {
-        setError(payload.error);
-      }
-    });
+      },
+    );
 
     return () => {
       active = false;
@@ -348,6 +386,34 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       setBusy(false);
     }
   };
+  const updateSpeedLimit = async () => {
+    if (!task) return;
+    const current =
+      task.speedLimitDownload > 0
+        ? String(task.speedLimitDownload / 1024 / 1024)
+        : "0";
+    const value = window.prompt(t.downloads.speedLimitPrompt, current);
+    if (value === null) return;
+    const mebibytes = parseSpeedLimitMebibytesPerSecond(value);
+    if (mebibytes === null) {
+      setError(t.downloads.speedLimitInvalid);
+      return;
+    }
+    const speedLimit = Math.round(mebibytes * 1024 * 1024);
+    try {
+      await service.updateSpeedLimit(task.id, speedLimit);
+      setTask(
+        (currentTask) =>
+          currentTask && {
+            ...currentTask,
+            speedLimitDownload: speedLimit,
+            speedLimitInherited: false,
+          },
+      );
+    } catch (cause) {
+      setError(String(cause));
+    }
+  };
 
   const copyPath = (text: string) => {
     void navigator.clipboard.writeText(text).then(() => {
@@ -369,18 +435,28 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
         <header className="dw-title" data-tauri-drag-region>
           <span>
             <Gauge />
-            Download
+            {t.downloadWindow.title}
           </span>
           <div className="dw-controls">
-            <button title="Minimizar" onClick={() => void appWindow.minimize()}>
+            <button
+              type="button"
+              title={t.common.minimize}
+              aria-label={t.common.minimize}
+              onClick={() => void appWindow.minimize()}
+            >
               <Minus />
             </button>
-            <button title="Fechar" onClick={() => void appWindow.close()}>
+            <button
+              type="button"
+              title={t.common.close}
+              aria-label={t.common.close}
+              onClick={() => void appWindow.close()}
+            >
               <X />
             </button>
           </div>
         </header>
-        <div className="dw-loading">Carregando detalhes...</div>
+        <div className="dw-loading" role="status">{t.downloadWindow.loadingDetails}</div>
       </main>
     );
 
@@ -389,27 +465,48 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     isExtracting = status === "extracting",
     isChecking = status === "checking_files",
     isCompleted = status === "completed",
-    isActive = ["downloading", "assembling", "extracting", "checking_files"].includes(status),
+    isActive = [
+      "downloading",
+      "assembling",
+      "extracting",
+      "checking_files",
+    ].includes(status),
     isFailed = status === "failed" || status === "cancelled",
     progress = total > 0 ? Math.min(100, (downloaded / total) * 100) : 0,
-    remaining = speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
+    remaining =
+      speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     domain = sourceDomain(task.originalUrl),
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
 
   return (
-    <main ref={mainRef} className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
+    <main
+      ref={mainRef}
+      className={`dw-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}
+    >
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text" data-tauri-drag-region>
           <TitleDownloadIcon status={status} />
-          <span className="dw-title-name" title={task.fileName} data-tauri-drag-region>
+          <span
+            className="dw-title-name"
+            title={task.fileName}
+            data-tauri-drag-region
+          >
             {task.fileName}
           </span>
         </span>
         <div className="dw-controls">
-          <button title={t.titlebar.minimizeTooltip} onClick={() => void appWindow.minimize()}>
+          <button
+            title={t.titlebar.minimizeTooltip}
+            aria-label={t.titlebar.minimizeTooltip}
+            onClick={() => void appWindow.minimize()}
+          >
             <Minus />
           </button>
-          <button title={t.titlebar.closeTooltip} onClick={() => void appWindow.close()}>
+          <button
+            title={t.titlebar.closeTooltip}
+            aria-label={t.titlebar.closeTooltip}
+            onClick={() => void appWindow.close()}
+          >
             <X />
           </button>
         </div>
@@ -426,23 +523,42 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               <div className="dw-right-top">
                 <div className="dw-right-info">
                   <p className="dw-origin">
-                    {statusLabels[status]} <span className="dw-origin-domain">• {domain}</span>
+                    {statusLabels[status]}{" "}
+                    <span className="dw-origin-domain">• {domain}</span>
                   </p>
 
                   <div className="dw-size-row">
                     {!isCompleted && !isFailed && (
-                      <button className="dw-icon-btn" title={isActive ? t.downloads.pauseDownload : t.downloads.resumeDownload} onClick={() => void pauseResume()}>
+                      <button
+                        className="dw-icon-btn"
+                        title={
+                          isActive
+                            ? t.downloads.pauseDownload
+                            : t.downloads.resumeDownload
+                        }
+                        onClick={() => void pauseResume()}
+                      >
                         {isActive ? <Pause /> : <Play />}
                       </button>
                     )}
                     {isCompleted && (
-                      <button className="dw-icon-btn" title={copied ? t.downloadWindow.copiedPath : t.downloadWindow.copyDestination} onClick={() => copyPath(task.finalPath)}>
+                      <button
+                        className="dw-icon-btn"
+                        title={
+                          copied
+                            ? t.downloadWindow.copiedPath
+                            : t.downloadWindow.copyDestination
+                        }
+                        onClick={() => copyPath(task.finalPath)}
+                      >
                         {copied ? <Check /> : <Copy />}
                       </button>
                     )}
                     <p className="dw-size">
                       {bytes(downloaded)}
-                      {!isCompleted && total ? <em> / {bytes(total)}</em> : null}
+                      {!isCompleted && total ? (
+                        <em> / {bytes(total)}</em>
+                      ) : null}
                     </p>
                   </div>
 
@@ -454,7 +570,9 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                           <span>{error}</span>
                         </span>
                       ) : isExtracting ? (
-                        <span>{extraction || t.downloadWindow.extractingFiles}</span>
+                        <span>
+                          {extraction || t.downloadWindow.extractingFiles}
+                        </span>
                       ) : isAssembling ? (
                         <span>{t.downloadWindow.assemblingParts}</span>
                       ) : isChecking ? (
@@ -468,15 +586,45 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                       )}
                     </p>
                   )}
+                  <div className="dw-detail-row">
+                    <span className="dw-detail-label">
+                      {t.downloads.speedLimit}
+                    </span>
+                    <span className="dw-detail-val">
+                      {task.speedLimitDownload > 0
+                        ? `${bytes(task.speedLimitDownload)}/s`
+                        : t.settings.downloadsTab.noLimit}
+                      <small className="dw-limit-source">
+                        {task.speedLimitInherited
+                          ? t.downloads.speedLimitDefault
+                          : t.downloads.speedLimitCustom}
+                      </small>
+                      <button
+                        type="button"
+                        className="dw-icon-btn"
+                        title={t.downloads.speedLimit}
+                        onClick={() => void updateSpeedLimit()}
+                      >
+                        <Gauge size={14} />
+                      </button>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="dw-file-badge" title={`Arquivo: ${task.fileName}`}>
+                <div
+                  className="dw-file-badge"
+                  title={`Arquivo: ${task.fileName}`}
+                >
                   <FileIcon extension={task.extension} width={64} height={74} />
                 </div>
               </div>
 
               {!isCompleted && (
-                <div className={`dw-bar${isActive ? " dw-bar--active" : ""}${status === "paused" ? " dw-bar--paused" : ""}${isFailed ? " dw-bar--failed" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
+                <div
+                  className={`dw-bar${isActive ? " dw-bar--active" : ""}${status === "paused" ? " dw-bar--paused" : ""}${isFailed ? " dw-bar--failed" : ""}`}
+                  role="progressbar"
+                  aria-valuenow={Math.round(progress)}
+                >
                   <i style={{ width: `${progress}%` }} />
                 </div>
               )}
@@ -486,7 +634,10 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
           <div className="dw-divider" />
 
           <footer className="dw-footer">
-            <button className="dw-details-toggle" onClick={() => setDetailsOpen((value) => !value)}>
+            <button
+              className="dw-details-toggle"
+              onClick={() => setDetailsOpen((value) => !value)}
+            >
               <ChevronDown className={detailsOpen ? "open" : ""} />
               {t.downloadWindow.moreDetails}
             </button>
@@ -521,7 +672,10 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                 </button>
               </div>
             ) : (
-              <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)}>
+              <button
+                className="dw-btn-cancel"
+                onClick={() => setCancelOpen(true)}
+              >
                 <Ban size={15} />
                 {t.common.cancel}
               </button>
@@ -533,41 +687,73 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       {detailsOpen && !cancelOpen && (
         <div className="dw-details dw-details-full">
           <div className="dw-details-header" data-tauri-drag-region>
-            <button className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
+            <button
+              className="dw-details-back nodrag"
+              onClick={() => setDetailsOpen(false)}
+            >
               <ArrowLeft size={16} />
               {t.common.back}
             </button>
-            <span className="dw-details-header-title">{t.downloadWindow.detailsTitle}</span>
+            <span className="dw-details-header-title">
+              {t.downloadWindow.detailsTitle}
+            </span>
           </div>
 
           <div className="dw-details-compact-body">
             <div className="dw-details-card">
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.currentSpeed}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.currentSpeed}
+                </span>
                 <span className="dw-detail-val">{bytes(speed)}/s</span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.remainingTime}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.remainingTime}
+                </span>
                 <span className="dw-detail-val">{eta(remaining)}</span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.elapsedTime}</span>
-                <span className="dw-detail-val">{formatElapsed(elapsedSeconds(task.createdAt, task.completedAt))}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.elapsedTime}
+                </span>
+                <span className="dw-detail-val">
+                  {formatElapsed(
+                    elapsedSeconds(task.createdAt, task.completedAt),
+                  )}
+                </span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.createdAt}</span>
-                <span className="dw-detail-val">{formatDateTime(task.createdAt)}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.createdAt}
+                </span>
+                <span className="dw-detail-val">
+                  {formatDateTime(task.createdAt)}
+                </span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.completedAt}</span>
-                <span className="dw-detail-val">{formatDateTime(task.completedAt)}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.completedAt}
+                </span>
+                <span className="dw-detail-val">
+                  {formatDateTime(task.completedAt)}
+                </span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.originalUrl}</span>
-                <span className="dw-detail-val dw-detail-url" title={task.originalUrl}>{task.originalUrl}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.originalUrl}
+                </span>
+                <span
+                  className="dw-detail-val dw-detail-url"
+                  title={task.originalUrl}
+                >
+                  {task.originalUrl}
+                </span>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.destinationFolder}</span>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.destinationFolder}
+                </span>
                 <span className="dw-detail-val">{destination}</span>
               </div>
             </div>
@@ -582,10 +768,16 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             <button className="dw-btn-danger" onClick={() => void cancel(true)}>
               {t.downloadWindow.confirmCancelDelete}
             </button>
-            <button className="dw-btn-warning" onClick={() => void cancel(false)}>
+            <button
+              className="dw-btn-warning"
+              onClick={() => void cancel(false)}
+            >
               {t.downloadWindow.confirmCancelKeep}
             </button>
-            <button className="dw-btn-secondary" onClick={() => setCancelOpen(false)}>
+            <button
+              className="dw-btn-secondary"
+              onClick={() => setCancelOpen(false)}
+            >
               {t.downloadWindow.confirmCancelBack}
             </button>
           </div>

@@ -2,6 +2,7 @@ node_modules/
 dist/
 target/
 src-tauri/target/
+src-tauri/target-updater-test/
 *.log
 scratch/
 
@@ -12,11 +13,10 @@ Release/
 # Build artifacts da extensão (gerados pelo web-ext / build.mjs).
 # O firefox-extension.xpi é mantido de propósito: é embutido no binário do app
 # via include_bytes! e precisa existir no repo para o build compilar.
-browser-extension/release/*-0.2*.xpi
-browser-extension/release/*-0.3*.xpi
-browser-extension/release/*-0.4*.xpi
-browser-extension/release/*-0.5*.xpi
-browser-extension/release/*-0.6*.xpi
-browser-extension/release/*-0.7*.xpi
+browser-extension/dist-chromium/
+browser-extension/dist-firefox/
+browser-extension/release/*.xpi
+!browser-extension/release/firefox-extension.xpi
+
 # Backups e zips locais
 *.zip

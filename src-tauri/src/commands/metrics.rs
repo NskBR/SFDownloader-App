@@ -4,9 +4,7 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
-pub fn metrics_snapshot(
-    database: State<'_, Database>,
-) -> Result<metrics::MetricsSnapshot, String> {
+pub fn metrics_snapshot(database: State<'_, Database>) -> Result<metrics::MetricsSnapshot, String> {
     metrics::snapshot(&database.connect()?)
         .map_err(|error| format!("Falha ao ler métricas: {error}"))
 }
@@ -82,7 +80,8 @@ pub fn export_metrics(
             };
             let _ = tx.send(result);
         });
-    rx.recv().unwrap_or(Err("Exportação cancelada.".to_string()))
+    rx.recv()
+        .unwrap_or(Err("Exportação cancelada.".to_string()))
 }
 
 #[tauri::command]

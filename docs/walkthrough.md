@@ -1,5 +1,7 @@
 # Walkthrough: Otimização de Colunas, Redução de Espaço Vazio, Centralização de Status e Correções de UI
 
+> Documento histórico de mudanças. Alguns nomes de arquivos, caminhos e telas podem se referir a versões anteriores; para a arquitetura vigente, consulte `AGENTS.md` e `MASTER_PLAN.md`.
+
 Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor a largura do aplicativo, centralizamos as informações da coluna de Status, reduzimos os espaços ociosos na tela de conclusão de download e corrigimos as coordenadas do menu de contexto para evitar cortes.
 
 ---
@@ -7,34 +9,34 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 ## Detalhes das Alterações Concluídas
 
 ### 1. Nome do Arquivo como Coluna Flexível (`1fr`)
-- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx)
+- **Modificado:** [DownloadsPage.tsx](../src/pages/DownloadsPage.tsx)
 - **Melhoria:** A coluna **Nome** passou a ser a coluna flexível (`1fr`) que expande para ocupar todo o espaço restante da tela. Isso evita o espaço vazio excessivo na coluna de **Data** (que agora tem largura customizável/resumida padrão de `110px`).
 - Com isso, nomes longos de arquivos ganham muito mais espaço de exibição e a barra de progresso não fica espremida.
 
 ### 2. Remapeamento das Colunas Redimensionáveis
-- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx)
+- **Modificado:** [DownloadsPage.tsx](../src/pages/DownloadsPage.tsx)
 - O controle de redimensionamento (resizer handles) foi removido do Nome (que é flexível) e associado às colunas **Data** (index 0, padrão `110px`) e **Tamanho** (index 1, padrão `100px`).
 - Atualizado o limite e a lógica do mouse dragging para respeitar os novos limites das colunas de Data e Tamanho.
 - Limpo o cache local com a chave `sf-downloader.columns-v4` para forçar o carregamento imediato das novas proporções.
 
 ### 3. Centralização e Respiração do Status
-- **Modificados:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx) e [redesign.css](file:///C:/Users/skell/Documents/Projeto/src/styles/redesign.css)
+- **Modificados:** [DownloadsPage.tsx](../src/pages/DownloadsPage.tsx) e [redesign.css](../src/styles/redesign.css)
 - Centralizado o cabeçalho "Status" e as tags de status dentro da coluna (`.col-status`).
 - **Resultado:** As tags ("Pausado", "Concluído", "Cancelado") agora ficam perfeitamente centralizadas em sua área e ganharam um respiro visual excelente, eliminando a sensação de ficarem muito coladas ou encavaladas na barra de progresso.
 
 ### 4. Toolbar Simplificada e Ações Exclusivas no Menu de Contexto Nativo
-- **Modificados:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx), [context_menu.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/context_menu.rs), [lib.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/lib.rs)
+- **Modificados:** [DownloadsPage.tsx](../src/pages/DownloadsPage.tsx), [context_menu.rs](../src-tauri/src/commands/context_menu.rs), [lib.rs](../src-tauri/src/lib.rs)
 - Removidos os botões de ação redundantes da barra de ferramentas superior.
 - **Menu de Contexto Nativo do OS:** Substituído o menu de contexto HTML por um menu nativo do sistema via API `tauri::menu`. Isso resolve em definitivo o problema de o menu ser cortado pelos limites da janela do webview, permitindo que ele ultrapasse a janela e apareça perfeitamente em relação ao clique do mouse.
 - As ações de **Excluir download**, **Abrir pasta de destino**, **Abrir arquivo** e **Fornecer novo link** (quando pausado ou falho) agora disparam chamadas nativas enviadas ao frontend.
 
 ### 5. Redução de Espaço Vertical e Ajustes de Janela
-- **Modificados:** [redesign.css](file:///C:/Users/skell/Documents/Projeto/src/styles/redesign.css) e [tauri.conf.json](file:///C:/Users/skell/Documents/Projeto/src-tauri/tauri.conf.json)
+- **Modificados:** [redesign.css](../src/styles/redesign.css) e [tauri.conf.json](../src-tauri/tauri.conf.json)
 - Redefinido `margin-top: 0` e ajustado o preenchimento superior do `.main-content` para `48px`, reduzindo o espaço em branco inutilizado sob a Titlebar.
 - Configurada a largura mínima da janela para `970` px e a altura mínima para `460` px.
 
 ### 6. Bump de Versão da Extensão para 0.2.1
-- **Modificados:** [manifest.chromium.json](file:///C:/Users/skell/Documents/Projeto/browser-extension/manifest.chromium.json) e [manifest.firefox.json](file:///C:/Users/skell/Documents/Projeto/browser-extension/manifest.firefox.json)
+- **Modificados:** [manifest.chromium.json](../browser-extension/manifest.chromium.json) e [manifest.firefox.json](../browser-extension/manifest.firefox.json)
 - Atualizada a versão da extensão para `0.2.1` e gerado os builds na pasta `browser-extension/dist` para envio à Mozilla.
 
 ### 7. Janelas Independentes de Download (Confirmação, Progresso e Conclusão)
@@ -45,13 +47,13 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 - A janela de **Conclusão** exibe o destino final e atalhos rápidos para abrir o arquivo ou sua pasta.
 
 ### 8. Refinamento Visual, Ajuste de Altura e Fim do Espaço Vazio na Conclusão
-- **Modificados:** [CompletePage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/CompletePage.tsx), [transfer.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/transfer.rs) e [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css)
+- **Modificados:** [CompletePage.tsx](../src/pages/CompletePage.tsx), [transfer.rs](../src-tauri/src/commands/transfer.rs) e [download-windows.css](../src/styles/download-windows.css)
 - **Status Removido:** Removida a linha redundante de "Status Concluído", pois a própria janela e o ícone de check no cabeçalho já expressam essa informação.
 - **Redução de Altura e Espaços:** Reduzida a altura padrão da janela de Conclusão no backend de `300px` para `195px`. Ajustado o CSS `.complete-compact .download-window-content` de `flex: 1` para `flex: 0 0 auto` para impedir o esticamento e remover o grande espaço vazio restante, deixando a janela perfeitamente ajustada.
 - **Botões Ajustados:** Com a diminuição da altura dos botões inferiores para `32px`, todos os elementos de ação ("Abrir arquivo", "Abrir pasta" e "Fechar") agora cabem com bastante folga na janela e não são cortados.
 
 ### 9. Duplo Clique Inteligente na Lista de Downloads
-- **Modificado:** [DownloadsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/DownloadsPage.tsx) e [downloadService.ts](file:///C:/Users/skell/Documents/Projeto/src/services/downloadService.ts)
+- **Modificado:** [DownloadsPage.tsx](../src/pages/DownloadsPage.tsx) e [downloadService.ts](../src/services/downloadService.ts)
 - **Melhoria:** Ao dar duplo clique em um item da lista:
   - Se o download estiver **concluído** (`completed`), abre diretamente a tela de conclusão de download (`CompletePage`).
   - Para qualquer outro status, abre a janela de progresso/detalhes correspondente.

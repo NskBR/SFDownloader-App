@@ -1,32 +1,25 @@
 use crate::database::{
-    models::{CreateDownloadInput, DownloadStatus, DownloadTask, UpdateDownloadInput},
-    repositories::{
-        chunks, downloads,
-        history::{self, CreateHistory},
-        metrics, statistics,
-    },
+    models::{DownloadStatus, DownloadTask, UpdateDownloadInput},
+    repositories::{chunks, downloads},
     Database,
 };
+use crate::download::retry::{retry_delay, AdaptiveThrottle, MAX_CHUNK_ATTEMPTS};
 use crate::download::runtime::TaskControl;
 use futures_util::StreamExt;
-use reqwest::{header, header::HeaderMap, Client, Response, Url};
+use reqwest::{header, header::HeaderMap, Client, Response};
 use serde::Serialize;
 use std::{
     collections::VecDeque,
     path::{Path, PathBuf},
     sync::{
-        atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicI64, AtomicU64, Ordering},
         Arc, Mutex as StdMutex,
     },
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant},
 };
 
-pub const DEFAULT_USER_AGENT: &str =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-
-const MAX_CHUNK_ATTEMPTS: usize = 8;
-const UI_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
-const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
+pub(crate) const UI_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
+pub(crate) const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
 const CHUNK_PERSIST_INTERVAL: Duration = Duration::from_secs(2);
 
 fn claim_interval(gate: &AtomicU64, elapsed: Duration, interval: Duration) -> bool {
@@ -44,74 +37,11 @@ fn claim_interval(gate: &AtomicU64, elapsed: Duration, interval: Duration) -> bo
     }
 }
 
-#[derive(Clone)]
-struct AdaptiveThrottle {
-    permits: Arc<Semaphore>,
-    concurrency: Arc<AtomicUsize>,
-    max_concurrency: usize,
-    cooldown_until: Arc<StdMutex<Instant>>,
-    last_recovery: Arc<StdMutex<Instant>>,
-    fallback_lock: Arc<AsyncMutex<()>>,
-}
-
-impl AdaptiveThrottle {
-    fn new(connections: usize) -> Self {
-        let connections = connections.clamp(1, 32);
-        Self {
-            permits: Arc::new(Semaphore::new(connections)),
-            concurrency: Arc::new(AtomicUsize::new(connections)),
-            max_concurrency: connections,
-            cooldown_until: Arc::new(StdMutex::new(Instant::now())),
-            last_recovery: Arc::new(StdMutex::new(Instant::now())),
-            fallback_lock: Arc::new(AsyncMutex::new(())),
-        }
-    }
-
-    async fn wait(&self) {
-        let until = self
-            .cooldown_until
-            .lock()
-            .map(|value| *value)
-            .unwrap_or_else(|_| Instant::now());
-        if until > Instant::now() {
-            tokio::time::sleep_until(tokio::time::Instant::from_std(until)).await;
-        }
-        let current = self.concurrency.load(Ordering::SeqCst);
-        if current < self.max_concurrency {
-            if let Ok(mut last) = self.last_recovery.lock() {
-                if last.elapsed() >= Duration::from_secs(5)
-                    && self
-                        .concurrency
-                        .compare_exchange(current, current + 1, Ordering::SeqCst, Ordering::SeqCst)
-                        .is_ok()
-                {
-                    self.permits.add_permits(1);
-                    *last = Instant::now();
-                }
-            }
-        }
-    }
-
-    fn limit(&self, delay: Duration) {
-        if let Ok(mut until) = self.cooldown_until.lock() {
-            *until = (*until).max(Instant::now() + delay);
-        }
-        let current = self.concurrency.load(Ordering::SeqCst);
-        let target = (current / 2).max(1);
-        let removed = self.permits.forget_permits(current.saturating_sub(target));
-        if removed > 0 {
-            self.concurrency.fetch_sub(removed, Ordering::SeqCst);
-            if let Ok(mut last) = self.last_recovery.lock() {
-                *last = Instant::now();
-            }
-        }
-    }
-}
 use tauri::{AppHandle, Emitter};
 use tokio::{
     fs::{File, OpenOptions},
     io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
-    sync::{Mutex as AsyncMutex, Semaphore},
+    sync::Mutex as AsyncMutex,
 };
 
 #[derive(Debug, Serialize, Clone)]
@@ -125,245 +55,9 @@ pub struct DownloadProgress {
     pub error: Option<String>,
 }
 
-pub struct PreparedDownload {
-    pub input: CreateDownloadInput,
-    pub response: Option<Response>,
-}
-
-pub async fn prepare_with_headers(
-    taken_paths: Vec<String>,
-    url: &str,
-    root: &str,
-    auto_organize: bool,
-    selected_category: Option<&str>,
-    request_headers: HeaderMap,
-    max_connections: usize,
-    max_parallel_downloads: usize,
-    speed_limit_download: u64,
-    resume_support: bool,
-    delete_archive_after_extract: bool,
-) -> Result<PreparedDownload, String> {
-    if root.trim().is_empty() {
-        return Err("Configure uma pasta principal antes de baixar.".into());
-    }
-
-    if url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent") {
-        let torrent_manager = crate::download::torrent::get_torrent_manager();
-        let meta = torrent_manager.parse_torrent(url).await.ok();
-
-        let raw_name = meta.as_ref().and_then(|m| m.name()).unwrap_or("Torrent Download");
-        let file_name = safe_file_name(raw_name);
-        let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty()) {
-            let category = category.trim();
-            if !valid_category_name(category) {
-                return Err("A categoria selecionada possui um nome inválido.".into());
-            }
-            PathBuf::from(root).join(category)
-        } else if auto_organize {
-            PathBuf::from(root).join("Torrents")
-        } else {
-            PathBuf::from(root)
-        };
-        tokio::fs::create_dir_all(&folder).await.map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
-
-        let temp_folder = folder.join(".sf-temp");
-        tokio::fs::create_dir_all(&temp_folder).await.map_err(|error| format!("Não foi possível criar a pasta temporária: {error}"))?;
-
-        let final_path = available_path(&folder, &file_name, &taken_paths);
-        let temp_name = final_path.file_name().and_then(|v| v.to_str()).unwrap_or(&file_name);
-        let temp_path = temp_folder.join(format!("{}.part", temp_name));
-
-        let total_size = meta.as_ref().and_then(|m| m.total_size()).map(|s| s as i64);
-        let info_hash = meta.as_ref().map(|m| m.info_hash().to_string());
-
-        return Ok(PreparedDownload {
-            input: CreateDownloadInput {
-                file_name,
-                file_size: total_size,
-                original_url: url.to_owned(),
-                save_path: folder.to_string_lossy().into_owned(),
-                temp_path: temp_path.to_string_lossy().into_owned(),
-                final_path: final_path.to_string_lossy().into_owned(),
-                mime_type: Some("application/x-bittorrent".into()),
-                extension: Some("torrent".into()),
-                supports_range: false,
-                max_connections: 1,
-                max_parallel_downloads: max_parallel_downloads.clamp(1, 50) as i64,
-                speed_limit_download: speed_limit_download.min(i64::MAX as u64) as i64,
-                etag: None,
-                last_modified: None,
-                delete_archive_after_extract: false,
-                download_type: "torrent".into(),
-                info_hash,
-            },
-            response: None,
-        });
-    }
-
-    if url.starts_with("magnet:") {
-        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] Tentativa de enviar magnet link para cliente HTTP! url='{}'", url);
-        return Err("Magnet links não utilizam cliente HTTP.".into());
-    }
-
-    let parsed = Url::parse(url).map_err(|_| "A URL informada é inválida.".to_string())?;
-    if !matches!(parsed.scheme(), "http" | "https") {
-        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] URL não HTTP/HTTPS recebida no cliente HTTP: '{}'", url);
-        return Err("Apenas URLs HTTP ou HTTPS são permitidas.".into());
-    }
-    let client = Client::builder()
-        .user_agent(DEFAULT_USER_AGENT)
-        .redirect(reqwest::redirect::Policy::limited(10))
-        .build()
-        .map_err(|error| format!("Falha ao preparar conexão: {error}"))?;
-    let response = client
-        .get(parsed.clone())
-        .headers(request_headers.clone())
-        .send()
-        .await
-        .map_err(|error| {
-            crate::commands::debug::log_error(
-                "download",
-                &format!("Falha ao conectar na URL: {error}"),
-                Some(error.to_string()),
-                Some(url.to_string()),
-                None,
-                None,
-            );
-            format!("Falha ao conectar ao servidor: {error}")
-        })?;
-    if !response.status().is_success() {
-        crate::commands::debug::log_error(
-            "download",
-            &format!("Servidor respondeu com erro HTTP {}", response.status()),
-            Some(format!("HTTP Status: {}", response.status())),
-            Some(url.to_string()),
-            None,
-            None,
-        );
-        return Err(format!(
-            "O servidor respondeu com HTTP {}.",
-            response.status()
-        ));
-    }
-    let file_name = safe_file_name({
-        let disposition_name = response
-            .headers()
-            .get(header::CONTENT_DISPOSITION)
-            .and_then(|value| value.to_str().ok())
-            .and_then(parse_filename_from_content_disposition);
-        if let Some(name) = disposition_name {
-            name
-        } else {
-            extract_filename_from_url_path(response.url())
-                .or_else(|| extract_filename_from_url_path(&parsed))
-                .unwrap_or_else(|| "download.bin".into())
-        }
-    });
-    let extension = Path::new(&file_name)
-        .extension()
-        .and_then(|value| value.to_str())
-        .map(|value| value.to_lowercase());
-    let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty())
-    {
-        let category = category.trim();
-        if !valid_category_name(category) {
-            return Err("A categoria selecionada possui um nome inválido.".into());
-        }
-        PathBuf::from(root).join(category)
-    } else if auto_organize {
-        PathBuf::from(root).join(category_for_extension(extension.as_deref()))
-    } else {
-        PathBuf::from(root)
-    };
-    tokio::fs::create_dir_all(&folder)
-        .await
-        .map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
-
-    // Create the hidden temporary folder inside the target folder
-    let temp_folder = folder.join(".sf-temp");
-    tokio::fs::create_dir_all(&temp_folder)
-        .await
-        .map_err(|error| format!("Não foi possível criar a pasta temporária: {error}"))?;
-
-    let final_path = available_path(&folder, &file_name, &taken_paths);
-    let temp_name = final_path
-        .file_name()
-        .and_then(|v| v.to_str())
-        .unwrap_or(&file_name);
-    let temp_path = temp_folder.join(format!("{}.part", temp_name));
-
-    let size = response
-        .content_length()
-        .and_then(|value| i64::try_from(value).ok());
-    let mime_type = response
-        .headers()
-        .get(header::CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let etag = response
-        .headers()
-        .get(header::ETAG)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let last_modified = response
-        .headers()
-        .get(header::LAST_MODIFIED)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let mut supports_range = response
-        .headers()
-        .get(header::ACCEPT_RANGES)
-        .and_then(|value| value.to_str().ok())
-        .is_some_and(|value| value.eq_ignore_ascii_case("bytes"));
-    if !supports_range && size.is_some_and(|value| value >= 2 * 1024 * 1024) {
-        supports_range = client
-            .get(parsed.clone())
-            .headers(request_headers.clone())
-            .header(header::RANGE, "bytes=0-0")
-            .send()
-            .await
-            .is_ok_and(|probe| probe.status() == reqwest::StatusCode::PARTIAL_CONTENT);
-    }
-
-    // Force supports_range to false if the user disabled resume support
-    if !resume_support {
-        supports_range = false;
-    }
-
-    Ok(PreparedDownload {
-        input: CreateDownloadInput {
-            file_name,
-            file_size: size,
-            original_url: url.to_owned(),
-            save_path: folder.to_string_lossy().into_owned(),
-            temp_path: temp_path.to_string_lossy().into_owned(),
-            final_path: final_path.to_string_lossy().into_owned(),
-            mime_type,
-            extension,
-            supports_range,
-            max_connections: max_connections.clamp(1, 32) as i64,
-            max_parallel_downloads: max_parallel_downloads.clamp(1, 50) as i64,
-            speed_limit_download: speed_limit_download.min(i64::MAX as u64) as i64,
-            etag,
-            last_modified,
-            delete_archive_after_extract,
-            download_type: "http".into(),
-            info_hash: None,
-        },
-        response: Some(response),
-    })
-}
-
-fn valid_category_name(name: &str) -> bool {
-    name != "."
-        && name != ".."
-        && !name.chars().any(|character| {
-            matches!(
-                character,
-                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
-            ) || character.is_control()
-        })
-}
+pub use crate::download::preparation::{prepare_with_headers, DEFAULT_USER_AGENT};
+pub use crate::download::segmented::run_segmented;
+pub use crate::download::simple::run;
 
 pub async fn prepare_resume(
     task: &DownloadTask,
@@ -371,7 +65,14 @@ pub async fn prepare_resume(
     request_headers: HeaderMap,
 ) -> Result<(Response, i64), String> {
     if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
-        println!("[MAGNET_ROUTED_TO_HTTP_ERROR] Tentativa de enviar torrent para cliente HTTP em prepare_resume! url='{}'", task.original_url);
+        crate::commands::debug::log_warn(
+            "download",
+            "Um torrent foi encaminhado indevidamente ao cliente HTTP e foi bloqueado.",
+            None,
+            None,
+            Some(task.id.clone()),
+            None,
+        );
         return Err("Torrents não utilizam cliente HTTP.".into());
     }
 
@@ -435,173 +136,26 @@ pub async fn prepare_resume(
     Ok((response, offset))
 }
 
-pub async fn run(
-    app: AppHandle,
-    database: Database,
-    task: DownloadTask,
-    response: Response,
-    control: TaskControl,
-    offset: i64,
-) {
-    let started = Instant::now();
-    let result = transfer(&app, &database, &task, response, &control, started, offset).await;
-    if let Err(error) = result {
-        let paused = control.was_paused();
-        let cancelled = control.was_cancelled();
-        let status = if paused {
-            DownloadStatus::Paused
-        } else if cancelled {
-            DownloadStatus::Cancelled
-        } else {
-            DownloadStatus::Failed
-        };
-        let (mut downloaded, average) = database
-            .connect()
-            .ok()
-            .and_then(|connection| downloads::find(&connection, &task.id).ok().flatten())
-            .map(|current| (current.total_downloaded, current.speed_average))
-            .unwrap_or((0, 0.0));
-        downloaded = downloaded.max(
-            tokio::fs::metadata(&task.temp_path)
-                .await
-                .ok()
-                .and_then(|metadata| i64::try_from(metadata.len()).ok())
-                .unwrap_or(0),
-        );
-        let observed_downloaded = downloaded;
-        if cancelled && control.should_delete_files() {
-            cleanup_partial(&database, &task).await;
-            downloaded = 0;
-        }
-        update_state(
-            &database,
-            &task.id,
-            status.clone(),
-            downloaded,
-            0.0,
-            average,
-        );
-        if !paused {
-            record_usage(
-                &database,
-                &task,
-                observed_downloaded,
-                0,
-                observed_downloaded,
-                average,
-                status.as_str(),
-            );
-            record_metrics(&database, observed_downloaded, observed_downloaded, 0, status.as_str(), started.elapsed().as_millis() as i64);
-            record_history(
-                &database,
-                &task,
-                status.as_str(),
-                started.elapsed(),
-                average,
-            );
-        }
-        let _ = app.emit(
-            "download-progress",
-            DownloadProgress {
-                id: task.id,
-                downloaded,
-                total: task.file_size,
-                speed: 0.0,
-                status,
-                error: if paused || cancelled {
-                    None
-                } else {
-                    Some(error)
-                },
-            },
-        );
-    }
-}
-
-pub async fn run_segmented(
-    app: AppHandle,
-    database: Database,
-    task: DownloadTask,
-    max_connections: usize,
-    control: TaskControl,
-    request_headers: HeaderMap,
-) {
-    let started = Instant::now();
-    if let Err(error) = transfer_segmented(
-        &app,
-        &database,
-        &task,
-        max_connections,
-        &control,
-        started,
-        request_headers,
-    )
-    .await
+pub(crate) async fn cleanup_partial(database: &Database, task: &DownloadTask) {
+    let root = Path::new(&task.save_path);
+    if let Ok(path) =
+        crate::download::paths::validate_destructive_path(root, Path::new(&task.temp_path))
     {
-        let paused = control.was_paused();
-        let cancelled = control.was_cancelled();
-        let status = if paused {
-            DownloadStatus::Paused
-        } else if cancelled {
-            DownloadStatus::Cancelled
-        } else {
-            DownloadStatus::Failed
-        };
-        let mut downloaded = database
-            .connect()
-            .ok()
-            .and_then(|connection| chunks::list(&connection, &task.id).ok())
-            .map(|items| items.iter().map(|chunk| chunk.downloaded_bytes).sum())
-            .unwrap_or(0);
-        let observed_downloaded = downloaded;
-        if cancelled && control.should_delete_files() {
-            cleanup_partial(&database, &task).await;
-            downloaded = 0;
-        }
-        update_state(&database, &task.id, status.clone(), downloaded, 0.0, 0.0);
-        if !paused {
-            record_usage(
-                &database,
-                &task,
-                observed_downloaded,
-                0,
-                observed_downloaded,
-                0.0,
-                status.as_str(),
-            );
-            record_metrics(&database, observed_downloaded, observed_downloaded, 0, status.as_str(), started.elapsed().as_millis() as i64);
-            record_history(&database, &task, status.as_str(), started.elapsed(), 0.0);
-        }
-        let _ = app.emit(
-            "download-progress",
-            DownloadProgress {
-                id: task.id,
-                downloaded,
-                total: task.file_size,
-                speed: 0.0,
-                status,
-                error: if paused || cancelled {
-                    None
-                } else {
-                    Some(error)
-                },
-            },
-        );
+        let _ = tokio::fs::remove_file(path).await;
     }
-}
-
-async fn cleanup_partial(database: &Database, task: &DownloadTask) {
-    let _ = tokio::fs::remove_file(&task.temp_path).await;
     if let Ok(connection) = database.connect() {
         if let Ok(plan) = chunks::list(&connection, &task.id) {
             for chunk in plan {
-                let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
+                let chunk = chunk_path(&task.temp_path, chunk.index);
+                if let Ok(path) = crate::download::paths::validate_destructive_path(root, &chunk) {
+                    let _ = tokio::fs::remove_file(path).await;
+                }
             }
         }
     }
 }
 
-async fn transfer_segmented(
+pub(crate) async fn transfer_segmented(
     app: &AppHandle,
     database: &Database,
     task: &DownloadTask,
@@ -692,7 +246,11 @@ async fn transfer_segmented(
     part.sync_data().await.map_err(|error| error.to_string())?;
     drop(part);
     for path in migrated_paths {
-        let _ = tokio::fs::remove_file(path).await;
+        if let Ok(path) =
+            crate::download::paths::validate_destructive_path(Path::new(&task.save_path), &path)
+        {
+            let _ = tokio::fs::remove_file(path).await;
+        }
     }
     drop(connection);
     update_state(
@@ -786,7 +344,11 @@ async fn transfer_segmented(
     }
     let failure = first_error.lock().ok().and_then(|mut error| error.take());
     if let Some(error) = failure {
-        if error.contains("recusou HTTP Range") && downloaded.load(Ordering::SeqCst) == 0 && !control.was_cancelled() && !control.was_paused() {
+        if error.contains("recusou HTTP Range")
+            && downloaded.load(Ordering::SeqCst) == 0
+            && !control.was_cancelled()
+            && !control.was_paused()
+        {
             let response = client
                 .get(&task.current_url)
                 .headers(minimal_range_headers(&request_headers))
@@ -805,8 +367,19 @@ async fn transfer_segmented(
                 let _ = chunks::delete_plan(&connection, &task.id);
             }
             let fallback_control = TaskControl::new();
-            fallback_control.set_speed_limit(task.speed_limit_download).await;
-            return transfer(app, database, task, response, &fallback_control, started, 0).await;
+            fallback_control
+                .set_speed_limit(task.speed_limit_download)
+                .await;
+            return crate::download::simple::transfer(
+                app,
+                database,
+                task,
+                response,
+                &fallback_control,
+                started,
+                0,
+            )
+            .await;
         }
         return Err(error);
     }
@@ -854,17 +427,27 @@ async fn transfer_segmented(
         .map_err(|error| error.to_string())?;
     output.sync_all().await.map_err(|error| error.to_string())?;
     drop(output);
-    tokio::fs::rename(&task.temp_path, &task.final_path)
+    let root = Path::new(&task.save_path);
+    let temp_path =
+        crate::download::paths::validate_destructive_path(root, Path::new(&task.temp_path))?;
+    let final_path =
+        crate::download::paths::validate_destructive_path(root, Path::new(&task.final_path))?;
+    tokio::fs::rename(&temp_path, &final_path)
         .await
         .map_err(|error| error.to_string())?;
     let (disk_read, extracted_written) =
         run_auto_extraction(app, database, task, task.delete_archive_after_extract).await;
     for chunk in &plan {
-        let _ = tokio::fs::remove_file(chunk_path(&task.temp_path, chunk.index)).await;
+        let chunk = chunk_path(&task.temp_path, chunk.index);
+        if let Ok(path) = crate::download::paths::validate_destructive_path(root, &chunk) {
+            let _ = tokio::fs::remove_file(path).await;
+        }
     }
     // Attempt to remove the temporary .sf-temp folder if it's empty
     if let Some(temp_folder) = Path::new(&task.temp_path).parent() {
-        let _ = tokio::fs::remove_dir(temp_folder).await;
+        if let Ok(path) = crate::download::paths::validate_destructive_path(root, temp_folder) {
+            let _ = tokio::fs::remove_dir(path).await;
+        }
     }
     let elapsed = started.elapsed();
     let speed = (total - initial).max(0) as f64 / elapsed.as_secs_f64().max(0.001);
@@ -885,7 +468,14 @@ async fn transfer_segmented(
         speed,
         "completed",
     );
-    record_metrics(database, total, total.saturating_add(extracted_written), extracted_written, "completed", elapsed.as_millis() as i64);
+    record_metrics(
+        database,
+        total,
+        total.saturating_add(extracted_written),
+        extracted_written,
+        "completed",
+        elapsed.as_millis() as i64,
+    );
     record_history(database, task, "completed", elapsed, speed);
     let _ = app.emit(
         "download-progress",
@@ -902,10 +492,11 @@ async fn transfer_segmented(
     if let Some(window) = tauri::Manager::get_webview_window(app, &progress_label) {
         let _ = window.close();
     }
-    let _ = crate::commands::transfer::open_complete_window(app.clone(), task.id.clone()).await;
+    let _ = crate::commands::windows::open_complete_window(app.clone(), task.id.clone()).await;
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn download_piece(
     client: Client,
     database: Database,
@@ -1083,25 +674,6 @@ fn adaptive_chunk_count(total: i64, connections: usize) -> usize {
         .max(2)
 }
 
-fn retry_delay(response: Option<&Response>, attempt: usize, chunk_index: i64) -> Duration {
-    if let Some(value) = response
-        .and_then(|response| response.headers().get(header::RETRY_AFTER))
-        .and_then(|value| value.to_str().ok())
-    {
-        if let Ok(seconds) = value.trim().parse::<u64>() {
-            return Duration::from_secs(seconds.clamp(1, 120));
-        }
-        if let Ok(date) = httpdate::parse_http_date(value) {
-            if let Ok(delay) = date.duration_since(SystemTime::now()) {
-                return delay.clamp(Duration::from_secs(1), Duration::from_secs(120));
-            }
-        }
-    }
-    let exponential = 1_u64 << attempt.min(5);
-    let jitter = ((chunk_index.unsigned_abs() + attempt as u64 * 17) % 700) + 100;
-    Duration::from_millis(exponential * 500 + jitter)
-}
-
 fn parse_content_range(value: &str) -> Option<(i64, i64, i64)> {
     let range = value.trim().strip_prefix("bytes ")?;
     let (bounds, total) = range.split_once('/')?;
@@ -1214,448 +786,216 @@ async fn migrate_legacy_chunk(
     Ok(())
 }
 
-async fn transfer(
-    app: &AppHandle,
-    database: &Database,
-    task: &DownloadTask,
-    response: Response,
-    control: &TaskControl,
-    started: Instant,
-    offset: i64,
-) -> Result<(), String> {
-    let mut file = if offset > 0 {
-        OpenOptions::new().append(true).open(&task.temp_path).await
-    } else {
-        File::create(&task.temp_path).await
-    }
-    .map_err(|error| format!("Não foi possível abrir o arquivo parcial: {error}"))?;
-    let mut stream = response.bytes_stream();
-    let mut downloaded = offset;
-    let mut last_persist = Instant::now();
-    let mut last_ui_update = Instant::now();
-    update_state(
-        database,
-        &task.id,
-        DownloadStatus::Downloading,
-        offset,
-        0.0,
-        task.speed_average,
-    );
-    loop {
-        let next = tokio::select! {
-            _ = control.cancellation.cancelled() => return Err("Download interrompido pelo usuário.".into()),
-            next = stream.next() => next,
-        };
-        let Some(chunk) = next else { break };
-        let bytes = chunk.map_err(|error| format!("Falha durante a transferência: {error}"))?;
-        file.write_all(&bytes)
-            .await
-            .map_err(|error| format!("Falha ao gravar o arquivo: {error}"))?;
-        control.throttle(bytes.len()).await;
-        downloaded += i64::try_from(bytes.len()).unwrap_or(0);
-        let elapsed = started.elapsed().as_secs_f64().max(0.001);
-        let speed = (downloaded - offset) as f64 / elapsed;
-        if last_persist.elapsed() >= PERSIST_INTERVAL {
-            update_state(
-                database,
-                &task.id,
-                DownloadStatus::Downloading,
-                downloaded,
-                speed,
-                speed,
-            );
-            last_persist = Instant::now();
-        }
-        if last_ui_update.elapsed() >= UI_UPDATE_INTERVAL {
-            let _ = app.emit(
-                "download-progress",
-                DownloadProgress {
-                    id: task.id.clone(),
-                    downloaded,
-                    total: task.file_size,
-                    speed,
-                    status: DownloadStatus::Downloading,
-                    error: None,
-                },
-            );
-            last_ui_update = Instant::now();
-        }
-    }
-    update_state(
-        database,
-        &task.id,
-        DownloadStatus::Assembling,
-        downloaded,
-        0.0,
-        task.speed_average,
-    );
-    let _ = app.emit(
-        "download-progress",
-        DownloadProgress {
-            id: task.id.clone(),
-            downloaded,
-            total: task.file_size.or(Some(downloaded)),
-            speed: 0.0,
-            status: DownloadStatus::Assembling,
-            error: None,
-        },
-    );
-    file.flush()
-        .await
-        .map_err(|error| format!("Falha ao finalizar o arquivo: {error}"))?;
-    drop(file);
-    tokio::fs::rename(&task.temp_path, &task.final_path)
-        .await
-        .map_err(|error| format!("Falha ao mover o arquivo concluído: {error}"))?;
-    let (disk_read, extracted_written) =
-        run_auto_extraction(app, database, task, task.delete_archive_after_extract).await;
-    // Attempt to remove the temporary .sf-temp folder if it's empty
-    if let Some(temp_folder) = Path::new(&task.temp_path).parent() {
-        let _ = tokio::fs::remove_dir(temp_folder).await;
-    }
-    let elapsed = started.elapsed();
-    let average = (downloaded - offset) as f64 / elapsed.as_secs_f64().max(0.001);
-    update_state(
-        database,
-        &task.id,
-        DownloadStatus::Completed,
-        downloaded,
-        0.0,
-        average,
-    );
-    record_usage(
-        database,
-        task,
-        downloaded,
-        disk_read,
-        downloaded.saturating_add(extracted_written),
-        average,
-        "completed",
-    );
-    record_metrics(database, downloaded, downloaded.saturating_add(extracted_written), extracted_written, "completed", elapsed.as_millis() as i64);
-    record_history(database, task, "completed", elapsed, average);
-    let _ = app.emit(
-        "download-progress",
-        DownloadProgress {
-            id: task.id.clone(),
-            downloaded,
-            total: task.file_size.or(Some(downloaded)),
-            speed: 0.0,
-            status: DownloadStatus::Completed,
-            error: None,
-        },
-    );
-    let progress_label = format!("download-progress-{}", task.id);
-    if let Some(window) = tauri::Manager::get_webview_window(app, &progress_label) {
-        let _ = window.close();
-    }
-    let _ = crate::commands::transfer::open_complete_window(app.clone(), task.id.clone()).await;
-    Ok(())
-}
-
-async fn run_auto_extraction(
-    app: &AppHandle,
-    database: &Database,
-    task: &DownloadTask,
-    delete_archive: bool,
-) -> (i64, i64) {
-    let Some(password) = crate::download::extraction::take(&task.id) else {
-        return (0, 0);
-    };
-    update_state(
-        database,
-        &task.id,
-        DownloadStatus::Extracting,
-        task.file_size.unwrap_or(task.total_downloaded),
-        0.0,
-        task.speed_average,
-    );
-    let _ = app.emit(
-        "download-progress",
-        DownloadProgress {
-            id: task.id.clone(),
-            downloaded: task.file_size.unwrap_or(task.total_downloaded),
-            total: task.file_size,
-            speed: 0.0,
-            status: DownloadStatus::Extracting,
-            error: None,
-        },
-    );
-    let extraction_result =
-        crate::download::extraction::extract_archive(task.final_path.clone(), password).await;
-    let result = match &extraction_result {
-        Ok(path) => {
-            if delete_archive {
-                let _ = tokio::fs::remove_file(&task.final_path).await;
-            }
-            format!("Extração concluída em {}", path.display())
-        }
-        Err(error) => format!("Erro na extração: {error}"),
-    };
-    crate::download::extraction::save_result(&task.id, result);
-    let disk_read = tokio::fs::metadata(&task.final_path)
-        .await
-        .ok()
-        .and_then(|metadata| i64::try_from(metadata.len()).ok())
-        .unwrap_or(0);
-    let extracted_written = i64::try_from(crate::download::extraction::take_extracted_size(
-        &task.final_path,
-    ))
-    .unwrap_or(i64::MAX);
-    (disk_read, extracted_written)
-}
-
-fn record_usage(
-    database: &Database,
-    task: &DownloadTask,
-    network_bytes: i64,
-    disk_read_bytes: i64,
-    disk_written_bytes: i64,
-    average_speed: f64,
-    status: &str,
-) {
-    if let Ok(mut connection) = database.connect() {
-        let _ = statistics::record_snapshot(
-            &mut connection,
-            &task.id,
-            &task.file_name,
-            network_bytes,
-            disk_read_bytes,
-            disk_written_bytes,
-            average_speed,
-            status,
-        );
-    }
-}
-
-fn update_state(
-    database: &Database,
-    id: &str,
-    status: DownloadStatus,
-    downloaded: i64,
-    current: f64,
-    average: f64,
-) {
-    if let Ok(connection) = database.connect() {
-        let _ = downloads::update_progress(
-            &connection,
-            &UpdateDownloadInput {
-                id: id.to_owned(),
-                status,
-                total_downloaded: downloaded,
-                speed_current: current,
-                speed_average: average,
-                seeds: None,
-                peers: None,
-                upload_speed: None,
-                total_uploaded: None,
-            },
-        );
-    }
-}
-
-fn record_metrics(
-    database: &Database,
-    network_bytes: i64,
-    disk_written_bytes: i64,
-    extracted_bytes: i64,
-    status: &str,
-    duration_ms: i64,
-) {
-    if let Ok(connection) = database.connect() {
-        let _ = metrics::record(
-            &connection,
-            network_bytes,
-            disk_written_bytes,
-            extracted_bytes,
-            status,
-            duration_ms,
-        );
-    }
-}
-
-fn record_history(
-    database: &Database,
-    task: &DownloadTask,
-    status: &str,
-    duration: Duration,
-    average: f64,
-) {
-    if let Ok(connection) = database.connect() {
-        let _ = history::create(
-            &connection,
-            CreateHistory {
-                file_name: &task.file_name,
-                file_size: task.file_size,
-                status,
-                source_url: &task.original_url,
-                path: &task.final_path,
-                duration_seconds: duration.as_secs() as i64,
-                average_speed: average,
-            },
-        );
-    }
-}
-
-fn url_decode_engine(input: &str) -> String {
-    let mut bytes = Vec::new();
-    let input_bytes = input.as_bytes();
-    let mut i = 0;
-    while i < input_bytes.len() {
-        if input_bytes[i] == b'%' && i + 2 < input_bytes.len() {
-            if let Ok(b) = u8::from_str_radix(
-                std::str::from_utf8(&input_bytes[i + 1..i + 3]).unwrap_or(""),
-                16,
-            ) {
-                bytes.push(b);
-                i += 3;
-                continue;
-            }
-        }
-        if input_bytes[i] == b'+' {
-            bytes.push(b' ');
-        } else {
-            bytes.push(input_bytes[i]);
-        }
-        i += 1;
-    }
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-fn parse_filename_from_content_disposition(header_val: &str) -> Option<String> {
-    // Try filename*= first (RFC 5987)
-    for part in header_val.split(';') {
-        let trimmed = part.trim();
-        if let Some(rest) = trimmed.strip_prefix("filename*=") {
-            let clean = rest.trim_matches(['"', '\'']);
-            let encoded = if let Some((_, val)) = clean.split_once("''") {
-                val
-            } else {
-                clean
-            };
-            let decoded = url_decode_engine(encoded);
-            let name = decoded.trim();
-            if !name.is_empty() {
-                return Some(name.to_string());
-            }
-        }
-    }
-    // Fall back to filename=
-    for part in header_val.split(';') {
-        let trimmed = part.trim();
-        if let Some(rest) = trimmed.strip_prefix("filename=") {
-            let clean = rest.trim_matches(['"', '\'']);
-            let name = clean.trim();
-            if !name.is_empty() {
-                return Some(name.to_string());
-            }
-        }
-    }
-    None
-}
-
-fn extract_filename_from_url_path(url: &Url) -> Option<String> {
-    let segments: Vec<&str> = url.path_segments()?.filter(|s| !s.is_empty()).collect();
-    for segment in segments.into_iter().rev() {
-        let clean = segment.split('?').next().unwrap_or(segment);
-        let decoded = url_decode_engine(clean);
-        let trimmed = decoded.trim().to_string();
-        let lower = trimmed.to_lowercase();
-        if matches!(
-            lower.as_str(),
-            "download" | "resolve" | "main" | "master" | "raw" | "blob" | "files"
-        ) {
-            continue;
-        }
-        if trimmed.contains('.') && !trimmed.ends_with('.') {
-            return Some(trimmed);
-        }
-    }
-    None
-}
-
-fn safe_file_name(value: impl AsRef<str>) -> String {
-    let cleaned: String = value
-        .as_ref()
-        .chars()
-        .map(|character| {
-            if "<>:\"/\\|?*".contains(character) || character.is_control() {
-                '_'
-            } else {
-                character
-            }
-        })
-        .collect();
-    let cleaned = cleaned.trim_matches([' ', '.']);
-    if cleaned.is_empty() {
-        "download.bin".into()
-    } else {
-        cleaned.chars().take(180).collect()
-    }
-}
-fn category_for_extension(extension: Option<&str>) -> &'static str {
-    let clean_ext = extension.unwrap_or("").trim().to_lowercase();
-    match clean_ext.as_str() {
-        "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "ico" | "svg" | "tiff" | "heic" => "Imagens",
-        "mp4" | "mkv" | "mov" | "avi" | "webm" | "flv" | "wmv" | "m4v" | "3gp" | "ts" => "Vídeos",
-        "mp3" | "wav" | "flac" | "ogg" | "m4a" | "aac" | "wma" | "opus" | "alac" => "Áudios",
-        "pdf" | "docx" | "xlsx" | "pptx" | "txt" | "doc" | "xls" | "ppt" | "csv" | "rtf" | "odt" | "epub" => "Documentos",
-        "zip" | "rar" | "7z" | "tar" | "gz" | "tgz" | "bz2" | "xz" | "cab" | "img" | "dmg" | "z01" | "z02" | "r00" | "r01" | "001" => "Compactados",
-        "safetensors" | "ckpt" | "gguf" | "pt" | "pth" | "onnx" | "tflite" | "h5" | "pb"
-        | "keras" | "model" | "mlmodel" | "safetensor" | "sft" | "ggml" | "ot" | "tensor"
-        | "weights" | "lora" => "Modelos de IA",
-        "exe" | "msi" | "apk" | "bat" | "cmd" | "ps1" | "appimage" | "deb" | "rpm" | "run"
-        | "bin" | "jar" | "vbs" | "wsf" | "com" | "gadget" | "sh" | "command" | "app" => "Aplicativos",
-        "torrent" => "Torrents",
-        _ => "Outros",
-    }
-}
-fn available_path(folder: &Path, file_name: &str, taken_paths: &[String]) -> PathBuf {
-    let original = folder.join(file_name);
-    let is_taken = |path: &Path| {
-        // Check if the file exists on disk
-        if path.exists() {
-            return true;
-        }
-        // Check if it's registered as an active download in the DB
-        if taken_paths.iter().any(|p| Path::new(p) == path) {
-            return true;
-        }
-        // Check if there's an active .part in .sf-temp (but NOT in cancelados/)
-        if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
-            let active_part = parent
-                .join(".sf-temp")
-                .join(format!("{}.part", name.to_string_lossy()));
-            if active_part.exists() {
-                return true;
-            }
-        }
-        false
-    };
-    if !is_taken(&original) {
-        return original;
-    }
-    let path = Path::new(file_name);
-    let stem = path
-        .file_stem()
-        .and_then(|value| value.to_str())
-        .unwrap_or("download");
-    let extension = path.extension().and_then(|value| value.to_str());
-    for index in 1..10_000 {
-        let candidate = match extension {
-            Some(ext) => folder.join(format!("{stem} ({index}).{ext}")),
-            None => folder.join(format!("{stem} ({index})")),
-        };
-        if !is_taken(&candidate) {
-            return candidate;
-        }
-    }
-    folder.join(format!("{}-{}", uuid::Uuid::new_v4(), file_name))
-}
+pub(crate) use crate::download::completion::{
+    record_history, record_metrics, record_usage, run_auto_extraction, update_state,
+};
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::download::paths::{category_for_extension, safe_file_name};
+    use axum::{
+        http::{header as axum_header, HeaderValue, StatusCode},
+        response::{IntoResponse, Redirect},
+        routing::get,
+        Router,
+    };
+    use tokio::{
+        io::AsyncWriteExt,
+        net::TcpListener,
+        task::JoinHandle,
+        time::{sleep, Duration},
+    };
+    const TEST_PAYLOAD: &[u8] = b"download-engine-integration-payload";
+    const RANGE_PROBE_SIZE: usize = 2 * 1024 * 1024;
+
+    async fn spawn_test_server(router: Router) -> (String, JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        (format!("http://{address}"), server)
+    }
+
+    async fn spawn_disconnect_server() -> (String, JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 64\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=truncated.bin\r\n\r\npartial-body").await.unwrap();
+            socket.shutdown().await.unwrap();
+            sleep(Duration::from_millis(100)).await;
+        });
+        (format!("http://{address}"), server)
+    }
+
+    fn temporary_download_root() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "sf-downloader-engine-test-{}",
+            uuid::Uuid::new_v4()
+        ))
+    }
+
+    async fn inspect_local_download(
+        url: &str,
+        root: &Path,
+    ) -> Result<crate::download::preparation::PreparedDownload, String> {
+        prepare_with_headers(
+            Vec::new(),
+            url,
+            &root.to_string_lossy(),
+            false,
+            None,
+            HeaderMap::new(),
+            4,
+            2,
+            0,
+            true,
+            false,
+        )
+        .await
+    }
+    async fn downloadable_file() -> impl IntoResponse {
+        (
+            [
+                (
+                    axum_header::CONTENT_DISPOSITION,
+                    HeaderValue::from_static(
+                        "attachment; filename*=UTF-8''relat%C3%B3rio-final.pdf",
+                    ),
+                ),
+                (
+                    axum_header::CONTENT_TYPE,
+                    HeaderValue::from_static("application/pdf"),
+                ),
+                (
+                    axum_header::ACCEPT_RANGES,
+                    HeaderValue::from_static("bytes"),
+                ),
+                (
+                    axum_header::ETAG,
+                    HeaderValue::from_static("\"local-etag\""),
+                ),
+                (
+                    axum_header::LAST_MODIFIED,
+                    HeaderValue::from_static("Wed, 21 Oct 2015 07:28:00 GMT"),
+                ),
+            ],
+            TEST_PAYLOAD,
+        )
+    }
+
+    async fn slow_download() -> axum::response::Response {
+        tokio::time::sleep(Duration::from_millis(25)).await;
+        downloadable_file().await.into_response()
+    }
+
+    async fn range_probe_file(headers: axum::http::HeaderMap) -> axum::response::Response {
+        if headers.contains_key(axum_header::RANGE) {
+            (
+                StatusCode::PARTIAL_CONTENT,
+                [
+                    (
+                        axum_header::CONTENT_RANGE,
+                        HeaderValue::from_static("bytes 0-0/2097152"),
+                    ),
+                    (axum_header::CONTENT_LENGTH, HeaderValue::from_static("1")),
+                ],
+                vec![b'x'],
+            )
+                .into_response()
+        } else {
+            (
+                [
+                    (
+                        axum_header::CONTENT_DISPOSITION,
+                        HeaderValue::from_static("attachment; filename=range-probe.bin"),
+                    ),
+                    (
+                        axum_header::CONTENT_TYPE,
+                        HeaderValue::from_static("application/octet-stream"),
+                    ),
+                ],
+                vec![b'x'; RANGE_PROBE_SIZE],
+            )
+                .into_response()
+        }
+    }
+
+    fn resume_response(
+        headers: axum::http::HeaderMap,
+        etag: &'static str,
+        last_modified: &'static str,
+    ) -> axum::response::Response {
+        if !headers
+            .get(axum_header::RANGE)
+            .is_some_and(|value| value == "bytes=4-")
+        {
+            return (StatusCode::OK, b"abcdefgh".to_vec()).into_response();
+        }
+        (
+            StatusCode::PARTIAL_CONTENT,
+            [
+                (
+                    axum_header::CONTENT_RANGE,
+                    HeaderValue::from_static("bytes 4-7/8"),
+                ),
+                (axum_header::CONTENT_LENGTH, HeaderValue::from_static("4")),
+                (axum_header::ETAG, HeaderValue::from_static(etag)),
+                (
+                    axum_header::LAST_MODIFIED,
+                    HeaderValue::from_static(last_modified),
+                ),
+            ],
+            b"efgh".to_vec(),
+        )
+            .into_response()
+    }
+
+    fn resume_task(url: &str, etag: Option<&str>, last_modified: Option<&str>) -> DownloadTask {
+        DownloadTask {
+            id: "resume-test".into(),
+            file_name: "resume.bin".into(),
+            file_size: Some(8),
+            original_url: url.into(),
+            current_url: url.into(),
+            save_path: String::new(),
+            temp_path: String::new(),
+            final_path: String::new(),
+            status: DownloadStatus::Paused,
+            mime_type: Some("application/octet-stream".into()),
+            extension: Some("bin".into()),
+            supports_range: true,
+            max_connections: 1,
+            max_parallel_downloads: 1,
+            speed_limit_download: 0,
+            speed_limit_inherited: false,
+            etag: etag.map(str::to_owned),
+            last_modified: last_modified.map(str::to_owned),
+            total_downloaded: 4,
+            speed_current: 0.0,
+            speed_average: 0.0,
+            created_at: String::new(),
+            updated_at: String::new(),
+            completed_at: None,
+            delete_archive_after_extract: false,
+            download_type: "http".into(),
+            info_hash: None,
+            seeds: 0,
+            peers: 0,
+            upload_speed: 0.0,
+            total_uploaded: 0,
+            priority: 1,
+            queue_order: 0,
+            scheduled_start_at: None,
+            daily_schedule_start_minute: None,
+            daily_schedule_end_minute: None,
+            scheduled_weekdays: 127,
+            pause_outside_schedule: false,
+            skip_schedule_once: false,
+            scheduled_last_started_at: None,
+            torrent_selected_file_indexes: vec![],
+        }
+    }
 
     #[test]
     fn sanitizes_server_file_names() {
@@ -1711,12 +1051,317 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn adaptive_throttle_recovers_after_provider_cooldown() {
-        let throttle = AdaptiveThrottle::new(4);
-        throttle.limit(Duration::ZERO);
-        assert_eq!(throttle.concurrency.load(Ordering::SeqCst), 2);
-        *throttle.last_recovery.lock().unwrap() = Instant::now() - Duration::from_secs(6);
-        throttle.wait().await;
-        assert_eq!(throttle.concurrency.load(Ordering::SeqCst), 3);
+    async fn inspect_download_uses_local_metadata_and_rfc5987_filename() {
+        let app = Router::new().route("/download", get(downloadable_file));
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&format!("{base_url}/download"), &root)
+            .await
+            .expect("o servidor local deve preparar o download");
+
+        assert_eq!(prepared.input.file_name, "relatório-final.pdf");
+        assert_eq!(prepared.input.file_size, Some(TEST_PAYLOAD.len() as i64));
+        assert_eq!(prepared.input.mime_type.as_deref(), Some("application/pdf"));
+        assert_eq!(prepared.input.etag.as_deref(), Some("\"local-etag\""));
+        assert_eq!(
+            prepared.input.last_modified.as_deref(),
+            Some("Wed, 21 Oct 2015 07:28:00 GMT")
+        );
+        assert!(prepared.input.supports_range);
+        assert_eq!(prepared.input.download_type, "http");
+        assert!(prepared.response.is_some());
+
+        server.abort();
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
+    #[tokio::test]
+    async fn inspect_download_follows_local_redirect() {
+        let app = Router::new()
+            .route("/download", get(downloadable_file))
+            .route(
+                "/redirect",
+                get(|| async { Redirect::temporary("/download") }),
+            );
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&format!("{base_url}/redirect"), &root)
+            .await
+            .expect("o redirecionamento local deve ser seguido");
+
+        assert_eq!(prepared.input.file_name, "relatório-final.pdf");
+        assert_eq!(
+            prepared.response.expect("resposta final").url().path(),
+            "/download"
+        );
+
+        server.abort();
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
+    #[tokio::test]
+    async fn inspect_download_probes_range_when_header_is_absent() {
+        let app = Router::new().route("/range-probe", get(range_probe_file));
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&format!("{base_url}/range-probe"), &root)
+            .await
+            .expect("o probe Range local deve preparar o download");
+
+        assert_eq!(prepared.input.file_name, "range-probe.bin");
+        assert_eq!(prepared.input.file_size, Some(RANGE_PROBE_SIZE as i64));
+        assert!(prepared.input.supports_range);
+
+        server.abort();
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
+    #[tokio::test]
+    async fn inspect_download_reports_local_http_errors() {
+        let app = Router::new()
+            .route(
+                "/missing",
+                get(|| async { (StatusCode::NOT_FOUND, "arquivo inexistente") }),
+            )
+            .route("/unauthorized", get(|| async { StatusCode::UNAUTHORIZED }))
+            .route("/forbidden", get(|| async { StatusCode::FORBIDDEN }))
+            .route(
+                "/range",
+                get(|| async { StatusCode::RANGE_NOT_SATISFIABLE }),
+            )
+            .route("/limited", get(|| async { StatusCode::TOO_MANY_REQUESTS }))
+            .route(
+                "/unavailable",
+                get(|| async { StatusCode::INTERNAL_SERVER_ERROR }),
+            );
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let error = inspect_local_download(&format!("{base_url}/missing"), &root)
+            .await
+            .expect_err("a resposta 404 deve falhar");
+
+        for (path, status) in [
+            ("/unauthorized", "401 Unauthorized"),
+            ("/forbidden", "403 Forbidden"),
+            ("/range", "416 Range Not Satisfiable"),
+            ("/limited", "429 Too Many Requests"),
+            ("/unavailable", "500 Internal Server Error"),
+        ] {
+            let error = inspect_local_download(&format!("{base_url}{path}"), &root)
+                .await
+                .expect_err("a resposta de erro deve falhar");
+            assert_eq!(error, format!("O servidor respondeu com HTTP {status}."));
+        }
+
+        assert_eq!(error, "O servidor respondeu com HTTP 404 Not Found.");
+        server.abort();
+    }
+    #[tokio::test]
+    async fn prepare_resume_accepts_matching_content_range_and_etag() {
+        let app = Router::new().route(
+            "/resume",
+            get(|headers| async move {
+                resume_response(headers, "\"stable-etag\"", "Wed, 21 Oct 2015 07:28:00 GMT")
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let task = resume_task(&format!("{base_url}/resume"), Some("\"stable-etag\""), None);
+
+        let (response, offset) = prepare_resume(&task, 4, HeaderMap::new())
+            .await
+            .expect("a retomada local deve aceitar Content-Range e ETag estáveis");
+
+        assert_eq!(offset, 4);
+        assert_eq!(response.status(), reqwest::StatusCode::PARTIAL_CONTENT);
+        server.abort();
+    }
+    #[tokio::test]
+    async fn prepare_resume_blocks_changed_etag() {
+        let app = Router::new().route(
+            "/changed-etag",
+            get(|headers| async move {
+                resume_response(headers, "\"changed-etag\"", "Wed, 21 Oct 2015 07:28:00 GMT")
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let task = resume_task(
+            &format!("{base_url}/changed-etag"),
+            Some("\"stable-etag\""),
+            None,
+        );
+
+        let error = match prepare_resume(&task, 4, HeaderMap::new()).await {
+            Err(error) => error,
+            Ok(_) => panic!("o ETag alterado deve bloquear a retomada"),
+        };
+
+        assert_eq!(
+            error,
+            "O ETag mudou; a retomada foi bloqueada para evitar corrupção."
+        );
+        server.abort();
+    }
+    #[tokio::test]
+    async fn prepare_resume_accepts_changed_last_modified_with_stable_etag() {
+        let app = Router::new().route(
+            "/changed-last-modified",
+            get(|headers| async move {
+                resume_response(headers, "\"stable-etag\"", "Thu, 22 Oct 2015 07:28:00 GMT")
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let task = resume_task(
+            &format!("{base_url}/changed-last-modified"),
+            Some("\"stable-etag\""),
+            Some("Tue, 20 Oct 2015 07:28:00 GMT"),
+        );
+
+        let (response, offset) = prepare_resume(&task, 4, HeaderMap::new())
+            .await
+            .expect("Last-Modified alterado não deve invalidar uma retomada com ETag estável");
+
+        assert_eq!(offset, 4);
+        assert_eq!(response.status(), reqwest::StatusCode::PARTIAL_CONTENT);
+        server.abort();
+    }
+    #[tokio::test]
+    async fn prepare_resume_retries_with_minimal_headers_after_range_refusal() {
+        let app = Router::new().route(
+            "/fallback",
+            get(|headers: axum::http::HeaderMap| async move {
+                if headers.contains_key("x-first-range-attempt") {
+                    (StatusCode::OK, b"abcdefgh".to_vec()).into_response()
+                } else {
+                    resume_response(headers, "\"stable-etag\"", "Wed, 21 Oct 2015 07:28:00 GMT")
+                }
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let task = resume_task(
+            &format!("{base_url}/fallback"),
+            Some("\"stable-etag\""),
+            None,
+        );
+
+        let mut request_headers = HeaderMap::new();
+        request_headers.insert(
+            "x-first-range-attempt",
+            header::HeaderValue::from_static("1"),
+        );
+
+        let (response, offset) = prepare_resume(&task, 4, request_headers)
+            .await
+            .expect("a segunda tentativa deve usar headers mínimos e aceitar Range");
+
+        assert_eq!(offset, 4);
+        assert_eq!(response.status(), reqwest::StatusCode::PARTIAL_CONTENT);
+        server.abort();
+    }
+    #[tokio::test]
+    async fn prepare_resume_rejects_invalid_content_range() {
+        let app = Router::new().route(
+            "/invalid-range",
+            get(|_headers: axum::http::HeaderMap| async move {
+                (
+                    StatusCode::PARTIAL_CONTENT,
+                    [
+                        (
+                            axum_header::CONTENT_RANGE,
+                            HeaderValue::from_static("bytes 0-3/8"),
+                        ),
+                        (axum_header::CONTENT_LENGTH, HeaderValue::from_static("4")),
+                        (
+                            axum_header::ETAG,
+                            HeaderValue::from_static("\"stable-etag\""),
+                        ),
+                    ],
+                    b"abcd".to_vec(),
+                )
+                    .into_response()
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let task = resume_task(
+            &format!("{base_url}/invalid-range"),
+            Some("\"stable-etag\""),
+            None,
+        );
+
+        let error = match prepare_resume(&task, 4, HeaderMap::new()).await {
+            Err(error) => error,
+            Ok(_) => panic!("Content-Range com início incorreto deve falhar"),
+        };
+
+        assert_eq!(
+            error,
+            "Faixa incorreta: solicitado início 4, servidor respondeu 0."
+        );
+        server.abort();
+    }
+    #[tokio::test]
+    async fn inspect_download_keeps_unknown_size_without_content_length() {
+        let app = Router::new().route(
+            "/stream-without-length",
+            get(|| async {
+                axum::response::Response::builder()
+                    .header(
+                        axum_header::CONTENT_DISPOSITION,
+                        "attachment; filename=stream.bin",
+                    )
+                    .header(axum_header::CONTENT_TYPE, "application/octet-stream")
+                    .body(axum::body::Body::from_stream(futures_util::stream::once(
+                        async {
+                            Ok::<_, std::convert::Infallible>(axum::body::Bytes::from_static(
+                                TEST_PAYLOAD,
+                            ))
+                        },
+                    )))
+                    .expect("a resposta de streaming deve ser válida")
+            }),
+        );
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&format!("{base_url}/stream-without-length"), &root)
+            .await
+            .expect("a resposta por streaming deve ser preparada");
+
+        assert_eq!(prepared.input.file_name, "stream.bin");
+        assert_eq!(prepared.input.file_size, None);
+        server.abort();
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
+    #[tokio::test]
+    async fn inspect_download_accepts_slow_local_response() {
+        let app = Router::new().route("/slow-download", get(slow_download));
+        let (base_url, server) = spawn_test_server(app).await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&format!("{base_url}/slow-download"), &root)
+            .await
+            .expect("a resposta lenta deve ser preparada");
+
+        assert_eq!(prepared.input.file_name, "relatório-final.pdf");
+        assert_eq!(prepared.input.file_size, Some(TEST_PAYLOAD.len() as i64));
+        server.abort();
+        tokio::fs::remove_dir_all(root).await.unwrap();
+    }
+    #[tokio::test]
+    async fn prepared_response_reports_truncated_body_after_disconnect() {
+        let (url, server) = spawn_disconnect_server().await;
+        let root = temporary_download_root();
+
+        let prepared = inspect_local_download(&url, &root)
+            .await
+            .expect("os headers da resposta truncada ainda devem ser inspecionados");
+
+        let response = prepared.response.expect("a resposta deve ser preservada");
+
+        assert!(response.bytes().await.is_err());
+        server
+            .await
+            .expect("o servidor local deve encerrar normalmente");
+        tokio::fs::remove_dir_all(root).await.unwrap();
     }
 }

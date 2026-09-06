@@ -1,186 +1,143 @@
 <div align="center">
 
-# ⚡ SFDownloader
+# SFDownloader
 
-**Gerenciador de downloads moderno, rápido e elegante para Windows.**
+**Gerenciador de downloads moderno para Windows, construído com Tauri, React e Rust.**
 
-Construído com **Tauri 2 + React + Rust** — leve, nativo e sem Electron.
-
-[![Version](https://img.shields.io/badge/versão-0.3.8-blue?style=for-the-badge)](https://github.com/NskBR/SFDownloader-BETA/releases)
-[![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
+[![Release](https://img.shields.io/github/v/release/NskBR/SFDownloader-App?display_name=tag&style=for-the-badge)](https://github.com/NskBR/SFDownloader-App/releases)
+[![Tauri](https://img.shields.io/badge/Tauri-2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![Rust](https://img.shields.io/badge/Rust-2021-CE422B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org)
+
+[Baixar](https://github.com/NskBR/SFDownloader-App/releases) · [Reportar problema](https://github.com/NskBR/SFDownloader-App/issues) · [Planejamento](docs/MASTER_PLAN.md)
 
 </div>
 
-> [!WARNING]
-> **⚠️ AVISO DE DESENVOLVIMENTO (BITTORRENT)**:  
-> O suporte a downloads BitTorrent encontra-se em **fase ativa de desenvolvimento**. O sistema está parcialmente funcional, porém ainda apresenta **bastante inconsistência**. Recomendamos utilizar prioritariamente downloads HTTP/HTTPS diretos enquanto aprimoramos o motor Torrent.
-
 > [!IMPORTANT]
-> **🗺️ ROADMAP EM DESTAQUE**:  
-> - [x] Motor de download HTTP/HTTPS com segmentação por Range
-> - [x] Pausa, retomada e recuperação automática de downloads interrompidos
-> - [x] Extração automática de arquivos compactados (ZIP, RAR, 7Z, TAR) com senha
-> - [x] Extensão oficial para navegadores Chromium (Chrome, Edge, Brave, Opera) e Firefox (v0.3.4)
-> - [x] Suporte multilíngue completo com sincronização dinâmica (Português & Inglês)
-> - [x] Notificador nativo de atualizações via GitHub Releases na barra de título
-> - [x] Temas futuristas com customizador de cores sólidas e gradientes dinâmicos
-> - [x] Painel de Métricas e estatísticas com exportação em TXT / JSON
-> - [ ] 🛠️ **Em Desenvolvimento**: Estabilização do motor BitTorrent / P2P
-> - [ ] Limitação dinâmica de velocidade de download por tarefa
-> - [ ] Agendador inteligente de downloads por horário
-> - [ ] Fila de downloads sequencial com prioridades configuráveis
+> O SFDownloader inicia sua distribuição oficial na versão **1.0.0**. Por enquanto, é uma **beta privada para Windows 10/11 64 bits**. Licença e termos de distribuição pública serão definidos antes da publicação geral.
 
----
+## Visão geral
 
-## 📸 Capturas de Tela
+O SFDownloader reúne downloads HTTP/HTTPS, retomada segura, organização de arquivos, extração de compactados, integração com navegadores, métricas e suporte BitTorrent em uma interface nativa e leve.
 
-### Interface Principal
-> Visualize todos os seus downloads organizados por categorias, com filtros em tempo real, velocidade acumulada, busca e modos de exibição.
+O aplicativo não atualiza silenciosamente: o usuário escolhe baixar uma atualização e, ao fim do download, escolhe quando abrir o instalador manualmente.
 
-![Interface Principal](screenshots/aplicativo.png)
+## Capturas de tela
 
-### 🪟 Janelas de Download & Diálogos Nativos
-> Suporte nativo a múltiplas janelas independentes (Confirmação de Download, Detalhes Técnicos, Progresso e Conclusão).
+| Downloads | Janelas de progresso |
+| --- | --- |
+| ![Lista principal](screenshots/aplicativo.png) | ![Janelas de download](screenshots/janelas-download.png) |
 
-![Janelas de Download](screenshots/janelas-download.png)
+| BitTorrent | Personalização |
+| --- | --- |
+| ![Download torrent](screenshots/torrent.png) | ![Temas](screenshots/temas.png) |
 
-### Suporte a BitTorrent & P2P
-> Adição e gerenciamento visual de torrents e magnet links com seleção individual de arquivos e monitoramento de peers e seeds.
+| Métricas | Integração com navegador |
+| --- | --- |
+| ![Métricas](screenshots/estatisticas.png) | ![Integração](screenshots/extensao.png) |
 
-![BitTorrent e P2P](screenshots/torrent.png)
+## Recursos
 
-### Personalização & Temas
-> Seletor de cores sólidas e gradientes, temas de interface com paletas pré-definidas e alternância instantânea de idioma.
+- Downloads HTTP/HTTPS segmentados, com pausa, retomada e recuperação após reinicialização.
+- Validação de ETag e Last-Modified para evitar retomadas em arquivos alterados.
+- Fila, prioridades, limite de velocidade e agendamento diário.
+- Organização automática por categoria e pasta de destino configurável.
+- Extração opcional de ZIP, RAR, 7Z e TAR.
+- Confirmação prévia com metadados, tamanho, nome e destino.
+- Reposição de links temporários expirados, com validação antes de retomar.
+- BitTorrent e magnet links com seleção de arquivos, verificação e peers reais.
+- Integração com Chromium (Chrome, Edge, Brave, Opera e Vivaldi) e Firefox por ponte exclusivamente local em `127.0.0.1`.
+- Temas, gradientes, escala de interface e idiomas Português (Brasil) e Inglês.
+- Métricas, logs de diagnóstico sanitizados e exportação técnica.
+- Atualização manual por GitHub Releases com barra de progresso.
 
-![Temas e Personalização](screenshots/temas.png)
+> [!WARNING]
+> O motor BitTorrent/P2P continua em estabilização. Para arquivos importantes, valide o resultado baixado e prefira HTTP/HTTPS quando houver uma fonte direta confiável.
 
-### Métricas e Estatísticas
-> Painel completo com total baixado, volume por status, escrita em disco, velocidade média e tempo médio por download — tudo exportável em TXT ou JSON.
+## Instalação e atualização
 
-![Métricas e Estatísticas](screenshots/estatisticas.png)
+1. Abra [Releases](https://github.com/NskBR/SFDownloader-App/releases) e baixe o instalador Windows `.exe`.
+2. Execute o instalador e siga as etapas exibidas pelo Windows.
+3. Quando uma atualização estiver disponível, clique em **Atualizar aplicativo** na titlebar.
+4. Após o download, clique em **Instalar atualização**. O app fecha e abre o instalador; nenhuma instalação ocorre sem sua ação.
 
-### Extensão & Integração com Navegadores
-> Extensão nativa para Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox. Captura links automaticamente e sincroniza tema e idioma direto com o aplicativo.
+O app ainda não possui assinatura de código pública. Antes de prosseguir diante de um alerta do SmartScreen, confira que o arquivo veio deste repositório oficial.
 
-![Integração com Navegadores](screenshots/extensao.png)
+Instalações beta anteriores que consultavam o repositório histórico precisam instalar a primeira versão `1.0.0` manualmente. A partir dela, as consultas passam a usar este repositório.
 
----
+## Extensão do navegador
 
-## ✨ Funcionalidades
+Abra **Configurações → Integração com navegador** no aplicativo.
 
-### Motor de Download
-- 🚀 **Downloads segmentados** com HTTP Range para máxima velocidade
-- ⏸️ **Pausa e retomada** inteligente com validação de ETag/Last-Modified
-- 📦 **Extração automática** de arquivos compactados (ZIP, RAR, 7Z, TAR)
-- 🔄 **Recuperação automática** de downloads interrompidos na inicialização
-- ⚡ **Downloads simultâneos** com controle de concorrência configurável
-- 📁 **Organização automática** por tipo de arquivo em pastas categorizadas
+- Em Chromium, carregue a pasta indicada pelo app em `chrome://extensions` ou `edge://extensions`, com o Modo do desenvolvedor ativado.
+- Em Firefox, use o `.xpi` disponibilizado na tela de integração.
+- A extensão comunica-se somente com `http://127.0.0.1:17831` e mantém compatibilidade com versões anteriores.
 
-### Interface
-- 🎨 **Temas personalizáveis** — paletas sólidas, gradientes dinâmicos e cores de destaque
-- 🌈 **Cores de destaque** — 8 cores sólidas + 4 gradientes futuristas
-- 🖱️ **Menu de contexto** completo com clique direito
-- 📊 **Métricas detalhadas** com gráfico donut e cards de estatísticas
-- 🔍 **Busca e filtros** por categoria, status, tamanho e data
-- 📋 **Seleção múltipla** com Shift + Click e Ctrl + Click
-- 🖥️ **Janelas independentes** para cada download em andamento
+Se ela ficar desconectada, confirme que o app está aberto e recarregue a extensão na página do navegador.
 
-### Extensão de Navegador
-- 🌐 **Chromium** — Chrome, Edge, Opera, Brave, Vivaldi
-- 🦊 **Firefox** — Compatível e validado para Mozilla AMO
-- 🎯 **Captura automática** de downloads com filtros por extensão
-- 🔗 **Protocolo `sfdownloader://`** para comunicação desktop ↔ navegador
-
-### Técnico
-- 💾 **SQLite embarcado** com migrações versionadas
-- 🪶 **~5 MB de instalação** — sem runtime pesado
-- 🖤 **Sem flash branco** — cor de fundo nativa desde a criação da janela
-- 🔒 **Arquivos temporários isolados** na pasta `.sf-temp`
-- 📡 **Deep links** para integração com navegadores e apps externos
-
----
-
-## 🛠️ Tecnologias
-
-| Camada | Tecnologia |
-|--------|-----------|
-| **Frontend** | React 18, TypeScript, Lucide Icons, CSS puro |
-| **Backend** | Rust (Tokio, reqwest, rusqlite) |
-| **Framework** | Tauri 2.0 (WebView2 no Windows) |
-| **Banco de Dados** | SQLite 3 embarcado |
-| **Extensão** | WebExtensions API (Manifest V3 + V2) |
-
----
-
-## 🚀 Como Executar
+## Desenvolvimento
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) 18+
-- [Rust](https://rustup.rs/) toolchain estável
-- [Tauri CLI](https://tauri.app/start/) v2
-
-### Desenvolvimento
+- Node.js 20+ e npm
+- Rust estável via [rustup](https://rustup.rs/)
+- Dependências do [Tauri 2 para Windows](https://v2.tauri.app/start/prerequisites/)
 
 ```bash
-# Instalar dependências
-npm install
-
-# Executar em modo desenvolvimento
+npm ci
 npm run tauri dev
 ```
 
-### Build de Produção
+### Testes
 
 ```bash
-# Compilar executável e instalador para a pasta /release
-npm run release
-```
-
-### Extensão de Navegador
-
-```bash
-# Compilar extensões para Chromium e Firefox
+npm test -- --run
+npm run build
+npm run versions:check
+npm run extension:lint
+npm run extension:test
 npm run extension:build
 ```
 
-Os builds ficam em `browser-extension/dist-chromium/` e `browser-extension/dist-firefox/`.
+Para preparar os testes backend no Windows:
 
----
-
-## 📂 Estrutura do Projeto
-
-```
-SFDownloader/
-├── src/                    # Frontend React + TypeScript
-│   ├── app/                # Composição e navegação
-│   ├── components/         # Componentes reutilizáveis (UI, downloads)
-│   ├── domain/             # Tipos e modelos de domínio
-│   ├── hooks/              # React hooks customizados
-│   ├── pages/              # Telas (Downloads, Settings, Metrics...)
-│   ├── services/           # Serviços (tema, download, storage)
-│   └── styles/             # CSS global e temas
-├── src-tauri/              # Backend Rust + Tauri
-│   ├── src/commands/       # Comandos IPC (transfer, settings, metrics)
-│   ├── src/database/       # SQLite, migrações e repositórios
-│   └── src/engine/         # Motor de download segmentado
-├── browser-extension/      # Extensão WebExtensions (Chromium + Firefox)
-├── screenshots/            # Capturas de tela do aplicativo e janelas
-└── release/                # Executáveis e instaladores gerados no build
+```powershell
+.\scripts\test-backend.ps1
 ```
 
----
+### Build de release
 
-## 📄 Licença
+```bash
+npm run release
+```
 
-Este projeto é de uso privado durante a fase Beta.
+Confira que tag e instalador usam a mesma versão (`1.0.0`, `1.0.1` etc.). O atualizador só aceita assets `.exe` de releases oficiais de `NskBR/SFDownloader-App`.
 
----
+## Estrutura
+
+```text
+src/                 Interface React e TypeScript
+src-tauri/           Aplicativo Tauri e motor Rust
+browser-extension/   Extensões Chromium e Firefox
+docs/                Planejamento, segurança e guias técnicos
+scripts/             Automação de versão, release e testes
+screenshots/         Imagens deste README
+```
+
+## Privacidade e segurança
+
+- A ponte do navegador usa loopback e não fica exposta à rede.
+- Cookies e headers recebidos da extensão têm validade e tamanho limitados.
+- Logs removem URLs completas, tokens, cookies e headers sensíveis antes da exportação.
+- O atualizador restringe downloads a assets de releases oficiais e exige ação explícita para instalar.
+
+Leia [a política da extensão](browser-extension/PRIVACY.md) e o [modelo de ameaças](docs/THREAT_MODEL.md).
+
+## Status e contribuição
+
+Use as [Issues](https://github.com/NskBR/SFDownloader-App/issues) para relatar bugs, com passos de reprodução e logs sanitizados quando possível. O [plano mestre](docs/MASTER_PLAN.md) registra fases e testes pendentes.
 
 <div align="center">
 
-**Feito com ☕ e Rust por [NskBR](https://github.com/NskBR)**
+Feito com Rust e React por [NskBR](https://github.com/NskBR).
 
 </div>

@@ -1,6 +1,7 @@
 import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { AppColor, GradientConfig } from "../../domain/settings";
+import { useTranslation } from "../../i18n";
 
 export interface DiscordThemePreset {
   id: string;
@@ -238,6 +239,7 @@ export function ThemeCustomizerModal({
   onChangeGradient: (config: GradientConfig) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const updateColor = (index: number, color: string) => {
     const stops = [...config.stops];
     if (stops[index]) {
@@ -341,7 +343,7 @@ export function ThemeCustomizerModal({
             <Palette size={17} className="discord-header-icon" />
             <span>Personalizar tema</span>
           </span>
-          <button type="button" onClick={onClose} title="Fechar painel">
+          <button type="button" onClick={onClose} title={t.common.close} aria-label={t.common.close}>
             <X size={18} />
           </button>
         </header>

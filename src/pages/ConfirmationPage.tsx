@@ -33,10 +33,20 @@ import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Toggle } from "../components/ui/Toggle";
 import { CustomSelect } from "../components/ui/CustomSelect";
-import { categoryForFile, cleanExtension, downloadCategories } from "../domain/categories";
+import { categoryForFile, downloadCategories } from "../domain/categories";
+import {
+  hasCompletePreview,
+  isArchivePreview,
+  mergeHttpPreview,
+  previewDisplayExtension,
+  previewFromTorrent,
+} from "../domain/confirmationPreview";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
+import { formatDownloadStartError } from "../domain/confirmationErrors";
+import { ipcErrorMessage } from "../domain/ipcErrors";
 import { useTranslation } from "../i18n";
+import { ConfirmationWindowHeader } from "../components/http/ConfirmationWindowHeader";
 
 interface Payload {
   url: string;
@@ -67,31 +77,12 @@ const shortHost = (value: string) => {
 
 const baseName = (value: string) => value.split(/[\\/]/).pop() || value;
 
-const stripFileName = (message: string) =>
-  message.replace(/^[^:]+:\s*/, "");
-
-const getFormattedErrorMessage = (raw: string) => {
-  const msg = stripFileName(raw);
-  if (/já está em andamento ou pausado/i.test(msg)) {
-    return "Não foi possível iniciar o download porque já existe outra instância deste arquivo ativa ou pausada.";
-  }
-  if (/já foi baixado/i.test(msg)) {
-    return "Não foi possível iniciar o download porque este arquivo já foi baixado anteriormente.";
-  }
-  if (!msg) {
-    return "Ocorreu um erro inesperado ao tentar iniciar o download.";
-  }
-  return msg.charAt(0).toUpperCase() + msg.slice(1);
-};
-
 export function ConfirmationPage({ token }: { token: string }) {
   const { t } = useTranslation();
   const storageKey = `sf-downloader.confirmation-${token}`;
   const payload = useMemo(() => {
     try {
-      return JSON.parse(
-        localStorage.getItem(storageKey) || "",
-      ) as Payload;
+      return JSON.parse(localStorage.getItem(storageKey) || "") as Payload;
     } catch {
       return null;
     }
@@ -121,6 +112,9 @@ export function ConfirmationPage({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Outros");
+  const [priority, setPriority] = useState(() =>
+    service.downloadPriorityValue(settings.downloadPriority),
+  );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const locationPickerRef = useRef<HTMLDivElement>(null);
@@ -128,7 +122,10 @@ export function ConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     if (!locationPickerOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (locationPickerRef.current && !locationPickerRef.current.contains(e.target as Node)) {
+      if (
+        locationPickerRef.current &&
+        !locationPickerRef.current.contains(e.target as Node)
+      ) {
         setLocationPickerOpen(false);
       }
     };
@@ -165,7 +162,10 @@ export function ConfirmationPage({ token }: { token: string }) {
       setDestination(settings.secondaryDownloadFolder);
       setLocationPickerOpen(false);
       try {
-        localStorage.setItem("sf-downloader.last-save-folder", settings.secondaryDownloadFolder);
+        localStorage.setItem(
+          "sf-downloader.last-save-folder",
+          settings.secondaryDownloadFolder,
+        );
       } catch {}
     }
   };
@@ -173,37 +173,22 @@ export function ConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     if (!payload) return;
     // If preview already has a valid fileSize (> 0) and valid extension, skip re-inspection
-    if (
-      preview &&
-      preview.fileSize &&
-      preview.fileSize > 0 &&
-      preview.extension &&
-      preview.extension !== "N/A" &&
-      preview.fileName &&
-      preview.fileName !== "download.bin"
-    ) {
+    if (hasCompletePreview(preview)) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
     let active = true;
-    if (payload.url.startsWith("magnet:") || payload.url.toLowerCase().endsWith(".torrent")) {
+    if (
+      payload.url.startsWith("magnet:") ||
+      payload.url.toLowerCase().endsWith(".torrent")
+    ) {
       void service
         .parseTorrentInfo(payload.url)
         .then((meta) => {
           if (!active) return;
-          const metaName = meta.name || "Torrent Download";
-          const extMatch = metaName.includes(".")
-            ? metaName.split(".").pop()?.toLowerCase() || null
-            : null;
-          setPreview({
-            url: payload.url,
-            fileName: metaName,
-            fileSize: meta.status === "ready" ? meta.totalSize : null,
-            mimeType: "application/x-bittorrent",
-            extension: extMatch || "torrent",
-          });
+          setPreview(previewFromTorrent(payload.url, meta));
         })
         .catch((cause) => active && setError(String(cause)))
         .finally(() => active && setLoading(false));
@@ -212,24 +197,9 @@ export function ConfirmationPage({ token }: { token: string }) {
         .inspectDownload(payload.url, payload.requestId)
         .then((result) => {
           if (!active) return;
-          setPreview((prev) => ({
-            url: result.url || payload.url,
-            fileName:
-              result.fileName && result.fileName !== "download.bin"
-                ? result.fileName
-                : prev?.fileName && prev.fileName !== "download.bin"
-                ? prev.fileName
-                : result.fileName,
-            fileSize: result.fileSize || prev?.fileSize || null,
-            mimeType: result.mimeType || prev?.mimeType || null,
-            extension:
-              result.extension ||
-              (result.fileName && result.fileName.includes(".")
-                ? result.fileName.split(".").pop()?.toLowerCase() || null
-                : null) ||
-              prev?.extension ||
-              null,
-          }));
+          setPreview((previous) =>
+            mergeHttpPreview(result, previous, payload.url),
+          );
         })
         .catch((cause) => active && setError(String(cause)))
         .finally(() => active && setLoading(false));
@@ -242,30 +212,23 @@ export function ConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     if (preview) {
       setSelectedCategory(
-        categoryForFile(preview.fileName, settings.customCategories, undefined, preview.url),
+        categoryForFile(
+          preview.fileName,
+          settings.customCategories,
+          undefined,
+          preview.url,
+        ),
       );
     }
   }, [preview, settings.customCategories]);
 
-  const displayExtension = useMemo(() => {
-    if (preview?.extension && preview.extension.trim() && preview.extension.toLowerCase() !== "bin") {
-      return preview.extension.toUpperCase();
-    }
-    if (preview?.fileName) {
-      const ext = cleanExtension(preview.fileName);
-      if (ext) return ext.toUpperCase();
-    }
-    if (preview?.url) {
-      const ext = cleanExtension(preview.url);
-      if (ext) return ext.toUpperCase();
-    }
-    return "ARQUIVO";
-  }, [preview]);
+  const displayExtension = useMemo(
+    () => previewDisplayExtension(preview),
+    [preview],
+  );
 
   const close = () => void appWindow.close();
-  const isArchive = ["zip", "7z", "rar", "tar", "gz", "tgz"].includes(
-    preview?.extension?.toLowerCase() ?? "",
-  );
+  const isArchive = isArchivePreview(preview);
   const categories = [
     ...downloadCategories.map((item) => item.name),
     ...settings.customCategories.map((item) => item.name),
@@ -273,11 +236,10 @@ export function ConfirmationPage({ token }: { token: string }) {
   const isPreconfiguredFolder =
     destination.trim() !== "" &&
     (destination === settings.rootDownloadFolder ||
-      (Boolean(settings.secondaryDownloadFolder) && destination === settings.secondaryDownloadFolder));
+      (Boolean(settings.secondaryDownloadFolder) &&
+        destination === settings.secondaryDownloadFolder));
 
   const isCustomFolder = destination.trim() !== "" && !isPreconfiguredFolder;
-
-
 
   const restoreDefaultFolder = () => {
     setDestination(settings.rootDownloadFolder);
@@ -301,13 +263,14 @@ export function ConfirmationPage({ token }: { token: string }) {
         isArchive && password.trim() ? password : undefined,
         isCustomFolder ? undefined : selectedCategory,
         force,
+        priority,
       );
       localStorage.removeItem(storageKey);
       setDuplicateOpen(false);
       close();
       void emit("download-created", task).catch(() => {});
     } catch (cause) {
-      const message = String(cause);
+      const message = ipcErrorMessage(cause, "Não foi possível iniciar o download.");
       if (/já foi baixado/i.test(message)) {
         setDuplicateOpen(true);
       } else {
@@ -329,45 +292,25 @@ export function ConfirmationPage({ token }: { token: string }) {
   if (!payload)
     return (
       <main className="download-window confirm-v2 http-confirm-window">
-        <header className="confirm-header" data-tauri-drag-region>
-          <div className="confirm-header-left">
-            <Download className="confirm-header-icon" size={20} />
-            <span className="confirm-title" title="Confirmar download">
-              Confirmar download
-            </span>
-          </div>
-          <div className="confirm-window-controls nodrag">
-            <button onClick={() => void appWindow.minimize()} title="Minimizar">
-              <Minus size={16} />
-            </button>
-            <button onClick={close} title="Fechar">
-              <X size={16} />
-            </button>
-          </div>
-        </header>
-        <p className="window-error confirm-empty">Solicitação não encontrada.</p>
+        <ConfirmationWindowHeader
+          title="Confirmar download"
+          onMinimize={() => void appWindow.minimize()}
+          onClose={close}
+        />
+        <p className="window-error confirm-empty">
+          Solicitação não encontrada.
+        </p>
       </main>
     );
 
   return (
     <main className="download-window confirm-v2 http-confirm-window">
       {/* 1. Header (Barra de título com nome do arquivo) */}
-      <header className="confirm-header" data-tauri-drag-region>
-        <div className="confirm-header-left">
-          <Download className="confirm-header-icon" size={20} />
-          <span className="confirm-title" title={fileNameText}>
-            {fileNameText}
-          </span>
-        </div>
-        <div className="confirm-window-controls nodrag">
-          <button onClick={() => void appWindow.minimize()} title="Minimizar">
-            <Minus size={16} />
-          </button>
-          <button onClick={close} title="Fechar">
-            <X size={16} />
-          </button>
-        </div>
-      </header>
+      <ConfirmationWindowHeader
+        title={fileNameText}
+        onMinimize={() => void appWindow.minimize()}
+        onClose={close}
+      />
 
       {/* 2. Conteúdo Central (Apenas se não houver erro) */}
       {!error && (
@@ -375,9 +318,15 @@ export function ConfirmationPage({ token }: { token: string }) {
           <div className="confirm-body">
             {/* Linha 1: Local e Categoria em 2 Colunas */}
             <div className="confirm-grid-row">
-              <div className="confirm-field-col" ref={locationPickerRef} style={{ position: "relative" }}>
+              <div
+                className="confirm-field-col"
+                ref={locationPickerRef}
+                style={{ position: "relative" }}
+              >
                 <div className="confirm-label-row">
-                  <span className="confirm-label">{t.confirmation.location}</span>
+                  <span className="confirm-label">
+                    {t.confirmation.location}
+                  </span>
                   {isCustomFolder && (
                     <button
                       type="button"
@@ -390,7 +339,11 @@ export function ConfirmationPage({ token }: { token: string }) {
                     </button>
                   )}
                 </div>
-                <div className="confirm-control-box" onClick={() => setLocationPickerOpen((v) => !v)} style={{ cursor: "pointer" }}>
+                <div
+                  className="confirm-control-box"
+                  onClick={() => setLocationPickerOpen((v) => !v)}
+                  style={{ cursor: "pointer" }}
+                >
                   <FolderOpen className="field-icon" size={16} />
                   <input
                     className="confirm-input-text"
@@ -424,9 +377,13 @@ export function ConfirmationPage({ token }: { token: string }) {
                       <FolderOpen size={15} className="loc-opt-icon" />
                       <span className="loc-opt-title">Pasta padrão</span>
                       <span className="loc-opt-path">
-                        {settings.rootDownloadFolder ? `(${settings.rootDownloadFolder})` : ""}
+                        {settings.rootDownloadFolder
+                          ? `(${settings.rootDownloadFolder})`
+                          : ""}
                       </span>
-                      {destination === settings.rootDownloadFolder && <Check size={14} className="loc-opt-check" />}
+                      {destination === settings.rootDownloadFolder && (
+                        <Check size={14} className="loc-opt-check" />
+                      )}
                     </button>
 
                     {/* Opção 2: Segunda pasta em outro disco */}
@@ -434,14 +391,20 @@ export function ConfirmationPage({ token }: { token: string }) {
                       type="button"
                       className={`location-dropdown-opt ${destination === settings.secondaryDownloadFolder && settings.secondaryDownloadFolder ? "selected" : ""}`}
                       onClick={() => void selectSecondaryLocation()}
-                      title={settings.secondaryDownloadFolder || "Segunda Pasta (Outro disco)"}
+                      title={
+                        settings.secondaryDownloadFolder ||
+                        "Segunda Pasta (Outro disco)"
+                      }
                     >
                       <HardDrive size={15} className="loc-opt-icon" />
                       <span className="loc-opt-title">Segunda pasta</span>
                       <span className="loc-opt-path">
-                        {settings.secondaryDownloadFolder ? `(${settings.secondaryDownloadFolder})` : "(Não configurada)"}
+                        {settings.secondaryDownloadFolder
+                          ? `(${settings.secondaryDownloadFolder})`
+                          : "(Não configurada)"}
                       </span>
-                      {destination === settings.secondaryDownloadFolder && settings.secondaryDownloadFolder ? (
+                      {destination === settings.secondaryDownloadFolder &&
+                      settings.secondaryDownloadFolder ? (
                         <Check size={14} className="loc-opt-check" />
                       ) : !settings.secondaryDownloadFolder ? (
                         <span className="loc-opt-tag">Configurar</span>
@@ -455,13 +418,17 @@ export function ConfirmationPage({ token }: { token: string }) {
                       onClick={() => void chooseFolder()}
                     >
                       <PlusCircle size={15} className="loc-opt-icon" />
-                      <span className="loc-opt-title">Escolher outro local...</span>
+                      <span className="loc-opt-title">
+                        Escolher outro local...
+                      </span>
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}>
+              <div
+                className={`confirm-field-col${isCustomFolder ? " confirm-field-disabled" : ""}`}
+              >
                 <span className="confirm-label">{t.confirmation.category}</span>
                 <div className="confirm-control-box box-custom-select">
                   <CustomSelect
@@ -480,15 +447,40 @@ export function ConfirmationPage({ token }: { token: string }) {
               </div>
             </div>
 
+            <div className="confirm-grid-row">
+              <div className="confirm-field-col">
+                <span className="confirm-label">{t.confirmation.priority}</span>
+                <div className="confirm-control-box box-custom-select">
+                  <CustomSelect
+                    value={String(priority)}
+                    options={[
+                      { value: "0", label: t.downloads.priorityLow },
+                      { value: "1", label: t.downloads.priorityNormal },
+                      { value: "2", label: t.downloads.priorityHigh },
+                      { value: "3", label: t.downloads.priorityUrgent },
+                    ]}
+                    onChange={(value) => setPriority(Number(value))}
+                    icon={<Clock size={16} />}
+                    direction="down"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Linha 2: Pílula Integrada de Metadados */}
             <div className="confirm-meta-row">
-              <div className="confirm-meta-item item-origin" title={hostName || "Provedor desconhecido"}>
+              <div
+                className="confirm-meta-item item-origin"
+                title={hostName || "Provedor desconhecido"}
+              >
                 <Globe size={16} />
                 <span>{hostName || "origem desconhecida"}</span>
               </div>
               <div className="confirm-meta-item item-size">
                 <Package size={16} />
-                <span>{loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}</span>
+                <span>
+                  {loading ? "Calculando..." : bytes(preview?.fileSize ?? null)}
+                </span>
               </div>
               <div className="confirm-meta-item item-type">
                 <FileText size={16} />
@@ -498,17 +490,24 @@ export function ConfirmationPage({ token }: { token: string }) {
 
             {/* Linha 3: Extrair e Senha em 2 Colunas */}
             <div className="confirm-grid-row">
-              <div className="confirm-control-box box-toggle" title={t.confirmation.autoExtract}>
+              <div
+                className="confirm-control-box box-toggle"
+                title={t.confirmation.autoExtract}
+              >
                 <Toggle
                   label={t.confirmation.autoExtract}
                   checked={isArchive && autoExtract}
                   onChange={setAutoExtract}
                   disabled={!isArchive}
                 />
-                <span className="toggle-label">{t.confirmation.autoExtract}</span>
+                <span className="toggle-label">
+                  {t.confirmation.autoExtract}
+                </span>
               </div>
 
-              <div className={`confirm-control-box box-password ${autoExtract ? "" : "is-disabled"}`}>
+              <div
+                className={`confirm-control-box box-password ${autoExtract ? "" : "is-disabled"}`}
+              >
                 <LockKeyhole className="field-icon" size={16} />
                 <input
                   className="confirm-input-text"
@@ -550,7 +549,11 @@ export function ConfirmationPage({ token }: { token: string }) {
                 onClick={() => void finish()}
               >
                 <Download size={18} />
-                <span>{busy ? `${t.confirmation.startDownload}...` : t.confirmation.startDownload}</span>
+                <span>
+                  {busy
+                    ? `${t.confirmation.startDownload}...`
+                    : t.confirmation.startDownload}
+                </span>
               </button>
             </div>
           </footer>
@@ -561,19 +564,29 @@ export function ConfirmationPage({ token }: { token: string }) {
       {detailsOpen && (
         <div className="dw-details dw-details-full">
           <div className="dw-details-header" data-tauri-drag-region>
-            <button type="button" className="dw-details-back nodrag" onClick={() => setDetailsOpen(false)}>
+            <button
+              type="button"
+              className="dw-details-back nodrag"
+              onClick={() => setDetailsOpen(false)}
+            >
               <ArrowLeft size={14} />
               <span>{t.common.back}</span>
             </button>
-            <span className="dw-details-header-title">{t.downloadWindow.detailsTitle}</span>
+            <span className="dw-details-header-title">
+              {t.downloadWindow.detailsTitle}
+            </span>
           </div>
 
           <div className="dw-details-compact-body">
             {/* Tabela de Metadados Técnicos */}
             <div className="dw-details-card">
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.originalUrl}</span>
-                <b className="dw-detail-val dw-detail-path" title={payload.url}>{payload.url}</b>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.originalUrl}
+                </span>
+                <b className="dw-detail-val dw-detail-path" title={payload.url}>
+                  {payload.url}
+                </b>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">Host</span>
@@ -581,36 +594,60 @@ export function ConfirmationPage({ token }: { token: string }) {
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">MIME</span>
-                <b className="dw-detail-val">{preview?.mimeType || "application/octet-stream"}</b>
+                <b className="dw-detail-val">
+                  {preview?.mimeType || "application/octet-stream"}
+                </b>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">{t.common.size}</span>
-                <b className="dw-detail-val">{preview?.fileSize ? `${preview.fileSize.toLocaleString()} bytes` : "—"}</b>
+                <b className="dw-detail-val">
+                  {preview?.fileSize
+                    ? `${preview.fileSize.toLocaleString()} bytes`
+                    : "—"}
+                </b>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">Ext</span>
-                <b className="dw-detail-val">{preview?.extension?.toUpperCase() || "N/A"}</b>
+                <b className="dw-detail-val">
+                  {preview?.extension?.toUpperCase() || "N/A"}
+                </b>
               </div>
               <div className="dw-detail-row">
-                <span className="dw-detail-label">{t.downloadWindow.destinationFolder}</span>
-                <b className="dw-detail-val dw-detail-path" title={destination}>{destination || "—"}</b>
+                <span className="dw-detail-label">
+                  {t.downloadWindow.destinationFolder}
+                </span>
+                <b className="dw-detail-val dw-detail-path" title={destination}>
+                  {destination || "—"}
+                </b>
               </div>
             </div>
 
             {/* Apenas os 3 Botões Pequenos Diretos no Rodapé */}
             <div className="dw-mini-actions-row">
-              <button type="button" className="dw-mini-action-btn" onClick={() => void navigator.clipboard.writeText(payload.url)}>
+              <button
+                type="button"
+                className="dw-mini-action-btn"
+                onClick={() => void navigator.clipboard.writeText(payload.url)}
+              >
                 <Copy size={13} className="icon-green" />
                 <span>{t.downloads.copyUrl}</span>
               </button>
-              <button type="button" className="dw-mini-action-btn" onClick={() => {
-                const info = `URL: ${payload.url}\nHost: ${hostName}\nMIME: ${preview?.mimeType}\nSize: ${preview?.fileSize} bytes\nDest: ${destination}`;
-                void navigator.clipboard.writeText(info);
-              }}>
+              <button
+                type="button"
+                className="dw-mini-action-btn"
+                onClick={() => {
+                  const info = `URL: ${payload.url}\nHost: ${hostName}\nMIME: ${preview?.mimeType}\nSize: ${preview?.fileSize} bytes\nDest: ${destination}`;
+                  void navigator.clipboard.writeText(info);
+                }}
+              >
                 <CopyCheck size={13} className="icon-green" />
                 <span>{t.common.copy}</span>
               </button>
-              <button type="button" className="dw-mini-action-btn" onClick={chooseFolder}>
+              <button
+                type="button"
+                className="dw-mini-action-btn"
+                onClick={chooseFolder}
+              >
                 <FolderOpen size={13} className="icon-amber" />
                 <span>{t.common.openFolder}</span>
               </button>
@@ -637,10 +674,11 @@ export function ConfirmationPage({ token }: { token: string }) {
                 </div>
                 <div className="confirm-error-info-content">
                   <p className="confirm-error-info-primary">
-                    {getFormattedErrorMessage(error)}
+                    {formatDownloadStartError(error)}
                   </p>
                   <p className="confirm-error-info-secondary">
-                    Siga as sugestões abaixo para resolver o problema e tentar novamente.
+                    Siga as sugestões abaixo para resolver o problema e tentar
+                    novamente.
                   </p>
                 </div>
               </div>
@@ -655,7 +693,9 @@ export function ConfirmationPage({ token }: { token: string }) {
                 <div className="confirm-suggestion-badge badge-green">
                   <Globe size={18} />
                 </div>
-                <span>Verifique se a fonte de download ainda está disponível</span>
+                <span>
+                  Verifique se a fonte de download ainda está disponível
+                </span>
               </div>
 
               <div className="confirm-suggestion-divider" />
@@ -677,7 +717,10 @@ export function ConfirmationPage({ token }: { token: string }) {
               </div>
             </div>
 
-            <button className="confirm-error-btn-primary" onClick={() => setError(null)}>
+            <button
+              className="confirm-error-btn-primary"
+              onClick={() => setError(null)}
+            >
               Voltar
             </button>
           </div>

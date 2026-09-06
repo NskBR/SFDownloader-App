@@ -1,18 +1,20 @@
 # Histórico de Tarefas Concluídas
 
+> Registro histórico de uma sessão anterior. Os caminhos e nomes de componentes podem estar defasados; consulte `AGENTS.md` e `MASTER_PLAN.md` para o estado atual.
+
 Abaixo estão todas as tarefas executadas nesta sessão:
 
 - `[x]` **Alternador de Temas (TitleBar)**
-  - `[x]` Limitar ciclo de temas a Claro/Escuro em [TitleBar.tsx](file:///C:/Users/skell/Documents/Projeto/src/components/layout/TitleBar.tsx)
+  - `[x]` Limitar ciclo de temas a Claro/Escuro em [TitleBar.tsx](../src/components/layout/TitleBar.tsx)
 
 - `[x]` **Sidebar Footer & Status**
-  - `[x]` Reduzir dimensões de botões e ícones em [redesign.css](file:///C:/Users/skell/Documents/Projeto/src/styles/redesign.css)
-  - `[x]` Simplificar texto de status para `• extensão` em [AppShell.tsx](file:///C:/Users/skell/Documents/Projeto/src/components/layout/AppShell.tsx)
+  - `[x]` Reduzir dimensões de botões e ícones em [redesign.css](../src/styles/redesign.css)
+  - `[x]` Simplificar texto de status para `• extensão` em [AppShell.tsx](../src/components/layout/AppShell.tsx)
   - `[x]` Adicionar versão do aplicativo `v{appVersion}` no rodapé
 
 - `[x]` **Página de Configurações (Estilo Windows)**
-  - `[x]` Reformular HTML para lista limpa sem cards em [SettingsPage.tsx](file:///C:/Users/skell/Documents/Projeto/src/pages/SettingsPage.tsx)
-  - `[x]` Estilizar elementos planos, link azul e botão azul Windows em [redesign.css](file:///C:/Users/skell/Documents/Projeto/src/styles/redesign.css)
+  - `[x]` Reformular HTML para lista limpa sem cards em [SettingsPage.tsx](../src/pages/SettingsPage.tsx)
+  - `[x]` Estilizar elementos planos, link azul e botão azul Windows em [redesign.css](../src/styles/redesign.css)
   - `[x]` Reduzir espaçamento superior para colar o conteúdo ao rodapé da TitleBar e remover espaços vazios
 
 - `[x]` **Tema Claro & Contraste**
@@ -38,8 +40,8 @@ Abaixo estão todas as tarefas executadas nesta sessão:
   - `[x]` Escutar ações do menu no frontend para Pausar, Retomar, Novo Link, Limite, Cancelar, Excluir, Abrir pasta e Abrir arquivo
 
 - `[x]` **Ajuste de Altura e Remoção de Espaço Vazio na Tela de Conclusão**
-  - `[x]` Reduzir dimensões padrão da janela de conclusão de `300px` para `195px` em [transfer.rs](file:///C:/Users/skell/Documents/Projeto/src-tauri/src/commands/transfer.rs)
-  - `[x]` Ajustar flex e padding do conteúdo em [download-windows.css](file:///C:/Users/skell/Documents/Projeto/src/styles/download-windows.css) para que não estique
+  - `[x]` Reduzir dimensões padrão da janela de conclusão de `300px` para `195px` em [transfer.rs](../src-tauri/src/commands/transfer.rs)
+  - `[x]` Ajustar flex e padding do conteúdo em [download-windows.css](../src/styles/download-windows.css) para que não estique
   - `[x]` Corrigir altura dos botões inferiores para evitar cortes
 
 - `[x]` **Comportamento Inteligente no Duplo Clique**

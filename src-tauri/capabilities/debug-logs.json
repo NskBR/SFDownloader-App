@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "debug-logs",
+  "description": "Permissões mínimas da janela de logs",
+  "windows": ["debug-logs"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
+}

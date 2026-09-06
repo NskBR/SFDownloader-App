@@ -1,3 +1,5 @@
+use crate::download::paths::valid_category_name;
+
 const CATEGORY_FOLDERS: [&str; 9] = [
     "Imagens",
     "Vídeos",
@@ -9,19 +11,6 @@ const CATEGORY_FOLDERS: [&str; 9] = [
     "Torrents",
     "Outros",
 ];
-
-fn valid_category_name(name: &str) -> bool {
-    let trimmed = name.trim();
-    !trimmed.is_empty()
-        && trimmed != "."
-        && trimmed != ".."
-        && !trimmed.chars().any(|character| {
-            matches!(
-                character,
-                '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'
-            ) || character.is_control()
-        })
-}
 
 #[tauri::command]
 fn create_category_folders(
@@ -68,7 +57,9 @@ fn set_autostart(app: tauri::AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 fn is_autostart_enabled(app: tauri::AppHandle) -> Result<bool, String> {
     use tauri_plugin_autostart::ManagerExt;
-    app.autolaunch().is_enabled().map_err(|error| error.to_string())
+    app.autolaunch()
+        .is_enabled()
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -91,8 +82,13 @@ pub fn run() {
         .setup(|app| {
             let open_item =
                 MenuItem::with_id(app, "tray-open", "Abrir SFDownloader", true, None::<&str>)?;
-            let hide_item =
-                MenuItem::with_id(app, "tray-hide", "Minimizar para a bandeja", true, None::<&str>)?;
+            let hide_item = MenuItem::with_id(
+                app,
+                "tray-hide",
+                "Minimizar para a bandeja",
+                true,
+                None::<&str>,
+            )?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "Sair", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&open_item, &hide_item, &quit_item])?;
             let mut tray = TrayIconBuilder::with_id("main-tray")
@@ -143,32 +139,68 @@ pub fn run() {
             app.manage(database.clone());
             app.manage(runtime.clone());
             app.manage(browser_bridge.clone());
+            commands::debug::log_info(
+                "system",
+                "SFDownloader iniciado.",
+                Some(format!(
+                    "versão={}; sistema={}; arquitetura={}; engine=pronta",
+                    env!("CARGO_PKG_VERSION"),
+                    std::env::consts::OS,
+                    std::env::consts::ARCH
+                )),
+                None,
+                None,
+                Some(app.handle()),
+            );
             browser_bridge::start(app.handle().clone(), browser_bridge.clone());
+            let startup_app = app.handle().clone();
+            let startup_database = database.clone();
+            let startup_runtime = runtime.clone();
+            let startup_bridge = browser_bridge.clone();
+            let startup_recovered_ids = recovered_ids.clone();
+            commands::scheduling::start_scheduler(
+                startup_app.clone(),
+                startup_database.clone(),
+                startup_runtime,
+                startup_bridge,
+            );
+            tauri::async_runtime::spawn(async move {
+                let (restored, failed) = commands::task_control::restore_recovered_torrents(
+                    startup_database.clone(),
+                    &startup_recovered_ids,
+                )
+                .await;
+                commands::debug::log_info(
+                    "torrent",
+                    "Restauração automática de torrents finalizada",
+                    Some(format!("restaurados={restored}, falhas={failed}")),
+                    None,
+                    None,
+                    Some(&startup_app),
+                );
+            });
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(1104.0, 611.0))));
-                let is_autostart = std::env::args().any(|arg| arg == "--autostart" || arg == "--minimized" || arg == "--tray");
-                if !is_autostart {
-                    let _ = window.unminimize();
-                    let _ = window.set_skip_taskbar(false);
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                let _ = window.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize::new(
+                    1104.0, 611.0,
+                ))));
+                let is_autostart = std::env::args()
+                    .any(|arg| arg == "--autostart" || arg == "--minimized" || arg == "--tray");
+                // A janela principal só é exibida pelo frontend, depois que o
+                // pré-loader está pintado. Mostrar aqui expunha um frame cinza
+                // do WebView antes de o HTML/CSS inicial estar disponível.
+                if is_autostart {
+                    let _ = window.hide();
                 }
             }
-            for id in recovered_ids {
-                let app_handle = app.handle().clone();
-                let database = database.clone();
-                let runtime = runtime.clone();
-                let browser_bridge = browser_bridge.clone();
-                tauri::async_runtime::spawn(async move {
-                    let _ = commands::transfer::resume_owned(
-                        app_handle,
-                        database,
-                        runtime,
-                        browser_bridge,
-                        id,
-                    )
-                    .await;
-                });
+            if !recovered_ids.is_empty() {
+                commands::debug::log_info(
+                    "scheduler",
+                    "Downloads interrompidos foram marcados como pausados para recuperação",
+                    Some(format!("quantidade={}", recovered_ids.len())),
+                    None,
+                    None,
+                    Some(app.handle()),
+                );
             }
             Ok(())
         })
@@ -182,13 +214,15 @@ pub fn run() {
                     tauri::WindowEvent::Resized(_) => {
                         const MIN_WIDTH: f64 = 1104.0;
                         const MIN_HEIGHT: f64 = 611.0;
-                        if let (Ok(size), Ok(scale)) = (window.inner_size(), window.scale_factor()) {
+                        if let (Ok(size), Ok(scale)) = (window.inner_size(), window.scale_factor())
+                        {
                             let logical: tauri::LogicalSize<f64> = size.to_logical(scale);
                             if logical.width < MIN_WIDTH || logical.height < MIN_HEIGHT {
-                                let _ = window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
-                                    logical.width.max(MIN_WIDTH),
-                                    logical.height.max(MIN_HEIGHT),
-                                )));
+                                let _ =
+                                    window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
+                                        logical.width.max(MIN_WIDTH),
+                                        logical.height.max(MIN_HEIGHT),
+                                    )));
                             }
                         }
                     }
@@ -214,6 +248,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             create_category_folders,
             browser_bridge::browser_extension_status,
+            browser_bridge::browser_extension_diagnostics,
             browser_bridge::update_extension_theme,
             commands::context_menu::show_download_context_menu,
             commands::downloads::create_download,
@@ -227,26 +262,34 @@ pub fn run() {
             commands::downloads::reveal_in_folder,
             commands::downloads::open_file,
             commands::transfer::start_download,
-            commands::transfer::inspect_download,
-            commands::transfer::open_download_confirmation,
+            commands::inspection::inspect_download,
+            commands::windows::open_download_confirmation,
             commands::transfer::queue_download,
-            commands::transfer::cancel_download,
-            commands::transfer::pause_download,
-            commands::transfer::resume_download,
-            commands::transfer::replace_download_url,
-            commands::transfer::open_progress_window,
-            commands::transfer::open_complete_window,
-            commands::transfer::show_ready_window,
+            commands::task_control::cancel_download,
+            commands::task_control::pause_download,
+            commands::task_control::resume_download,
+            commands::task_control::replace_download_url,
+            commands::windows::open_progress_window,
+            commands::windows::open_complete_window,
+            commands::windows::show_ready_window,
             commands::transfer::update_speed_limit,
-            commands::transfer::open_browser_integration_window,
-            commands::transfer::get_extension_dir,
-            commands::transfer::open_folder,                    
-            commands::transfer::open_url,
+            commands::transfer::update_download_priority,
+            commands::transfer::prioritize_download,
+            commands::transfer::move_download_queue_item,
+            commands::scheduling::update_download_schedule,
+            commands::scheduling::bypass_download_schedule,
+            commands::scheduling::next_download_execution,
+            commands::scheduling::get_global_download_schedule,
+            commands::scheduling::update_global_download_schedule,
+            commands::windows::open_browser_integration_window,
+            commands::browser_extension::get_extension_dir,
+            commands::system::open_folder,
+            commands::system::open_url,
             commands::transfer::start_drag_folder,
             commands::transfer::parse_torrent_info,
             commands::transfer::confirm_torrent,
             commands::transfer::cancel_torrent,
-            commands::transfer::open_torrent_progress_window,
+            commands::windows::open_torrent_progress_window,
             commands::metrics::metrics_snapshot,
             commands::metrics::reset_metrics,
             commands::metrics::export_metrics,
@@ -256,7 +299,12 @@ pub fn run() {
             is_autostart_boot,
             download::extraction::extraction_status,
             commands::updater::check_for_updates,
+            commands::updater::update_download_status,
+            commands::updater::download_update,
+            commands::updater::cancel_update_download,
+            commands::updater::install_downloaded_update,
             commands::debug::get_debug_logs,
+            commands::debug::get_diagnostic_report,
             commands::debug::clear_debug_logs,
             commands::debug::open_debug_window
         ])

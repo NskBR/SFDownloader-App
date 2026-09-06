@@ -1,183 +1,16 @@
-use librqbit::{
-    AddTorrent, AddTorrentOptions, ManagedTorrent, Session, SessionOptions,
-    SessionPersistenceConfig,
+use crate::download::torrent_files::{
+    has_selected_subset, normalize_selected_file_indexes, remove_initialized_unselected_files,
+    remove_known_torrent_files, selected_size,
 };
-use serde::{Deserialize, Serialize};
+pub use crate::download::torrent_metadata::{
+    parse_bencode, sanitize_info_hash, validate_torrent_relative_path, BencodeValue,
+    TorrentFileItem, TorrentMetadataResponse,
+};
+use librqbit::{ManagedTorrent, Session};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
-use tokio::sync::RwLock;
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct TorrentFileItem {
-    pub index: usize,
-    pub path: String,
-    pub size: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(tag = "status", rename_all = "camelCase")]
-pub enum TorrentMetadataResponse {
-    #[serde(rename = "ready")]
-    Ready {
-        info_hash: String,
-        name: String,
-        total_size: u64,
-        files: Vec<TorrentFileItem>,
-    },
-    #[serde(rename = "fetchingMetadata")]
-    FetchingMetadata {
-        info_hash: String,
-        name: Option<String>,
-    },
-}
-
-impl TorrentMetadataResponse {
-    pub fn name(&self) -> Option<&str> {
-        match self {
-            Self::Ready { name, .. } => Some(name),
-            Self::FetchingMetadata { name, .. } => name.as_deref(),
-        }
-    }
-
-    pub fn info_hash(&self) -> &str {
-        match self {
-            Self::Ready { info_hash, .. } => info_hash,
-            Self::FetchingMetadata { info_hash, .. } => info_hash,
-        }
-    }
-
-    pub fn total_size(&self) -> Option<u64> {
-        match self {
-            Self::Ready { total_size, .. } => Some(*total_size),
-            Self::FetchingMetadata { .. } => None,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn files(&self) -> Option<&[TorrentFileItem]> {
-        match self {
-            Self::Ready { files, .. } => Some(files.as_slice()),
-            Self::FetchingMetadata { .. } => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum BencodeValue {
-    Int(i64),
-    Bytes(Vec<u8>),
-    List(Vec<BencodeValue>),
-    Dict(BTreeMap<Vec<u8>, BencodeValue>),
-}
-
-pub fn parse_bencode(bytes: &[u8]) -> Result<BencodeValue, String> {
-    let mut pos = 0;
-    let val = parse_bencode_value(bytes, &mut pos)?;
-    Ok(val)
-}
-
-fn parse_bencode_value(bytes: &[u8], pos: &mut usize) -> Result<BencodeValue, String> {
-    if *pos >= bytes.len() {
-        return Err("Não foi possível ler os metadados deste torrent.".into());
-    }
-    match bytes[*pos] {
-        b'i' => {
-            *pos += 1;
-            let start = *pos;
-            while *pos < bytes.len() && bytes[*pos] != b'e' {
-                *pos += 1;
-            }
-            if *pos >= bytes.len() {
-                return Err("Não foi possível ler os metadados deste torrent.".into());
-            }
-            let s = std::str::from_utf8(&bytes[start..*pos])
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            let val = s
-                .parse::<i64>()
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            *pos += 1; // skip 'e'
-            Ok(BencodeValue::Int(val))
-        }
-        b'l' => {
-            *pos += 1;
-            let mut list = Vec::new();
-            while *pos < bytes.len() && bytes[*pos] != b'e' {
-                list.push(parse_bencode_value(bytes, pos)?);
-            }
-            if *pos >= bytes.len() {
-                return Err("Não foi possível ler os metadados deste torrent.".into());
-            }
-            *pos += 1; // skip 'e'
-            Ok(BencodeValue::List(list))
-        }
-        b'd' => {
-            *pos += 1;
-            let mut dict = BTreeMap::new();
-            while *pos < bytes.len() && bytes[*pos] != b'e' {
-                let key_val = parse_bencode_value(bytes, pos)?;
-                let key = match key_val {
-                    BencodeValue::Bytes(b) => b,
-                    _ => return Err("Não foi possível ler os metadados deste torrent.".into()),
-                };
-                let val = parse_bencode_value(bytes, pos)?;
-                dict.insert(key, val);
-            }
-            if *pos >= bytes.len() {
-                return Err("Não foi possível ler os metadados deste torrent.".into());
-            }
-            *pos += 1; // skip 'e'
-            Ok(BencodeValue::Dict(dict))
-        }
-        b'0'..=b'9' => {
-            let start = *pos;
-            while *pos < bytes.len() && bytes[*pos] != b':' {
-                *pos += 1;
-            }
-            if *pos >= bytes.len() {
-                return Err("Não foi possível ler os metadados deste torrent.".into());
-            }
-            let len_str = std::str::from_utf8(&bytes[start..*pos])
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            let len = len_str
-                .parse::<usize>()
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            *pos += 1; // skip ':'
-            if *pos + len > bytes.len() {
-                return Err("Não foi possível ler os metadados deste torrent.".into());
-            }
-            let data = bytes[*pos..*pos + len].to_vec();
-            *pos += len;
-            Ok(BencodeValue::Bytes(data))
-        }
-        _ => Err("Não foi possível ler os metadados deste torrent.".into()),
-    }
-}
-
-pub fn sanitize_info_hash(raw: &str) -> String {
-    let mut s = raw.trim();
-    if let Some(inner) = s.strip_prefix("Some(").and_then(|i| i.strip_suffix(")")) {
-        s = inner;
-    }
-    if let Some(inner) = s
-        .strip_prefix("Id20(\"")
-        .and_then(|i| i.strip_suffix("\")"))
-    {
-        s = inner;
-    } else if let Some(inner) = s.strip_prefix("Id20(").and_then(|i| i.strip_suffix(")")) {
-        s = inner;
-    }
-    let cleaned: String = s
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
-        .collect();
-    if cleaned.is_empty() {
-        "torrent_hash".to_string()
-    } else {
-        cleaned
-    }
-}
+use tokio::sync::{Mutex, RwLock};
 
 pub struct TorrentEntry {
     pub info_hash: String,
@@ -190,14 +23,19 @@ pub struct TorrentEntry {
     pub files: Vec<TorrentFileItem>,
     pub selected_file_indexes: Vec<usize>,
     pub save_path: String,
+    pub tracker_count: i64,
 }
 
 pub struct TorrentManager {
     session: Arc<RwLock<Option<Arc<Session>>>>,
     entries: Arc<RwLock<BTreeMap<String, TorrentEntry>>>,
+    parse_lock: Arc<Mutex<()>>,
 }
 
 static TORRENT_MANAGER: LazyLock<TorrentManager> = LazyLock::new(TorrentManager::new);
+
+const DUPLICATE_TORRENT_MESSAGE: &str =
+    "Este torrent já está sendo preparado ou já existe na lista.";
 
 pub fn get_torrent_manager() -> &'static TorrentManager {
     &TORRENT_MANAGER
@@ -208,6 +46,7 @@ impl TorrentManager {
         Self {
             session: Arc::new(RwLock::new(None)),
             entries: Arc::new(RwLock::new(BTreeMap::new())),
+            parse_lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -219,45 +58,20 @@ impl TorrentManager {
         &self.session
     }
     pub async fn get_session(&self, default_output_dir: &Path) -> Result<Arc<Session>, String> {
-        let mut guard = self.session.write().await;
-        if let Some(ref s) = *guard {
-            return Ok(s.clone());
-        }
-
-        let persistence_root = std::env::var_os("LOCALAPPDATA")
-            .or_else(|| std::env::var_os("APPDATA"))
-            .map(PathBuf::from)
-            .unwrap_or_else(std::env::temp_dir)
-            .join("SF Downloader")
-            .join("torrent-session");
-        let opts = SessionOptions {
-            disable_dht: false,
-            persistence: Some(SessionPersistenceConfig::Json {
-                folder: Some(persistence_root),
-            }),
-            fastresume: true,
-            ..Default::default()
-        };
-
-        let session = Session::new_with_opts(default_output_dir.to_path_buf(), opts)
-            .await
-            .map_err(|e| format!("Falha ao inicializar motor Torrent: {e}"))?;
-
-        *guard = Some(session.clone());
-        Ok(session)
+        crate::download::torrent_session::get_or_create(&self.session, default_output_dir).await
     }
 
+    #[cfg(test)]
     pub async fn start_torrent_handle(
         &self,
         session: &Arc<Session>,
         source: &str,
         output_dir: &Path,
     ) -> Result<Arc<ManagedTorrent>, String> {
-        self.start_torrent_handle_configured(session, source, output_dir, false, None)
-            .await
+        crate::download::torrent_session::add_handle(session, source, output_dir, false, None).await
     }
 
-    async fn start_torrent_handle_configured(
+    pub(crate) async fn start_torrent_handle_configured(
         &self,
         session: &Arc<Session>,
         source: &str,
@@ -265,78 +79,167 @@ impl TorrentManager {
         paused: bool,
         only_files: Option<Vec<usize>>,
     ) -> Result<Arc<ManagedTorrent>, String> {
-        let opts = AddTorrentOptions {
-            output_folder: Some(output_dir.to_string_lossy().to_string()),
-            overwrite: true,
-            paused,
-            only_files,
-            ..Default::default()
-        };
-
-        let response = if source.starts_with("magnet:") {
-            session
-                .add_torrent(AddTorrent::from_url(source), Some(opts))
-                .await
-                .map_err(|e| {
-                    println!(
-                        "[ADD_TORRENT_ALERT] error_code=failed_to_add info_hash=magnet error={:?}",
-                        e
-                    );
-                    format!("Falha ao adicionar torrent: {e}")
-                })?
-        } else {
-            let bytes = std::fs::read(source)
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            session
-                .add_torrent(AddTorrent::from_bytes(bytes), Some(opts))
-                .await
-                .map_err(|e| {
-                    println!(
-                        "[ADD_TORRENT_ALERT] error_code=failed_to_add_file error={:?}",
-                        e
-                    );
-                    format!("Falha ao adicionar torrent: {e}")
-                })?
-        };
-
-        response
-            .into_handle()
-            .ok_or_else(|| "Torrents em lista não suportados".to_string())
+        crate::download::torrent_session::add_handle(
+            session, source, output_dir, paused, only_files,
+        )
+        .await
     }
 
+    pub async fn restore_task_handle(
+        &self,
+        task: &crate::database::models::DownloadTask,
+        paused: bool,
+    ) -> Result<(), String> {
+        let info_hash = task
+            .info_hash
+            .as_deref()
+            .map(sanitize_info_hash)
+            .filter(|hash| !hash.is_empty())
+            .ok_or_else(|| "Torrent salvo sem info hash válido.".to_string())?;
+
+        if self.entries.read().await.contains_key(&info_hash) {
+            return Ok(());
+        }
+
+        let _restore_guard = self.parse_lock.lock().await;
+        if self.entries.read().await.contains_key(&info_hash) {
+            return Ok(());
+        }
+
+        let save_path = Path::new(&task.save_path);
+        std::fs::create_dir_all(save_path)
+            .map_err(|error| format!("Falha ao preparar destino do torrent: {error}"))?;
+        let session = self.get_session(save_path).await?;
+        let source = crate::download::torrent_session::preferred_restore_source(
+            &info_hash,
+            &task.original_url,
+        );
+        let only_files = (!task.torrent_selected_file_indexes.is_empty())
+            .then(|| task.torrent_selected_file_indexes.clone());
+        let handle = match self
+            .start_torrent_handle_configured(
+                &session,
+                &source,
+                save_path,
+                paused,
+                only_files.clone(),
+            )
+            .await
+        {
+            Ok(handle) => handle,
+            Err(cache_error) if source != task.original_url => {
+                let _ = std::fs::remove_file(
+                    crate::download::torrent_session::cached_torrent_path(&info_hash),
+                );
+                self.start_torrent_handle_configured(
+                    &session,
+                    &task.original_url,
+                    save_path,
+                    paused,
+                    only_files,
+                )
+                .await
+                .map_err(|source_error| {
+                    format!(
+                        "Cache do torrent inválido ({cache_error}); a fonte original também falhou: {source_error}"
+                    )
+                })?
+            }
+            Err(error) => return Err(error),
+        };
+        let actual_info_hash = sanitize_info_hash(&format!("{:?}", handle.info_hash()));
+        if actual_info_hash != info_hash {
+            let _ = session
+                .delete(librqbit::api::TorrentIdOrHash::Id(handle.id()), false)
+                .await;
+            return Err("Os metadados restaurados não correspondem ao torrent salvo.".into());
+        }
+
+        let (files, torrent_bytes) = handle
+            .with_metadata(|metadata| {
+                let files = metadata
+                    .file_infos
+                    .iter()
+                    .enumerate()
+                    .map(|(index, file)| TorrentFileItem {
+                        index,
+                        path: file.relative_filename.to_string_lossy().replace('\\', "/"),
+                        size: file.len,
+                    })
+                    .collect::<Vec<_>>();
+                (files, metadata.torrent_bytes.to_vec())
+            })
+            .map_err(|error| {
+                format!("Metadados do torrent restaurado não estão disponíveis: {error}")
+            })?;
+        for file in &files {
+            validate_torrent_relative_path(&file.path)?;
+        }
+        let _ = crate::download::torrent_session::cache_metainfo(&info_hash, &torrent_bytes);
+        let total_size = files.iter().map(|file| file.size).sum::<u64>();
+        let selected_file_indexes = if task.torrent_selected_file_indexes.is_empty() {
+            handle.only_files().unwrap_or_default()
+        } else {
+            task.torrent_selected_file_indexes.clone()
+        };
+        let tracker_count = task
+            .original_url
+            .split('&')
+            .filter(|part| part.starts_with("tr="))
+            .count() as i64;
+
+        self.entries.write().await.insert(
+            info_hash.clone(),
+            TorrentEntry {
+                info_hash,
+                source: task.original_url.clone(),
+                handle,
+                metadata_ready: true,
+                confirmed: true,
+                name: task.file_name.clone(),
+                total_size: if total_size > 0 {
+                    total_size
+                } else {
+                    task.file_size.unwrap_or_default().max(0) as u64
+                },
+                files,
+                selected_file_indexes,
+                save_path: task.save_path.clone(),
+                tracker_count,
+            },
+        );
+        Ok(())
+    }
     pub async fn parse_torrent(&self, source: &str) -> Result<TorrentMetadataResponse, String> {
         self.parse_torrent_with_app(None, None, source).await
     }
 
     pub async fn parse_torrent_with_app(
         &self,
-        app: Option<tauri::AppHandle>,
-        token: Option<&str>,
+        _app: Option<tauri::AppHandle>,
+        _token: Option<&str>,
         source: &str,
     ) -> Result<TorrentMetadataResponse, String> {
-        println!(
-            "[TORRENT_LOG][BACKEND_RECEIVE] Argumento recebido: '{}'",
-            source
-        );
-
+        let _parse_guard = self.parse_lock.lock().await;
         if source.starts_with("magnet:") {
-            println!("[MAGNET_RECEIVED] Magnet link recebido: {}", source);
             let magnet = librqbit::Magnet::parse(source)
                 .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
             let info_hash = sanitize_info_hash(&format!("{:?}", magnet.as_id20()));
             let name = magnet.name.clone();
-
-            println!(
-                "[MAGNET_PARSED] Magnet parsed: info_hash={}, name={:?}",
-                info_hash, name
-            );
+            let tracker_count = source
+                .split('&')
+                .filter(|part| part.starts_with("tr="))
+                .count() as i64;
 
             // Verificar se handle persistente já existe no TorrentManager
             {
                 let read_guard = self.entries.read().await;
                 if let Some(existing) = read_guard.get(&info_hash) {
-                    if existing.metadata_ready {
-                        println!("[TORRENT_HANDLE_FOUND] Handle persistente existente encontrado com metadados prontos! info_hash={}", info_hash);
+                    // O React StrictMode executa efeitos duas vezes no ambiente de
+                    // desenvolvimento. Se a primeira chamada acabou de resolver o
+                    // magnet, devolva o mesmo resultado para a segunda chamada em
+                    // vez de exibir um falso erro de torrent duplicado.
+                    if existing.metadata_ready && !existing.confirmed {
                         return Ok(TorrentMetadataResponse::Ready {
                             info_hash: existing.info_hash.clone(),
                             name: existing.name.clone(),
@@ -344,159 +247,113 @@ impl TorrentManager {
                             files: existing.files.clone(),
                         });
                     }
+                    return Err(DUPLICATE_TORRENT_MESSAGE.into());
                 }
             }
 
-            // Adicionar handle persistente na sessão global
+            // O librqbit resolve os metadados do magnet dentro de add_torrent:
+            // ele só devolve o handle depois que recebeu o metainfo. Portanto,
+            // faça essa espera aqui com limite explícito, em vez de criar um
+            // observador que nunca começa enquanto add_torrent está bloqueado.
             let temp_dir = std::env::temp_dir();
             let session = self.get_session(&temp_dir).await?;
-            let handle = self
-                .start_torrent_handle_configured(&session, source, &temp_dir, true, None)
-                .await?;
-            println!("[MAGNET_ADDED_TO_SESSION] Handle persistente adicionado à sessão global. handle_id={}", handle.id());
-
-            // Guardar handle persistente no TorrentManager
+            let handle = match tokio::time::timeout(
+                tokio::time::Duration::from_secs(40),
+                self.start_torrent_handle_configured(&session, source, &temp_dir, false, None),
+            )
+            .await
             {
-                let mut write_guard = self.entries.write().await;
-                write_guard.insert(
-                    info_hash.clone(),
-                    TorrentEntry {
-                        info_hash: info_hash.clone(),
-                        source: source.to_string(),
-                        handle: handle.clone(),
-                        metadata_ready: false,
-                        confirmed: false,
-                        name: name.clone().unwrap_or_else(|| "Torrent Magnet".into()),
-                        total_size: 0,
-                        files: vec![],
-                        selected_file_indexes: vec![],
-                        save_path: temp_dir.to_string_lossy().to_string(),
-                    },
-                );
+                Ok(Ok(handle)) => handle,
+                Ok(Err(error)) => {
+                    crate::commands::debug::log_warn(
+                        "torrent",
+                        "Não foi possível adicionar o magnet ao motor Torrent.",
+                        Some(error.clone()),
+                        None,
+                        None,
+                        None,
+                    );
+                    return Err(error);
+                }
+                Err(_) => {
+                    let message = "Não foi possível obter os metadados deste magnet em 40 segundos. Verifique se há pares e trackers disponíveis.";
+                    crate::commands::debug::log_warn(
+                        "torrent",
+                        "A obtenção de metadados do magnet excedeu o tempo limite.",
+                        None,
+                        None,
+                        None,
+                        None,
+                    );
+                    return Err(message.into());
+                }
+            };
+
+            // A negociação já terminou quando o handle é devolvido. Pause antes
+            // de expor os arquivos, para que nada seja gravado no diretório
+            // temporário antes da confirmação do usuário.
+            let _ = session.pause(&handle).await;
+            let meta_name = handle.name().or(name).unwrap_or_else(|| "Torrent".into());
+            let files = handle
+                .with_metadata(|metadata| {
+                    metadata
+                        .file_infos
+                        .iter()
+                        .enumerate()
+                        .map(|(index, file)| TorrentFileItem {
+                            index,
+                            path: file.relative_filename.to_string_lossy().replace('\\', "/"),
+                            size: file.len,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .map_err(|error| format!("Falha ao ler os metadados recebidos: {error}"))?;
+            let total_size = files.iter().map(|file| file.size).sum::<u64>();
+            if files.is_empty() || total_size == 0 {
+                let _ = session
+                    .delete(librqbit::api::TorrentIdOrHash::Id(handle.id()), false)
+                    .await;
+                return Err("Os metadados recebidos não contêm arquivos válidos.".into());
             }
 
-            // Iniciar observador de metadados em background
-            if let Some(app_handle) = app {
-                let token_str = token.unwrap_or("").to_string();
-                let info_hash_str = info_hash.clone();
-                let name_str = name.clone();
-                let entries_ref = self.entries.clone();
-
-                tokio::spawn(async move {
-                    use tauri::Emitter;
-                    println!("[MAGNET_WAITING_METADATA] Aguardando metadados dos peers P2P para info_hash={}...", info_hash_str);
-
-                    for _ in 0..60 {
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                        let stats = handle.stats();
-                        if stats.total_bytes > 0 {
-                            let meta_name = handle.name().unwrap_or_else(|| {
-                                name_str.clone().unwrap_or_else(|| "Torrent".into())
-                            });
-                            let total_size = stats.total_bytes as u64;
-
-                            // Extrair lista real de arquivos do torrent via handle.with_metadata()
-                            let files: Vec<TorrentFileItem> = match handle.with_metadata(|m| {
-                                m.file_infos
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(idx, fi)| TorrentFileItem {
-                                        index: idx,
-                                        path: fi
-                                            .relative_filename
-                                            .to_string_lossy()
-                                            .replace('\\', "/"),
-                                        size: fi.len,
-                                    })
-                                    .collect::<Vec<TorrentFileItem>>()
-                            }) {
-                                Ok(files) if !files.is_empty() => files,
-                                _ => vec![TorrentFileItem {
-                                    index: 0,
-                                    path: meta_name.clone(),
-                                    size: total_size,
-                                }],
-                            };
-
-                            println!(
-                                "[MAGNET_METADATA_RECEIVED] Metadados recebidos do swarm P2P!"
-                            );
-                            println!(
-                                "[MAGNET_METADATA_RECEIVED] info_hash={}, nome='{}', total_size={} bytes, files.len()={}",
-                                info_hash_str, meta_name, total_size, files.len()
-                            );
-                            for f in &files {
-                                println!(
-                                    "[MAGNET_METADATA_RECEIVED] File: index={}, path='{}', size={} bytes",
-                                    f.index, f.path, f.size
-                                );
-                            }
-
-                            // Atualizar entrada persistente no TorrentManager
-                            {
-                                let mut guard = entries_ref.write().await;
-                                if let Some(entry) = guard.get_mut(&info_hash_str) {
-                                    entry.metadata_ready = true;
-                                    entry.name = meta_name.clone();
-                                    entry.total_size = total_size;
-                                    entry.files = files.clone();
-                                }
-                            }
-
-                            let ready_response = TorrentMetadataResponse::Ready {
-                                info_hash: info_hash_str.clone(),
-                                name: meta_name,
-                                total_size,
-                                files,
-                            };
-
-                            let event_name = format!("torrent-metadata-ready-{}", token_str);
-                            let _ = app_handle.emit(&event_name, ready_response);
-                            break;
-                        }
-                    }
-                });
-            }
-
-            let response = TorrentMetadataResponse::FetchingMetadata { info_hash, name };
-            let json_str = serde_json::to_string(&response)
-                .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-            println!(
-                "[TORRENT_LOG][BACKEND_RETURN_JSON] JSON enviado ao frontend:\n{}",
-                json_str
+            self.entries.write().await.insert(
+                info_hash.clone(),
+                TorrentEntry {
+                    info_hash: info_hash.clone(),
+                    source: source.to_string(),
+                    handle,
+                    metadata_ready: true,
+                    confirmed: false,
+                    name: meta_name.clone(),
+                    total_size,
+                    files: files.clone(),
+                    selected_file_indexes: vec![],
+                    save_path: temp_dir.to_string_lossy().to_string(),
+                    tracker_count,
+                },
             );
-            return Ok(response);
+
+            return Ok(TorrentMetadataResponse::Ready {
+                info_hash,
+                name: meta_name,
+                total_size,
+                files,
+            });
         }
 
         let path = PathBuf::from(source);
-        println!(
-            "[TORRENT_LOG][BACKEND_RECEIVE] Verificando arquivo no disco: path='{}', existe={}",
-            path.display(),
-            path.exists()
-        );
-
         if !path.exists() {
             return Err("Não foi possível ler os metadados deste torrent.".into());
         }
 
         let metadata_fs = std::fs::metadata(&path)
             .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-        println!(
-            "[TORRENT_LOG][BACKEND_RECEIVE] Tamanho físico no disco: {} bytes",
-            metadata_fs.len()
-        );
-
         if metadata_fs.len() == 0 {
             return Err("Não foi possível ler os metadados deste torrent.".into());
         }
 
         let bytes = std::fs::read(&path)
             .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-        println!(
-            "[TORRENT_LOG][BACKEND_RECEIVE] Quantidade real de bytes lidos: {} bytes",
-            bytes.len()
-        );
-
         let root_val = parse_bencode(&bytes)?;
         let root_dict = match root_val {
             BencodeValue::Dict(d) => d,
@@ -512,10 +369,7 @@ impl TorrentManager {
             Some(BencodeValue::Bytes(b)) => String::from_utf8_lossy(b).trim().to_string(),
             _ => return Err("Não foi possível ler os metadados deste torrent.".into()),
         };
-
-        if name.is_empty() {
-            return Err("Não foi possível ler os metadados deste torrent.".into());
-        }
+        let name = validate_torrent_relative_path(&name)?;
 
         let mut files = Vec::new();
         let mut total_size: u64 = 0;
@@ -545,17 +399,18 @@ impl TorrentManager {
                 for part in path_list {
                     if let BencodeValue::Bytes(pb) = part {
                         let s = String::from_utf8_lossy(pb).to_string();
-                        if !s.is_empty() {
-                            path_parts.push(s);
+                        if s.is_empty() {
+                            return Err("O torrent contém um caminho de arquivo inválido.".into());
                         }
+                        path_parts.push(s);
                     }
                 }
 
                 if path_parts.is_empty() {
-                    return Err("Não foi possível ler os metadados deste torrent.".into());
+                    return Err("O torrent contém um caminho de arquivo inválido.".into());
                 }
 
-                let rel_path = path_parts.join("/");
+                let rel_path = validate_torrent_relative_path(&path_parts.join("/"))?;
 
                 total_size = total_size.checked_add(file_size).ok_or_else(|| {
                     "Não foi possível ler os metadados deste torrent.".to_string()
@@ -593,6 +448,14 @@ impl TorrentManager {
             .await?;
         let info_hash = sanitize_info_hash(&format!("{:?}", handle.info_hash()));
 
+        let is_duplicate = self.entries.read().await.contains_key(&info_hash);
+        if is_duplicate {
+            let _ = session
+                .delete(librqbit::api::TorrentIdOrHash::Id(handle.id()), false)
+                .await;
+            return Err(DUPLICATE_TORRENT_MESSAGE.into());
+        }
+
         {
             let mut guard = self.entries.write().await;
             guard.insert(
@@ -608,6 +471,7 @@ impl TorrentManager {
                     files: files.clone(),
                     selected_file_indexes: vec![],
                     save_path: temp_dir.to_string_lossy().to_string(),
+                    tracker_count: 0,
                 },
             );
         }
@@ -619,30 +483,10 @@ impl TorrentManager {
             files: files.clone(),
         };
 
-        println!(
-            "[TORRENT_LOG][BACKEND_PARSED] Nome interno: '{}', Tipo: '{}', Total de arquivos: {}, Total Size: {} bytes",
-            name,
-            if files.len() > 1 { "Múltiplos arquivos" } else { "Arquivo único" },
-            files.len(),
-            total_size
-        );
-        for f in &files {
-            println!(
-                "[TORRENT_LOG][BACKEND_FILE] index: {}, path: '{}', size: {} bytes",
-                f.index, f.path, f.size
-            );
-        }
-
-        let json_str = serde_json::to_string(&meta)
-            .map_err(|_| "Não foi possível ler os metadados deste torrent.".to_string())?;
-        println!(
-            "[TORRENT_LOG][BACKEND_RETURN_JSON] JSON enviado ao frontend:\n{}",
-            json_str
-        );
-
         Ok(meta)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn confirm_torrent(
         &self,
         app: &tauri::AppHandle,
@@ -653,72 +497,72 @@ impl TorrentManager {
         selected_file_indexes: &[usize],
         start_immediately: bool,
     ) -> Result<crate::database::models::DownloadTask, String> {
-        println!(
-            "[CONFIRM_TORRENT_REQUEST] info_hash='{}', save_path='{}', selected_files={:?}, start_immediately={}",
-            info_hash, save_path, selected_file_indexes, start_immediately
-        );
+        {
+            let conn = database.connect().map_err(|e| e.to_string())?;
+            if let Some(existing) =
+                crate::database::repositories::downloads::find_by_info_hash(&conn, info_hash)
+                    .map_err(|e| format!("Erro ao consultar torrents existentes: {e}"))?
+            {
+                return Err(format!(
+                    "{} ({})",
+                    DUPLICATE_TORRENT_MESSAGE, existing.file_name
+                ));
+            }
+        }
 
         let mut guard = self.entries.write().await;
         let entry = guard.get_mut(info_hash).ok_or_else(|| {
-            println!(
-                "[ADD_TORRENT_ALERT] error_code=handle_not_found info_hash={}",
-                info_hash
-            );
-            format!(
-                "Handle do torrent não encontrado para info_hash: {}",
-                info_hash
-            )
+            format!("Handle do torrent não encontrado para info_hash: {info_hash}")
         })?;
 
         if !entry.metadata_ready {
-            println!(
-                "[ADD_TORRENT_ALERT] error_code=metadata_not_ready info_hash={}",
-                info_hash
-            );
             return Err("Metadados do torrent ainda não foram baixados.".into());
         }
 
-        let _stats = entry.handle.stats();
-        println!(
-            "[TORRENT_HANDLE_FOUND] handle_id={}, metadata_ready=true, estado_atual='{:?}', total_size={} bytes",
-            entry.handle.id(),
-            _stats,
-            entry.total_size
-        );
+        for file in &entry.files {
+            validate_torrent_relative_path(&file.path)?;
+        }
+
+        let normalized_selection =
+            normalize_selected_file_indexes(&entry.files, selected_file_indexes);
+        if !selected_file_indexes.is_empty() && normalized_selection.is_empty() {
+            return Err("A seleção do torrent não contém nenhum arquivo válido.".into());
+        }
+        let selected_file_indexes = normalized_selection.as_slice();
+
+        let has_selected_subset = has_selected_subset(&entry.files, selected_file_indexes);
 
         // Testar validade do diretório e teste de escrita
         let save_dir = PathBuf::from(save_path);
         std::fs::create_dir_all(&save_dir).map_err(|e| {
-            println!(
-                "[TORRENT_ERROR] error_code=failed_to_create_dir save_path='{}' error={:?}",
-                save_path, e
+            crate::commands::debug::log_error(
+                "torrent",
+                "Não foi possível criar a pasta de destino do torrent.",
+                Some(e.to_string()),
+                None,
+                None,
+                None,
             );
             format!("Não foi possível criar pasta de destino: {e}")
         })?;
 
         let test_file = save_dir.join(format!(".sf_test_{}.tmp", uuid::Uuid::new_v4()));
         if let Err(e) = std::fs::write(&test_file, b"test") {
-            println!(
-                "[TORRENT_ERROR] error_code=permission_denied save_path='{}' error={:?}",
-                save_path, e
+            crate::commands::debug::log_error(
+                "torrent",
+                "Não há permissão para gravar no destino do torrent.",
+                Some(e.to_string()),
+                None,
+                None,
+                None,
             );
             return Err(format!("Sem permissão de escrita em {}: {e}", save_path));
         } else {
             let _ = std::fs::remove_file(test_file);
         }
 
-        println!(
-            "[TORRENT_DESTINATION] caminho_absoluto='{}', existe=true, e_diretorio=true, teste_escrita=ok",
-            save_dir.display()
-        );
-
-        println!(
-            "[TORRENT_PRIORITIES] Prioridades de arquivos aplicadas para índices: {:?}",
-            selected_file_indexes
-        );
-
         // Aplicar seleção de arquivos (update_only_files) na sessão do librqbit
-        if !selected_file_indexes.is_empty() && selected_file_indexes.len() < entry.files.len() {
+        if has_selected_subset {
             let selected_set: std::collections::HashSet<usize> =
                 selected_file_indexes.iter().copied().collect();
             if let Some(ref session) = *self.session.read().await {
@@ -726,29 +570,31 @@ impl TorrentManager {
                     .update_only_files(&entry.handle, &selected_set)
                     .await
                 {
-                    println!(
-                        "[TORRENT_ERROR] Falha ao aplicar update_only_files na sessão: {:?}",
-                        e
+                    crate::commands::debug::log_warn(
+                        "torrent",
+                        "Não foi possível aplicar a seleção parcial de arquivos do torrent.",
+                        Some(e.to_string()),
+                        None,
+                        None,
+                        None,
                     );
-                } else {
-                    println!("[TORRENT_PRIORITIES] update_only_files aplicado com sucesso via sessão: {:?}", selected_set);
                 }
             }
         }
 
-        let selected_total_size: u64 = if !selected_file_indexes.is_empty()
-            && selected_file_indexes.len() < entry.files.len()
-        {
-            selected_file_indexes
-                .iter()
-                .map(|&idx| entry.files.get(idx).map(|f| f.size).unwrap_or(0))
-                .sum()
+        let selected_total_size = if has_selected_subset {
+            selected_size(&entry.files, selected_file_indexes)
         } else {
             entry.total_size
         };
 
         let old_handle_id = entry.handle.id();
-        let source = entry.source.clone();
+        let torrent_bytes = entry
+            .handle
+            .with_metadata(|metadata| metadata.torrent_bytes.to_vec())
+            .map_err(|error| format!("Metadados do torrent não estão disponíveis: {error}"))?;
+        let cached_source =
+            crate::download::torrent_session::cache_metainfo(info_hash, &torrent_bytes)?;
         let only_files = if !selected_file_indexes.is_empty()
             && selected_file_indexes.len() < entry.files.len()
         {
@@ -767,19 +613,10 @@ impl TorrentManager {
             .await
             .map_err(|e| format!("Falha ao preparar destino do torrent: {e}"))?;
 
-        use tauri::Manager;
-        if let Some(app_dir) = app.path().app_data_dir().ok() {
-            let persistence_root = app_dir.join("SF Downloader").join("torrent-session");
-            let bitv = persistence_root.join(format!("{}.bitv", info_hash));
-            let torrent_file = persistence_root.join(format!("{}.torrent", info_hash));
-            let _ = std::fs::remove_file(bitv);
-            let _ = std::fs::remove_file(torrent_file);
-        }
-
         let final_handle = self
             .start_torrent_handle_configured(
                 &session,
-                &source,
+                &cached_source.to_string_lossy(),
                 &save_dir,
                 !start_immediately,
                 only_files,
@@ -792,21 +629,8 @@ impl TorrentManager {
         entry.selected_file_indexes = selected_file_indexes.to_vec();
 
         // Remover do disco arquivos desmarcados que a inicialização de armazenamento do librqbit cria automaticamente
-        if !selected_file_indexes.is_empty() && selected_file_indexes.len() < entry.files.len() {
-            let selected_set: std::collections::HashSet<usize> =
-                selected_file_indexes.iter().copied().collect();
-            for file in &entry.files {
-                if !selected_set.contains(&file.index) {
-                    let unselected_path = save_dir.join(&file.path);
-                    if unselected_path.exists() {
-                        let _ = std::fs::remove_file(&unselected_path);
-                        println!(
-                            "[TORRENT_CLEANUP] Removido arquivo desmarcado criado no init do librqbit: {:?}",
-                            unselected_path
-                        );
-                    }
-                }
-            }
+        if has_selected_subset {
+            remove_initialized_unselected_files(&save_dir, &entry.files, selected_file_indexes);
         }
 
         let conn = database.connect().map_err(|e| e.to_string())?;
@@ -837,20 +661,26 @@ impl TorrentManager {
             max_connections: 1,
             max_parallel_downloads: 5,
             speed_limit_download: 0,
+            speed_limit_inherited: false,
             etag: None,
             last_modified: None,
             delete_archive_after_extract: false,
             download_type: "torrent".into(),
             info_hash: Some(info_hash.to_string()),
+            priority: 1,
         };
 
         let task = crate::database::repositories::downloads::create(&conn, input)
             .map_err(|e| format!("Erro ao criar registro no banco: {e}"))?;
-
-        println!(
-            "[TORRENT_RESUME] Motor retomado/iniciado com sucesso para info_hash={}",
-            info_hash
-        );
+        crate::database::repositories::downloads::update_torrent_selection(
+            &conn,
+            &task.id,
+            selected_file_indexes,
+        )
+        .map_err(|e| format!("Erro ao persistir seleção do torrent: {e}"))?;
+        let task = crate::database::repositories::downloads::find(&conn, &task.id)
+            .map_err(|e| format!("Erro ao reler torrent criado: {e}"))?
+            .ok_or_else(|| "Torrent criado não foi encontrado no banco.".to_string())?;
 
         if start_immediately {
             let control = crate::download::runtime::TaskControl::new();
@@ -877,11 +707,6 @@ impl TorrentManager {
         info_hash: &str,
         delete_files: bool,
     ) -> Result<(), String> {
-        println!(
-            "[MAGNET_CANCELLED] Cancelando torrent com info_hash={}, delete_files={}",
-            info_hash, delete_files
-        );
-
         let mut actual_info_hash = info_hash.to_string();
         let mut db_task_id = info_hash.to_string();
 
@@ -893,23 +718,6 @@ impl TorrentManager {
                 if let Some(h) = task.info_hash {
                     actual_info_hash = h;
                 }
-
-                if delete_files {
-                    let final_path = std::path::PathBuf::from(&task.final_path);
-                    let save_path = std::path::PathBuf::from(&task.save_path);
-
-                    if final_path.exists() {
-                        if final_path.is_file() {
-                            let _ = std::fs::remove_file(&final_path);
-                        } else if final_path.is_dir() {
-                            let _ = std::fs::remove_dir_all(&final_path);
-                        }
-                    }
-
-                    if save_path.exists() && save_path != final_path && save_path.is_dir() {
-                        let _ = std::fs::remove_dir_all(&save_path);
-                    }
-                }
             }
         }
 
@@ -919,31 +727,31 @@ impl TorrentManager {
             .or_else(|| guard.remove(info_hash))
         {
             let id_num = entry.handle.id();
+            if delete_files {
+                let _ = remove_known_torrent_files(
+                    Path::new(&entry.save_path),
+                    &entry.files,
+                    &entry.selected_file_indexes,
+                );
+            }
             if let Some(ref session) = *self.session.read().await {
                 let _ = session
-                    .delete(librqbit::api::TorrentIdOrHash::Id(id_num), delete_files)
+                    .delete(librqbit::api::TorrentIdOrHash::Id(id_num), false)
                     .await;
             }
         }
 
         // Apagar os arquivos de cache/persistência (.bitv e .torrent) da pasta torrent-session
-        use tauri::Manager;
-        let app_dir = app.path().app_data_dir().ok();
-        let persistence_root = app_dir
-            .unwrap_or_else(std::env::temp_dir)
-            .join("SF Downloader")
-            .join("torrent-session");
+        let persistence_root = crate::download::torrent_session::persistence_root();
 
         for h in [&actual_info_hash, info_hash] {
             let bitv = persistence_root.join(format!("{}.bitv", h));
             let torrent_file = persistence_root.join(format!("{}.torrent", h));
             if bitv.exists() {
                 let _ = std::fs::remove_file(&bitv);
-                println!("[TORRENT_CLEANUP] Removido cache bitv de persistencia: {:?}", bitv);
             }
             if torrent_file.exists() {
                 let _ = std::fs::remove_file(&torrent_file);
-                println!("[TORRENT_CLEANUP] Removido cache torrent de persistencia: {:?}", torrent_file);
             }
         }
 
@@ -983,234 +791,7 @@ impl TorrentManager {
     }
 }
 
-pub async fn run_torrent(
-    app: tauri::AppHandle,
-    database: crate::database::Database,
-    task: crate::database::models::DownloadTask,
-    control: crate::download::runtime::TaskControl,
-) {
-    use crate::database::models::{DownloadStatus, UpdateDownloadInput};
-    use crate::database::repositories::downloads;
-    use tauri::Emitter;
-
-    let connection = match database.connect() {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    let manager = get_torrent_manager();
-    let info_hash = task.info_hash.clone().unwrap_or_default();
-
-    let mut current_downloaded = task.total_downloaded;
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(500));
-    loop {
-        interval.tick().await;
-
-        if control.was_paused() {
-            let _ = downloads::update_progress(
-                &connection,
-                &UpdateDownloadInput {
-                    id: task.id.clone(),
-                    status: DownloadStatus::Paused,
-                    total_downloaded: current_downloaded,
-                    speed_current: 0.0,
-                    speed_average: 0.0,
-                    seeds: None,
-                    peers: None,
-                    upload_speed: None,
-                    total_uploaded: None,
-                },
-            );
-            let _ = app.emit(
-                "download-progress",
-                serde_json::json!({
-                    "id": task.id,
-                    "downloaded": current_downloaded,
-                    "total": task.file_size,
-                    "speed": 0.0,
-                    "status": "paused",
-                    "error": null
-                }),
-            );
-            break;
-        }
-
-        if control.was_cancelled() {
-            let _ = manager
-                .cancel_torrent(&app, &database, &info_hash, false)
-                .await;
-            break;
-        }
-
-        // Buscar handle no TorrentManager
-        let guard = manager.entries.read().await;
-        if let Some(entry) = guard.get(&info_hash) {
-            let stats = entry.handle.stats();
-
-            let has_selected_subset = !entry.selected_file_indexes.is_empty()
-                && entry.selected_file_indexes.len() < entry.files.len();
-
-            let logical_total_size = if has_selected_subset {
-                entry
-                    .selected_file_indexes
-                    .iter()
-                    .map(|&idx| entry.files.get(idx).map(|f| f.size).unwrap_or(0))
-                    .sum::<u64>() as i64
-            } else {
-                task.file_size.unwrap_or(entry.total_size as i64)
-            };
-
-            let total_size = logical_total_size;
-
-            let downloaded = if has_selected_subset {
-                entry
-                    .selected_file_indexes
-                    .iter()
-                    .map(|&idx| stats.file_progress.get(idx).copied().unwrap_or(0))
-                    .sum::<u64>() as i64
-            } else if stats.finished {
-                total_size
-            } else {
-                stats.progress_bytes as i64
-            };
-
-            // Garantir que baixado nunca ultrapasse o total_size da seleção ou do torrent
-            let downloaded = if total_size > 0 {
-                downloaded.min(total_size)
-            } else {
-                downloaded
-            };
-
-            let is_finished = if total_size > 0 {
-                downloaded >= total_size
-            } else {
-                stats.finished
-            };
-
-            let speed_bytes = stats
-                .live
-                .as_ref()
-                .map(|l| l.download_speed.mbps * 1024.0 * 1024.0)
-                .unwrap_or(0.0);
-
-            let upload_speed = stats
-                .live
-                .as_ref()
-                .map(|l| l.upload_speed.mbps * 1024.0 * 1024.0)
-                .unwrap_or(0.0);
-
-            let peers = stats
-                .live
-                .as_ref()
-                .map(|l| (l.snapshot.peer_stats.live + l.snapshot.peer_stats.connecting) as i64)
-                .unwrap_or(0);
-            let seeds = 0;
-
-            // Mapear estado real do librqbit para DownloadStatus
-            use librqbit::TorrentStatsState;
-            let is_initializing = matches!(stats.state, TorrentStatsState::Initializing);
-            let real_downloaded = if is_initializing { 0_i64 } else { downloaded };
-            current_downloaded = real_downloaded;
-
-            let (db_status, ui_status) = if stats.error.is_some() {
-                (DownloadStatus::Failed, "failed")
-            } else if is_finished {
-                (DownloadStatus::Completed, "completed")
-            } else {
-                match stats.state {
-                    TorrentStatsState::Initializing => {
-                        (DownloadStatus::Downloading, "checking_files")
-                    }
-                    TorrentStatsState::Live => {
-                        // Exibir "Baixando" APENAS quando já baixou algum byte real (> 0)
-                        // E a velocidade real de download for >= 1.0 KB/s.
-                        // Caso contrário, exibir "Conectando P2P" (Conectando-se aos pares).
-                        if real_downloaded > 0 && speed_bytes >= 1024.0 {
-                            (DownloadStatus::Downloading, "downloading")
-                        } else {
-                            (DownloadStatus::Downloading, "connecting")
-                        }
-                    }
-                    TorrentStatsState::Paused => (DownloadStatus::Paused, "paused"),
-                    TorrentStatsState::Error => (DownloadStatus::Failed, "failed"),
-                }
-            };
-
-            // Durante Initializing, progress_bytes = peças verificadas no disco (não bytes baixados)
-            // Só registrar progresso real quando estado for Live e houver velocidade
-            let real_downloaded = if is_initializing { 0_i64 } else { downloaded };
-
-            println!(
-                "[TORRENT_LOG][BACKEND_STATUS] info_hash={} state={:?} verified={}/{} bytes, real_dl={} bytes, speed={:.0} B/s, peers={} seeds={}",
-                info_hash, stats.state, downloaded, total_size, real_downloaded, speed_bytes, peers, seeds
-            );
-
-            let _ = downloads::update_progress(
-                &connection,
-                &UpdateDownloadInput {
-                    id: task.id.clone(),
-                    status: db_status,
-                    total_downloaded: real_downloaded,
-                    speed_current: speed_bytes,
-                    speed_average: speed_bytes,
-                    seeds: Some(seeds),
-                    peers: Some(peers),
-                    upload_speed: Some(upload_speed),
-                    total_uploaded: Some(stats.uploaded_bytes as i64),
-                },
-            );
-
-            let _ = app.emit(
-                "download-progress",
-                serde_json::json!({
-                    "id": task.id,
-                    // downloaded = bytes REALMENTE baixados (0 durante verificação)
-                    "downloaded": real_downloaded,
-                    // verifiedBytes = bytes verificados no disco (só durante checking_files)
-                    "verifiedBytes": if is_initializing { downloaded } else { 0_i64 },
-                    "total": total_size,
-                    "speed": speed_bytes,
-                    "uploadSpeed": upload_speed,
-                    "seeds": seeds,
-                    "peers": peers,
-                    "status": ui_status,
-                    "error": stats.error.clone()
-                }),
-            );
-
-            if is_finished && has_selected_subset {
-                let selected: std::collections::HashSet<usize> =
-                    entry.selected_file_indexes.iter().copied().collect();
-                for file in entry.files.iter().filter(|file| !selected.contains(&file.index)) {
-                    let relative = Path::new(&file.path);
-                    let safe_relative = relative.components().all(|component| {
-                        matches!(
-                            component,
-                            std::path::Component::Normal(_) | std::path::Component::CurDir
-                        )
-                    });
-                    if !safe_relative {
-                        continue;
-                    }
-                    let candidate = Path::new(&entry.save_path).join(relative);
-                    if std::fs::metadata(&candidate)
-                        .map(|metadata| metadata.is_file() && metadata.len() == 0)
-                        .unwrap_or(false)
-                    {
-                        let _ = std::fs::remove_file(candidate);
-                    }
-                }
-            }
-
-            if is_finished || stats.error.is_some() {
-                break;
-            }
-        } else {
-            println!("[TORRENT_LOG][BACKEND_STATUS] info_hash={} handle not found in TorrentManager — encerrando loop", info_hash);
-            break;
-        }
-    }
-}
+pub use crate::download::torrent_runner::run_torrent;
 
 #[cfg(test)]
 mod tests {
@@ -1235,14 +816,32 @@ mod tests {
         out
     }
 
+    #[test]
+    fn accepts_v1_v2_and_hybrid_magnets_offline() {
+        let magnets = [
+            "magnet:?xt=urn:btih:631a31dd0a46257d5078c0dee4e66e26f73e42ac&dn=v1-test",
+            "magnet:?xt=urn:btmh:1220caf1e1c30e81cb361b9ee167c4aa64228a7fa4fa9f6105232b28ad099f3a302e&dn=v2-test",
+            "magnet:?xt=urn:btih:631a31dd0a46257d5078c0dee4e66e26f73e42ac&xt=urn:btmh:1220d8dd32ac93357c368556af3ac1d95c9d76bd0dff6fa9833ecdac3d53134efabb&dn=hybrid-test",
+        ];
+        for source in magnets {
+            let magnet = librqbit::Magnet::parse(source).expect("valid test magnet");
+            assert!(!sanitize_info_hash(&format!("{:?}", magnet.as_id20())).is_empty());
+        }
+    }
     #[tokio::test]
     async fn test_tauri_command_parse_torrent_single_file() {
-        let dir = std::env::temp_dir();
-        let file_path = dir.join(format!("test_single_{}.torrent", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!(
+            "sf-downloader-torrent-single-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file_path = dir.join("source.torrent");
 
         let info_dict = create_bencode_dict(&[
             (b"name", create_bencode_string("example.iso")),
             (b"length", create_bencode_int(1048576)),
+            (b"piece length", create_bencode_int(262_144)),
+            (b"pieces", create_bencode_string(&"\0".repeat(20))),
         ]);
         let root_dict = create_bencode_dict(&[(b"info", info_dict)]);
 
@@ -1267,13 +866,59 @@ mod tests {
         let json = serde_json::to_string(&meta).unwrap();
         assert!(json.contains("example.iso"));
         assert!(json.contains("1048576"));
-        assert!(json.contains("totalSize"));
+        assert!(json.contains("total_size"));
         assert!(json.contains("files"));
 
         let deserialized: TorrentMetadataResponse = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, meta);
 
         let _ = std::fs::remove_file(file_path);
+    }
+
+    #[test]
+    fn metadata_timeout_response_serializes_for_the_frontend() {
+        let response = TorrentMetadataResponse::Failed {
+            info_hash: "abc123".into(),
+            message: "Sem pares disponíveis.".into(),
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"status\":\"failed\""));
+
+        let deserialized: TorrentMetadataResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, response);
+        assert_eq!(deserialized.info_hash(), "abc123");
+        assert_eq!(deserialized.name(), None);
+    }
+
+    #[test]
+    fn rejects_unsafe_torrent_relative_paths() {
+        assert_eq!(
+            validate_torrent_relative_path("season/episode.mkv").unwrap(),
+            "season/episode.mkv"
+        );
+        let unicode_path = "Séries/日本語/episódio-01.mkv";
+        assert_eq!(
+            validate_torrent_relative_path(unicode_path).unwrap(),
+            unicode_path
+        );
+        let long_path = format!("{}{}.bin", "pasta/".repeat(40), "arquivo".repeat(20));
+        assert_eq!(
+            validate_torrent_relative_path(&long_path).unwrap(),
+            long_path
+        );
+
+        for path in [
+            "../outside.mkv",
+            "folder/../../outside.mkv",
+            "/absolute.mkv",
+            "C:/outside.mkv",
+        ] {
+            assert_eq!(
+                validate_torrent_relative_path(path).unwrap_err(),
+                "O torrent contém um caminho de arquivo inválido."
+            );
+        }
     }
 
     fn create_bencode_list(items: &[Vec<u8>]) -> Vec<u8> {
@@ -1287,8 +932,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_tauri_command_parse_torrent_multi_file() {
-        let dir = std::env::temp_dir();
-        let file_path = dir.join(format!("test_multi_{}.torrent", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!(
+            "sf-downloader-torrent-multi-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file_path = dir.join("source.torrent");
 
         let path1 = create_bencode_list(&[
             create_bencode_string("Season 01"),
@@ -1309,6 +958,8 @@ mod tests {
         let info_dict = create_bencode_dict(&[
             (b"files", files_list),
             (b"name", create_bencode_string("Example Pack")),
+            (b"piece length", create_bencode_int(262_144)),
+            (b"pieces", create_bencode_string(&"\0".repeat(20))),
         ]);
         let root_dict = create_bencode_dict(&[(b"info", info_dict)]);
 
@@ -1373,13 +1024,19 @@ mod tests {
     #[tokio::test]
     async fn test_torrent_manager_confirm_and_cancel() {
         let manager = TorrentManager::new();
-        let dir = std::env::temp_dir();
+        let dir = std::env::temp_dir().join(format!(
+            "sf-downloader-torrent-manager-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
         let info_dict = create_bencode_dict(&[
             (b"name", create_bencode_string("test_game.iso")),
             (b"length", create_bencode_int(1048576)),
+            (b"piece length", create_bencode_int(262_144)),
+            (b"pieces", create_bencode_string(&"\0".repeat(20))),
         ]);
         let root_dict = create_bencode_dict(&[(b"info", info_dict)]);
-        let file_path = dir.join(format!("test_manager_{}.torrent", uuid::Uuid::new_v4()));
+        let file_path = dir.join("source.torrent");
         std::fs::write(&file_path, &root_dict).unwrap();
 
         let session = manager.get_session(&dir).await.unwrap();
@@ -1408,6 +1065,7 @@ mod tests {
                     }],
                     selected_file_indexes: vec![0],
                     save_path: dir.to_string_lossy().to_string(),
+                    tracker_count: 0,
                 },
             );
         }

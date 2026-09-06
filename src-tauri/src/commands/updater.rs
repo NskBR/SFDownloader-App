@@ -1,5 +1,16 @@
+use std::{
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
+
+use futures_util::StreamExt;
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::io::AsyncWriteExt;
+use tokio_util::sync::CancellationToken;
+
+use crate::download::paths::safe_file_name;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct UpdateCheckResult {
@@ -9,6 +20,63 @@ pub struct UpdateCheckResult {
     pub release_url: String,
     pub release_name: Option<String>,
     pub release_notes: Option<String>,
+    pub installer_url: Option<String>,
+    pub installer_name: Option<String>,
+    pub installer_size: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct UpdateDownloadProgress {
+    pub status: String,
+    pub downloaded_bytes: u64,
+    pub total_bytes: Option<u64>,
+    pub bytes_per_second: u64,
+    pub installer_name: Option<String>,
+    pub message: Option<String>,
+}
+
+impl UpdateDownloadProgress {
+    fn idle() -> Self {
+        Self {
+            status: "idle".into(),
+            downloaded_bytes: 0,
+            total_bytes: None,
+            bytes_per_second: 0,
+            installer_name: None,
+            message: None,
+        }
+    }
+}
+
+struct UpdateRuntime {
+    progress: UpdateDownloadProgress,
+    ready_installer: Option<PathBuf>,
+    cancellation: Option<CancellationToken>,
+    approved_installer: Option<(String, String)>,
+}
+
+impl Default for UpdateRuntime {
+    fn default() -> Self {
+        Self {
+            progress: UpdateDownloadProgress::idle(),
+            ready_installer: None,
+            cancellation: None,
+            approved_installer: None,
+        }
+    }
+}
+
+static UPDATE_RUNTIME: OnceLock<Mutex<UpdateRuntime>> = OnceLock::new();
+
+fn runtime() -> &'static Mutex<UpdateRuntime> {
+    UPDATE_RUNTIME.get_or_init(|| Mutex::new(UpdateRuntime::default()))
+}
+
+fn set_progress(app: &AppHandle, progress: UpdateDownloadProgress) {
+    if let Ok(mut state) = runtime().lock() {
+        state.progress = progress.clone();
+    }
+    let _ = app.emit("update-download-progress", progress);
 }
 
 fn extract_version_str(s: &str) -> String {
@@ -16,7 +84,6 @@ fn extract_version_str(s: &str) -> String {
     let mut best = String::new();
     let mut current = String::new();
     let mut dots = 0;
-
     for &c in &chars {
         if c.is_ascii_digit() {
             current.push(c);
@@ -34,7 +101,6 @@ fn extract_version_str(s: &str) -> String {
     if dots >= 1 && current.len() > best.len() {
         best = current.trim_matches('.').to_string();
     }
-
     if best.is_empty() {
         s.trim_start_matches('v').to_string()
     } else {
@@ -51,10 +117,67 @@ fn is_version_newer(latest: &str, current: &str) -> bool {
             .map(|p| p.parse::<u64>().unwrap_or(0))
             .collect()
     };
-    let l_parts = parse_ver(latest);
-    let c_parts = parse_ver(current);
+    parse_ver(latest) > parse_ver(current)
+}
 
-    l_parts > c_parts
+fn fallback_result(repo: &str, current_version: String) -> UpdateCheckResult {
+    UpdateCheckResult {
+        available: false,
+        current_version: current_version.clone(),
+        latest_version: current_version,
+        release_url: format!("https://github.com/{repo}/releases"),
+        release_name: None,
+        release_notes: None,
+        installer_url: None,
+        installer_name: None,
+        installer_size: None,
+    }
+}
+
+fn is_official_release_asset_url(value: &str) -> bool {
+    let Ok(url) = reqwest::Url::parse(value) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && url.host_str() == Some("github.com")
+        && url.path().contains("/releases/download/")
+        && url.path().to_ascii_lowercase().ends_with(".exe")
+}
+
+fn select_windows_installer(json: &serde_json::Value) -> Option<(String, String, u64)> {
+    json["assets"].as_array()?.iter().find_map(|asset| {
+        let name = asset["name"].as_str()?.to_string();
+        let url = asset["browser_download_url"].as_str()?.to_string();
+        let normalized = name.to_ascii_lowercase();
+        if normalized.ends_with(".exe")
+            && (normalized.contains("setup") || normalized.contains("installer"))
+            && is_official_release_asset_url(&url)
+        {
+            Some((url, name, asset["size"].as_u64().unwrap_or(0)))
+        } else {
+            None
+        }
+    })
+}
+
+fn installer_cache_path(
+    app: &AppHandle,
+    installer_name: &str,
+) -> Result<(PathBuf, PathBuf), String> {
+    let root = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Não foi possível acessar a pasta de dados do aplicativo: {e}"))?
+        .join("updates");
+    std::fs::create_dir_all(&root)
+        .map_err(|e| format!("Não foi possível preparar a pasta da atualização: {e}"))?;
+    let safe_name = safe_file_name(installer_name);
+    if !safe_name.to_ascii_lowercase().ends_with(".exe") {
+        return Err("O arquivo de atualização não é um instalador .exe válido.".into());
+    }
+    let destination = root.join(safe_name);
+    let temporary = destination.with_extension("exe.part");
+    Ok((destination, temporary))
 }
 
 #[tauri::command]
@@ -64,74 +187,76 @@ pub async fn check_for_updates(
 ) -> Result<UpdateCheckResult, String> {
     let repo = repo_override
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "NskBR/SFDownloader-BETA".to_string());
-
+        .unwrap_or_else(|| "NskBR/SFDownloader-App".to_string());
     let current_version = env!("CARGO_PKG_VERSION").to_string();
-    let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
-
+    let url = format!("https://api.github.com/repos/{repo}/releases/latest");
     let client = reqwest::Client::builder()
         .user_agent("SFDownloader-updater")
         .build()
         .map_err(|e| format!("Erro ao criar cliente HTTP: {e}"))?;
-
     let resp = match client.get(&url).send().await {
         Ok(r) => r,
         Err(e) => {
-            println!("[UPDATER] Erro de rede ao checar atualizações: {:?}", e);
-            return Ok(UpdateCheckResult {
-                available: false,
-                current_version: current_version.clone(),
-                latest_version: current_version,
-                release_url: format!("https://github.com/{}/releases", repo),
-                release_name: None,
-                release_notes: None,
-            });
+            crate::commands::debug::log_warn(
+                "updater",
+                "A verificação de atualizações não conseguiu acessar o servidor.",
+                Some(e.to_string()),
+                None,
+                None,
+                Some(&app),
+            );
+            return Ok(fallback_result(&repo, current_version));
         }
     };
-
     if !resp.status().is_success() {
-        println!("[UPDATER] GitHub API respondeu status: {}", resp.status());
-        return Ok(UpdateCheckResult {
-            available: false,
-            current_version: current_version.clone(),
-            latest_version: current_version,
-            release_url: format!("https://github.com/{}/releases", repo),
-            release_name: None,
-            release_notes: None,
-        });
+        crate::commands::debug::log_warn(
+            "updater",
+            "O servidor de atualizações respondeu com um status não esperado.",
+            Some(format!("HTTP {}", resp.status())),
+            None,
+            None,
+            Some(&app),
+        );
+        return Ok(fallback_result(&repo, current_version));
     }
-
     let json: serde_json::Value = resp
         .json()
         .await
         .map_err(|e| format!("Falha ao ler resposta do GitHub: {e}"))?;
-
     let raw_tag = json["tag_name"].as_str().unwrap_or("");
     let raw_name = json["name"].as_str().unwrap_or("");
-
+    // Releases de teste às vezes recebem uma tag descritiva (por exemplo,
+    // "TESTE"). Nesse caso, o nome do instalador ainda é uma fonte oficial
+    // e inequívoca para a versão publicada.
+    let installer = select_windows_installer(&json);
     let mut tag_name = extract_version_str(raw_tag);
     if tag_name.is_empty() || !tag_name.contains('.') {
         tag_name = extract_version_str(raw_name);
     }
-
+    if tag_name.is_empty() || !tag_name.contains('.') {
+        if let Some((_, installer_name, _)) = installer.as_ref() {
+            tag_name = extract_version_str(installer_name);
+        }
+    }
     let release_url = json["html_url"]
         .as_str()
-        .unwrap_or(&format!("https://github.com/{}/releases", repo))
+        .unwrap_or(&format!("https://github.com/{repo}/releases"))
         .to_string();
-
     let release_name = json["name"].as_str().map(String::from);
     let release_notes = json["body"].as_str().map(String::from);
-
     let available = is_version_newer(&tag_name, &current_version);
-
-    // Se houver atualização disponível, abrir a janela principal (sair do modo tray)
+    let installer = if available { installer } else { None };
+    if let Ok(mut state) = runtime().lock() {
+        state.approved_installer = installer
+            .as_ref()
+            .map(|(url, name, _)| (url.clone(), name.clone()));
+    }
     if available {
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.show();
             let _ = window.set_focus();
         }
     }
-
     Ok(UpdateCheckResult {
         available,
         current_version,
@@ -143,5 +268,210 @@ pub async fn check_for_updates(
         release_url,
         release_name,
         release_notes,
+        installer_url: installer.as_ref().map(|(url, _, _)| url.clone()),
+        installer_name: installer.as_ref().map(|(_, name, _)| name.clone()),
+        installer_size: installer.map(|(_, _, size)| size),
     })
+}
+
+#[tauri::command]
+pub fn update_download_status() -> UpdateDownloadProgress {
+    runtime()
+        .lock()
+        .map(|state| state.progress.clone())
+        .unwrap_or_else(|_| UpdateDownloadProgress::idle())
+}
+
+#[tauri::command]
+pub async fn download_update(
+    app: AppHandle,
+    installer_url: String,
+    installer_name: String,
+) -> Result<(), String> {
+    if !is_official_release_asset_url(&installer_url) {
+        return Err("A atualização precisa ser baixada de um release oficial do GitHub.".into());
+    }
+    let installer_name = safe_file_name(&installer_name);
+    if !installer_name.to_ascii_lowercase().ends_with(".exe") {
+        return Err("A atualização selecionada não é um instalador .exe válido.".into());
+    }
+    let cancellation = CancellationToken::new();
+    {
+        let mut state = runtime()
+            .lock()
+            .map_err(|_| "O estado do atualizador está indisponível.".to_string())?;
+        if state.progress.status == "downloading" {
+            return Err("Já existe uma atualização sendo baixada.".into());
+        }
+        if state.approved_installer.as_ref()
+            != Some(&(installer_url.clone(), installer_name.clone()))
+        {
+            return Err(
+                "A atualização não corresponde ao instalador oferecido pelo release verificado."
+                    .into(),
+            );
+        }
+        state.ready_installer = None;
+        state.cancellation = Some(cancellation.clone());
+    }
+    let app_for_task = app.clone();
+    tauri::async_runtime::spawn(async move {
+        set_progress(
+            &app_for_task,
+            UpdateDownloadProgress {
+                status: "downloading".into(),
+                downloaded_bytes: 0,
+                total_bytes: None,
+                bytes_per_second: 0,
+                installer_name: Some(installer_name.clone()),
+                message: Some("Baixando instalador do GitHub…".into()),
+            },
+        );
+        let result = async {
+            let client = reqwest::Client::builder().user_agent("SFDownloader-updater").redirect(reqwest::redirect::Policy::limited(5)).build().map_err(|e| format!("Erro ao criar cliente HTTP: {e}"))?;
+            let response = client.get(&installer_url).send().await.map_err(|e| format!("Não foi possível baixar a atualização: {e}"))?.error_for_status().map_err(|e| format!("O GitHub recusou o download da atualização: {e}"))?;
+            let total_bytes = response.content_length();
+            let (destination, temporary) = installer_cache_path(&app_for_task, &installer_name)?;
+            let _ = tokio::fs::remove_file(&temporary).await;
+            let mut output = tokio::fs::File::create(&temporary).await.map_err(|e| format!("Não foi possível criar o instalador temporário: {e}"))?;
+            let mut stream = response.bytes_stream();
+            let started = Instant::now();
+            let mut last_emit = Instant::now() - Duration::from_secs(1);
+            let mut downloaded_bytes = 0_u64;
+            loop {
+                let next = tokio::select! { _ = cancellation.cancelled() => { let _ = tokio::fs::remove_file(&temporary).await; return Err("Download da atualização cancelado.".to_string()); }, value = stream.next() => value };
+                let Some(chunk) = next else { break };
+                let chunk = chunk.map_err(|e| format!("Falha durante o download da atualização: {e}"))?;
+                output.write_all(&chunk).await.map_err(|e| format!("Falha ao salvar a atualização: {e}"))?;
+                downloaded_bytes += chunk.len() as u64;
+                if last_emit.elapsed() >= Duration::from_millis(150) {
+                    set_progress(&app_for_task, UpdateDownloadProgress { status: "downloading".into(), downloaded_bytes, total_bytes, bytes_per_second: (downloaded_bytes as f64 / started.elapsed().as_secs_f64()) as u64, installer_name: Some(installer_name.clone()), message: Some("Baixando instalador do GitHub…".into()) });
+                    last_emit = Instant::now();
+                }
+            }
+            output.flush().await.map_err(|e| format!("Falha ao finalizar o instalador: {e}"))?;
+            if let Some(expected) = total_bytes { if downloaded_bytes != expected { return Err("O instalador foi baixado de forma incompleta.".into()); } }
+            tokio::fs::rename(&temporary, &destination).await.map_err(|e| format!("Não foi possível finalizar o instalador: {e}"))?;
+            Ok::<(PathBuf, u64, Option<u64>), String>((destination, downloaded_bytes, total_bytes))
+        }.await;
+        match result {
+            Ok((path, downloaded_bytes, total_bytes)) => {
+                if let Ok(mut state) = runtime().lock() {
+                    state.ready_installer = Some(path);
+                    state.cancellation = None;
+                }
+                set_progress(
+                    &app_for_task,
+                    UpdateDownloadProgress {
+                        status: "ready".into(),
+                        downloaded_bytes,
+                        total_bytes,
+                        bytes_per_second: 0,
+                        installer_name: Some(installer_name),
+                        message: Some(
+                            "Instalador pronto. Clique para iniciar a instalação manual.".into(),
+                        ),
+                    },
+                );
+            }
+            Err(error) => {
+                if let Ok(mut state) = runtime().lock() {
+                    state.cancellation = None;
+                }
+                crate::commands::debug::log_warn(
+                    "updater",
+                    "Não foi possível baixar a atualização.",
+                    Some(error.clone()),
+                    None,
+                    None,
+                    Some(&app_for_task),
+                );
+                set_progress(
+                    &app_for_task,
+                    UpdateDownloadProgress {
+                        status: "failed".into(),
+                        downloaded_bytes: 0,
+                        total_bytes: None,
+                        bytes_per_second: 0,
+                        installer_name: Some(installer_name),
+                        message: Some(error),
+                    },
+                );
+            }
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+pub fn cancel_update_download(app: AppHandle) -> Result<(), String> {
+    let mut state = runtime()
+        .lock()
+        .map_err(|_| "O estado do atualizador está indisponível.".to_string())?;
+    let Some(cancellation) = state.cancellation.take() else {
+        return Ok(());
+    };
+    cancellation.cancel();
+    state.progress = UpdateDownloadProgress {
+        status: "cancelling".into(),
+        downloaded_bytes: state.progress.downloaded_bytes,
+        total_bytes: state.progress.total_bytes,
+        bytes_per_second: 0,
+        installer_name: state.progress.installer_name.clone(),
+        message: Some("Cancelando download da atualização…".into()),
+    };
+    let progress = state.progress.clone();
+    drop(state);
+    let _ = app.emit("update-download-progress", progress);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
+    let installer = runtime()
+        .lock()
+        .map_err(|_| "O estado do atualizador está indisponível.".to_string())?
+        .ready_installer
+        .clone()
+        .ok_or_else(|| "Nenhum instalador de atualização está pronto.".to_string())?;
+    if !installer.is_file()
+        || !installer
+            .to_string_lossy()
+            .to_ascii_lowercase()
+            .ends_with(".exe")
+    {
+        return Err("O instalador baixado não está disponível.".into());
+    }
+    std::process::Command::new(&installer)
+        .spawn()
+        .map_err(|e| format!("Não foi possível abrir o instalador: {e}"))?;
+    app.exit(0);
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_official_release_asset_url, select_windows_installer};
+    #[test]
+    fn only_accepts_a_github_release_exe() {
+        assert!(is_official_release_asset_url("https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/SFDownloader-setup.exe"));
+        assert!(!is_official_release_asset_url(
+            "https://example.test/installer.exe"
+        ));
+        assert!(!is_official_release_asset_url(
+            "https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/readme.txt"
+        ));
+    }
+    #[test]
+    fn selects_the_windows_setup_asset() {
+        let release = serde_json::json!({"assets": [{"name": "checksums.txt", "browser_download_url": "https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/checksums.txt", "size": 10}, {"name": "SFDownloader-setup.exe", "browser_download_url": "https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/SFDownloader-setup.exe", "size": 20}]});
+        assert_eq!(select_windows_installer(&release), Some(("https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/SFDownloader-setup.exe".into(), "SFDownloader-setup.exe".into(), 20)));
+    }
+
+    #[test]
+    fn extracts_a_version_from_a_test_release_installer_name() {
+        let release = serde_json::json!({"assets": [{"name": "SFDownloader_1.0.1_x64-setup.exe", "browser_download_url": "https://github.com/NskBR/SFDownloader-App/releases/download/TESTE/SFDownloader_1.0.1_x64-setup.exe", "size": 20}]});
+        let installer = select_windows_installer(&release).expect("valid setup asset");
+        assert_eq!(super::extract_version_str(&installer.1), "1.0.1");
+    }
 }

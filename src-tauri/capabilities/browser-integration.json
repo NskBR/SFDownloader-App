@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "browser-integration",
+  "description": "Permissões mínimas da integração com navegadores",
+  "windows": ["browser-integration"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
+}

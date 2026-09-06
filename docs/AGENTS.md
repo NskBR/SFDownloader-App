@@ -9,7 +9,7 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 - Apenas a UI (Vite dev server em `http://127.0.0.1:1420`): `npm run build && npm run dev`
 - Build de produção: `npm run build` (roda `tsc && vite build`, sem emitir arquivos — `noEmit:true`).
 - Extensão de navegador: `npm run extension:build` (Builds separados em `browser-extension/`).
-- **Não há suíte de testes.** Verificação é manual via `tauri dev` ou typecheck implícito no `tsc` do build.
+- Testes Rust: `cargo test` em `src-tauri/`. Ainda não há suíte automatizada para o frontend ou a extensão; a verificação manual via `tauri dev` continua necessária para fluxos visuais e nativos.
 
 ## Arquitetura multi-janela (fato central)
 
@@ -34,7 +34,7 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 - Backend emite evento `download-progress` (`src-tauri/src/download/engine.rs`): `src/hooks/useDownloads.ts` e `src/pages/DownloadWindow.tsx` escutam.
 - Tipos fonte da verdade: `src/domain/download.ts` → `DownloadTask` e `DownloadProgress`.
 - `DownloadTask` já traz `speedAverage`, `supportsRange`, `etag`, etc. O `DownloadWindow` aproveita esses campos nas "Mais detalhes" em vez de criar estado novo.
-- Abrir link externo: comando `open_url` em `src-tauri/src/commands/transfer.rs` (valida http/https, usa `cmd /c start`/`open`/`xdg-open`). Exponha via `services/downloadService.ts` (`openUrl`) — **não** use `window.open` (bloqueado no webview Tauri).
+- Abrir link externo: comando `open_url` em `src-tauri/src/commands/transfer.rs` (valida http/https e usa a associação de protocolo nativa). Exponha via `services/downloadService.ts` (`openUrl`) — **não** use `window.open` (bloqueado no webview Tauri).
 - Deep link: protocolo `sfdownloader://download?url=<https-url>` (registrado em `tauri.conf.json` → `plugins.deep-link`). Tratado em `src/App.tsx`.
 - Links consumidos são marcados na sessão para impedir que `F5` duplique downloads ativos. Ao testar deep links, recarregar a janela não deve criar tarefa duplicada.
 
@@ -55,7 +55,7 @@ Gerenciador de downloads desktop (Tauri 2 + React 18 + TypeScript + Rust).
 ## Pontos de atenção / armadilhas
 
 - Janelas filhas (`progress-*{id}`) usam label dinâmica → seletores CSS baseados em label funcionam (`download-progress-*` nas capabilities).
-- `tauri.conf.json` define só a janela `main` (980×480, `visible:false`). As outras janelas são criadas em runtime no Rust.
+- `tauri.conf.json` define só a janela `main` (1104×611, `visible:false`). As outras janelas são criadas em runtime no Rust.
 - Nunca abrir a janela principal visível antes da hora: `main.tsx` controla `show()` conforme `startInTrayMode`.
 - `esbuild` exige `onlyBuiltDependencies` (ver `pnpm-workspace.yaml`) — relevante só se migrar para pnpm.
 - Arquivos temporários do download **não** ficam ao lado do destino: parciais vão para `<destino>/.sf-temp/<nome>.part`, fatias segmentadas são `<temp>.chunk-<i>`, e extração usa `.sf-extracting-<nome>-<uuid>`. Não hardcode caminhos — use os helpers de `src-tauri/src/download/engine.rs`.

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DownloadTask, ParsedTorrentMeta } from "../domain/download";
+import type { DownloadScheduleInput, DownloadTask, ParsedTorrentMeta } from "../domain/download";
 import type { AppSettings } from "../domain/settings";
 import type { ProfileStatistics } from "../domain/profile";
 import type { MetricsSnapshot } from "../domain/metrics";
@@ -11,6 +11,16 @@ export interface DownloadPreview {
   mimeType: string | null;
   extension: string | null;
 }
+export const downloadPriorityValue = (value?: string): number => {
+  const normalized = value?.trim().toLocaleLowerCase() ?? "";
+  if (normalized === "0" || normalized === "baixa" || normalized === "low")
+    return 0;
+  if (normalized === "2" || normalized === "alta" || normalized === "high")
+    return 2;
+  if (normalized === "3" || normalized === "urgente" || normalized === "urgent")
+    return 3;
+  return 1;
+};
 const input = (
   url: string,
   settings: AppSettings,
@@ -21,6 +31,7 @@ const input = (
   archivePassword?: string,
   selectedCategory?: string,
   force = false,
+  priority?: number,
 ) => ({
   url,
   rootFolder: rootFolder || settings.rootDownloadFolder,
@@ -32,12 +43,20 @@ const input = (
     0,
     Math.round(settings.speedLimitDownloadMbps * 1024 * 1024),
   ),
+  speedLimitInherited: true,
   browserRequestId: browserRequestId || null,
   resumeSupport,
   autoExtract,
   archivePassword: archivePassword || null,
   selectedCategory: selectedCategory || null,
   force,
+  priority: Math.max(
+    0,
+    Math.min(
+      3,
+      Math.round(priority ?? downloadPriorityValue(settings.downloadPriority)),
+    ),
+  ),
 });
 export const listDownloads = () => invoke<DownloadTask[]>("list_downloads");
 export const inspectDownload = (url: string, requestId?: string) =>
@@ -77,6 +96,7 @@ export const startDownload = (
   archivePassword?: string,
   selectedCategory?: string,
   force = false,
+  priority?: number,
 ) =>
   invoke<DownloadTask>("start_download", {
     input: input(
@@ -89,6 +109,7 @@ export const startDownload = (
       archivePassword,
       selectedCategory,
       force,
+      priority,
     ),
   });
 export const queueDownload = (
@@ -100,6 +121,7 @@ export const queueDownload = (
   autoExtract = false,
   archivePassword?: string,
   selectedCategory?: string,
+  priority?: number,
 ) =>
   invoke<DownloadTask>("queue_download", {
     input: input(
@@ -111,6 +133,8 @@ export const queueDownload = (
       autoExtract,
       archivePassword,
       selectedCategory,
+      false,
+      priority,
     ),
   });
 export const cancelDownload = (id: string, deleteFiles = false) =>
@@ -128,23 +152,49 @@ export const revealInFolder = (path: string) =>
 export const openFile = (path: string) => invoke<void>("open_file", { path });
 export const updateSpeedLimit = (id: string, speedLimit: number) =>
   invoke<void>("update_speed_limit", { id, speedLimit });
+export const updateDownloadPriority = (id: string, priority: number) =>
+  invoke<DownloadTask>("update_download_priority", { id, priority });
+export const moveDownloadQueueItem = (id: string, direction: "up" | "down") =>
+  invoke<DownloadTask[]>("move_download_queue_item", { id, direction });
+export const prioritizeDownload = (id: string) =>
+  invoke<DownloadTask>("prioritize_download", { id });
+export const updateDownloadSchedule = (
+  id: string,
+  scheduleInput: DownloadScheduleInput,
+) => invoke<DownloadTask>("update_download_schedule", { id, scheduleInput });
+export const bypassDownloadSchedule = (id: string) =>
+  invoke<DownloadTask>("bypass_download_schedule", { id });export const nextDownloadExecution = (id: string) =>
+  invoke<string | null>("next_download_execution", { id });export interface GlobalDownloadSchedule {
+  dailyStartMinute: number | null;
+  dailyEndMinute: number | null;
+  weekdays: number;
+  pauseOutsideSchedule: boolean;
+}
+export const getGlobalDownloadSchedule = () =>
+  invoke<GlobalDownloadSchedule>("get_global_download_schedule");
+export const updateGlobalDownloadSchedule = (scheduleInput: GlobalDownloadSchedule) =>
+  invoke<GlobalDownloadSchedule>("update_global_download_schedule", { scheduleInput });
 export const browserExtensionConnected = () =>
   invoke<boolean>("browser_extension_status");
+export interface BrowserBridgeDiagnostics {
+  listening: boolean;
+  connected: boolean;
+  port: number;
+  error: string | null;
+}
+export const browserExtensionDiagnostics = () =>
+  invoke<BrowserBridgeDiagnostics>("browser_extension_diagnostics");
 export const extractionStatus = (id: string) =>
   invoke<string | null>("extraction_status", { id });
 export const openUrl = (url: string) => invoke<void>("open_url", { url });
 export const setLaunchOnStartup = (enabled: boolean) =>
   invoke<void>("set_autostart", { enabled });
-export const isLaunchOnStartup = () =>
-  invoke<boolean>("is_autostart_enabled");
-export const getMetrics = () =>
-  invoke<MetricsSnapshot>("metrics_snapshot");
-export const resetMetrics = () =>
-  invoke<void>("reset_metrics");
+export const isLaunchOnStartup = () => invoke<boolean>("is_autostart_enabled");
+export const getMetrics = () => invoke<MetricsSnapshot>("metrics_snapshot");
+export const resetMetrics = () => invoke<void>("reset_metrics");
 export const exportMetrics = (format: "json" | "txt") =>
   invoke<string>("export_metrics", { format });
-export const importMetrics = () =>
-  invoke<void>("import_metrics");
+export const importMetrics = () => invoke<void>("import_metrics");
 export const profileStatistics = () =>
   invoke<ProfileStatistics>("profile_statistics");
 export interface TorrentFileItem {
@@ -165,21 +215,21 @@ export type TorrentMetadataResponse =
       status: "fetchingMetadata";
       infoHash: string;
       name?: string;
+    }
+  | {
+      status: "failed";
+      infoHash: string;
+      message: string;
     };
 
 export const parseTorrentInfo = async (
   source: string,
-  token?: string
+  token?: string,
 ): Promise<TorrentMetadataResponse> => {
-  console.log("[TORRENT_LOG][FRONTEND_SEND] Enviando argumento para parse_torrent_info:", { source, token });
-  try {
-    const res = await invoke<TorrentMetadataResponse>("parse_torrent_info", { token, source });
-    console.log("[TORRENT_LOG][FRONTEND_RECEIVE] Resposta recebida de parse_torrent_info:", res);
-    return res;
-  } catch (err) {
-    console.error("[TORRENT_LOG][FRONTEND_ERROR] Erro retornado de parse_torrent_info:", err);
-    throw err;
-  }
+  return invoke<TorrentMetadataResponse>("parse_torrent_info", {
+    token,
+    source,
+  });
 };
 
 export const confirmTorrent = (input: {
@@ -202,10 +252,31 @@ export interface UpdateCheckResult {
   release_url: string;
   release_name?: string | null;
   release_notes?: string | null;
+  installer_url?: string | null;
+  installer_name?: string | null;
+  installer_size?: number | null;
 }
 
 export const checkForUpdates = (repoOverride?: string) =>
   invoke<UpdateCheckResult>("check_for_updates", { repoOverride });
+
+export interface UpdateDownloadProgress {
+  status: "idle" | "downloading" | "cancelling" | "ready" | "failed";
+  downloaded_bytes: number;
+  total_bytes?: number | null;
+  bytes_per_second: number;
+  installer_name?: string | null;
+  message?: string | null;
+}
+
+export const updateDownloadStatus = () =>
+  invoke<UpdateDownloadProgress>("update_download_status");
+export const downloadUpdate = (installerUrl: string, installerName: string) =>
+  invoke<void>("download_update", { installerUrl, installerName });
+export const cancelUpdateDownload = () =>
+  invoke<void>("cancel_update_download");
+export const installDownloadedUpdate = () =>
+  invoke<void>("install_downloaded_update");
 
 export interface DebugLogEntry {
   id: string;
@@ -216,9 +287,23 @@ export interface DebugLogEntry {
   details?: string | null;
   targetUrl?: string | null;
   downloadId?: string | null;
+  correlationId: string;
+  failureKind?: "recoverable" | "definitive" | null;
 }
 
 export const getDebugLogs = () => invoke<DebugLogEntry[]>("get_debug_logs");
+export interface DiagnosticReport {
+  generatedAt: string;
+  appVersion: string;
+  operatingSystem: string;
+  architecture: string;
+  engine: {
+    activeTasks: number;
+    queuedTasks: number;
+    parallelLimit: number;
+  };
+  logs: DebugLogEntry[];
+}
+export const getDiagnosticReport = () => invoke<DiagnosticReport>("get_diagnostic_report");
 export const clearDebugLogs = () => invoke<void>("clear_debug_logs");
 export const openDebugWindow = () => invoke<void>("open_debug_window");
-

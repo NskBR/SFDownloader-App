@@ -29,6 +29,7 @@ pub struct ProfileStatistics {
     pub disk_read_available: bool,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn record_snapshot(
     connection: &mut Connection,
     download_id: &str,
@@ -138,7 +139,7 @@ pub fn profile(connection: &Connection) -> Result<ProfileStatistics> {
         .into_iter()
         .map(|(name, (bytes, files))| CategoryStatistic { name, bytes, files })
         .collect::<Vec<_>>();
-    categories.sort_by(|left, right| right.bytes.cmp(&left.bytes));
+    categories.sort_by_key(|item| std::cmp::Reverse(item.bytes));
 
     let active_downloads = connection.query_row(
         "SELECT COUNT(*) FROM download_tasks WHERE status IN ('pending','checking_files','downloading','paused','assembling','extracting')",

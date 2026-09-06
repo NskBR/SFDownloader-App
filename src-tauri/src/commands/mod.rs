@@ -1,7 +1,13 @@
+pub mod browser_extension;
 pub mod context_menu;
 pub mod debug;
 pub mod downloads;
+pub mod inspection;
 pub mod metrics;
 pub mod profile;
+pub mod scheduling;
+pub mod system;
+pub mod task_control;
 pub mod transfer;
 pub mod updater;
+pub mod windows;

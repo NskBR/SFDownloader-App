@@ -19,6 +19,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Toggle } from "../components/ui/Toggle";
+import { TorrentWindowCloseButton } from "../components/torrent/TorrentWindowCloseButton";
 import { loadSettings } from "../services/settingsStorage";
 import * as service from "../services/downloadService";
 import type { TorrentMetadataResponse } from "../services/downloadService";
@@ -39,13 +40,19 @@ interface TorrentFileNode {
   selected: boolean;
 }
 
-type PageStatus = "idle" | "fetchingMetadata" | "ready" | "failed" | "cancelled";
+type PageStatus =
+  "idle" | "fetchingMetadata" | "ready" | "failed" | "cancelled";
+
+const METADATA_FETCH_TIMEOUT_MS = 45_000;
 
 export const formatFileSize = (value: number | null | undefined): string => {
   if (value === null || value === undefined || value < 0) return "Desconhecido";
   if (value === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const index = Math.min(
+    Math.floor(Math.log(value) / Math.log(1024)),
+    units.length - 1,
+  );
   const size = value / Math.pow(1024, index);
   return `${size.toLocaleString("pt-BR", {
     minimumFractionDigits: index >= 3 ? 2 : index ? 1 : 0,
@@ -56,21 +63,53 @@ export const formatFileSize = (value: number | null | undefined): string => {
 function getFileItemIcon(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   if (["iso", "img", "nrg", "vcd"].includes(ext)) {
-    return <Disc size={14} className="tc-file-icon" style={{ color: "#a855f7" }} />;
+    return (
+      <Disc size={14} className="tc-file-icon" style={{ color: "#a855f7" }} />
+    );
   }
   if (["mkv", "mp4", "avi", "mov", "wmv", "flv", "webm"].includes(ext)) {
-    return <FileVideo size={14} className="tc-file-icon" style={{ color: "#3b82f6" }} />;
+    return (
+      <FileVideo
+        size={14}
+        className="tc-file-icon"
+        style={{ color: "#3b82f6" }}
+      />
+    );
   }
   if (["mp3", "flac", "wav", "aac", "ogg", "m4a"].includes(ext)) {
-    return <FileAudio size={14} className="tc-file-icon" style={{ color: "#ec4899" }} />;
+    return (
+      <FileAudio
+        size={14}
+        className="tc-file-icon"
+        style={{ color: "#ec4899" }}
+      />
+    );
   }
   if (["zip", "rar", "7z", "tar", "gz", "bz2", "xz"].includes(ext)) {
-    return <FileArchive size={14} className="tc-file-icon" style={{ color: "#f59e0b" }} />;
+    return (
+      <FileArchive
+        size={14}
+        className="tc-file-icon"
+        style={{ color: "#f59e0b" }}
+      />
+    );
   }
   if (["txt", "nfo", "md", "doc", "docx", "pdf", "sfv", "info"].includes(ext)) {
-    return <FileText size={14} className="tc-file-icon" style={{ color: "#10b981" }} />;
+    return (
+      <FileText
+        size={14}
+        className="tc-file-icon"
+        style={{ color: "#10b981" }}
+      />
+    );
   }
-  return <File size={14} className="tc-file-icon" style={{ color: "var(--text-2)" }} />;
+  return (
+    <File
+      size={14}
+      className="tc-file-icon"
+      style={{ color: "var(--text-2)" }}
+    />
+  );
 }
 
 export function TorrentConfirmationPage({ token }: { token: string }) {
@@ -78,9 +117,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const storageKey = `sf-downloader.confirmation-${token}`;
   const payload = useMemo(() => {
     try {
-      return JSON.parse(
-        localStorage.getItem(storageKey) || "",
-      ) as Payload;
+      return JSON.parse(localStorage.getItem(storageKey) || "") as Payload;
     } catch {
       return null;
     }
@@ -111,7 +148,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   const [infoHash, setInfoHash] = useState<string>("");
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [fileList, setFileList] = useState<TorrentFileNode[]>([]);
-
+  const [metadataAttempt, setMetadataAttempt] = useState(0);
 
   // Timer para tempo decorrido no fetchingMetadata
   useEffect(() => {
@@ -123,11 +160,10 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   }, [status]);
 
   const handleMetadataResponse = (res: TorrentMetadataResponse) => {
-    console.log("[TORRENT_LOG][FRONTEND_STATE] Recebida resposta de metadados:", res);
-
     if (res.status === "fetchingMetadata") {
       setStatus("fetchingMetadata");
       setError(null);
+      setElapsedSeconds(0);
       setInfoHash(res.infoHash || (res as any).info_hash || "");
       if (res.name) setTorrentName(res.name);
       setFileList([]);
@@ -135,7 +171,12 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
       const rawTotalSize = res.totalSize ?? (res as any).total_size ?? 0;
       const rawFiles = res.files ?? (res as any).files ?? [];
 
-      if (!rawFiles || rawFiles.length === 0 || !rawTotalSize || rawTotalSize === 0) {
+      if (
+        !rawFiles ||
+        rawFiles.length === 0 ||
+        !rawTotalSize ||
+        rawTotalSize === 0
+      ) {
         setError("Não foi possível ler os metadados deste torrent.");
         setStatus("failed");
         setFileList([]);
@@ -155,66 +196,110 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         selected: true,
       }));
       setFileList(nodes);
+    } else {
+      setError(
+        res.message || "Não foi possível ler os metadados deste torrent.",
+      );
+      setStatus("failed");
+      setFileList([]);
     }
   };
 
   useEffect(() => {
     let active = true;
-    if (payload?.url) {
-      setError(null);
-      setStatus("fetchingMetadata");
+    let settled = false;
+    let knownInfoHash = "";
+    let timeoutId: number | undefined;
 
+    if (!payload?.url) return;
+
+    const receiveMetadata = (response: TorrentMetadataResponse) => {
+      if (!active || settled) return;
+      knownInfoHash = response.infoHash || (response as any).info_hash || knownInfoHash;
+      handleMetadataResponse(response);
+      if (response.status !== "fetchingMetadata") {
+        settled = true;
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      }
+    };
+
+    const failMetadata = (message: string) => {
+      if (!active || settled) return;
+      settled = true;
+      setError(message);
+      setStatus("failed");
+      setFileList([]);
+      if (knownInfoHash) {
+        void service.cancelTorrent(knownInfoHash, false).catch(() => {});
+      }
+    };
+
+    setError(null);
+    setStatus("fetchingMetadata");
+    setElapsedSeconds(0);
+    setFileList([]);
+
+    // Registre o listener antes de iniciar o parse. Assim, uma resposta rápida
+    // do backend não se perde entre o invoke e a inscrição no evento Tauri.
+    const unlistenPromise = listen<TorrentMetadataResponse>(
+      `torrent-metadata-ready-${token}`,
+      (event) => receiveMetadata(event.payload),
+    );
+
+    void unlistenPromise.then((unlisten) => {
+      if (!active) {
+        unlisten();
+        return;
+      }
       void service
         .parseTorrentInfo(payload.url, token)
-        .then((res) => {
-          if (!active) return;
-          handleMetadataResponse(res);
-        })
-        .catch((err) => {
-          if (!active) return;
-          console.error("[TORRENT_LOG][FRONTEND_STATE] Falha ao obter metadados:", err);
-          setError("Não foi possível ler os metadados deste torrent.");
-          setStatus("failed");
-          setFileList([]);
-        });
+        .then(receiveMetadata)
+        .catch((cause) =>
+          failMetadata(
+            String(cause) || "Não foi possível ler os metadados deste torrent.",
+          ),
+        );
+    });
 
-      const unlistenPromise = listen<TorrentMetadataResponse>(
-        `torrent-metadata-ready-${token}`,
-        (event) => {
-          if (!active) return;
-          const p = event.payload;
-          console.log(
-            JSON.stringify(
-              {
-                status: p.status,
-                totalSize: (p as any).totalSize,
-                total_size: (p as any).total_size,
-                files: (p as any).files,
-                errorBeforeUpdate: error,
-                currentStatus: status,
-              },
-              null,
-              2,
-            ),
-          );
-          handleMetadataResponse(p);
-        },
+    // O backend também possui timeout, mas este limite no cliente impede que a
+    // janela fique bloqueada caso um evento Tauri seja perdido ou o motor P2P
+    // encerre sem conseguir notificar a interface.
+    timeoutId = window.setTimeout(() => {
+      failMetadata(
+        "Não foi possível obter os metadados em 45 segundos. Verifique a disponibilidade de pares e trackers, ou tente novamente.",
       );
+    }, METADATA_FETCH_TIMEOUT_MS);
 
-      return () => {
-        active = false;
-        void unlistenPromise.then((unlisten) => unlisten());
-      };
-    }
-  }, [payload, token]);
+    return () => {
+      active = false;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [payload, token, metadataAttempt]);
 
   const close = () => {
     if (infoHash) {
-      console.log("[MAGNET_CANCELLED] Cancelando busca/torrent pelo infoHash:", infoHash);
+      console.log(
+        "[MAGNET_CANCELLED] Cancelando busca/torrent pelo infoHash:",
+        infoHash,
+      );
       void service.cancelTorrent(infoHash, false).catch(() => {});
     }
     setStatus("cancelled");
     void appWindow.close();
+  };
+
+  const retryMetadata = async () => {
+    const previousInfoHash = infoHash;
+    setError(null);
+    setStatus("fetchingMetadata");
+    setElapsedSeconds(0);
+    setFileList([]);
+    setInfoHash("");
+    if (previousInfoHash) {
+      await service.cancelTorrent(previousInfoHash, false).catch(() => {});
+    }
+    setMetadataAttempt((attempt) => attempt + 1);
   };
 
   const chooseFolder = async () => {
@@ -259,7 +344,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     setBusy(true);
     setError(null);
     try {
-      const sanitizedName = torrentName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "Torrent";
+      const sanitizedName =
+        torrentName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "Torrent";
       const finalSavePath = createSubfolder
         ? `${destination.replace(/[/\\]+$/, "")}/${sanitizedName}`
         : destination;
@@ -291,18 +377,25 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <Download size={18} />
           </div>
           <div data-tauri-drag-region>
-            <h1 data-tauri-drag-region className="text-truncate" style={{ maxWidth: 500 }} title={torrentName}>
+            <h1
+              data-tauri-drag-region
+              className="text-truncate"
+              style={{ maxWidth: 500 }}
+              title={torrentName}
+            >
               {torrentName}
             </h1>
-            <p data-tauri-drag-region>Adicionar Torrent • Configure seu download antes de iniciar.</p>
+            <p data-tauri-drag-region>
+              Adicionar Torrent • Configure seu download antes de iniciar.
+            </p>
           </div>
         </div>
-        <button type="button" className="tc-close-btn" onClick={close}>
-          <X size={18} />
-        </button>
+        <TorrentWindowCloseButton title={t.common.close} className="tc-close-btn" onClose={close} size={18} />
       </header>
 
-      {status === "failed" && error && <div className="tc-error-banner">{error}</div>}
+      {status === "failed" && error && (
+        <div className="tc-error-banner">{error}</div>
+      )}
 
       {/* Main 2-Column Body */}
       <main className="tc-body-grid">
@@ -324,8 +417,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
           <div className="tc-card">
             <label className="tc-card-label">Salvar em</label>
             <div className="tc-path-row">
-              <div className="tc-path-box" title={destination}>{destination}</div>
-              <button type="button" className="tc-btn-outline" onClick={chooseFolder}>
+              <div className="tc-path-box" title={destination}>
+                {destination}
+              </div>
+              <button
+                type="button"
+                className="tc-btn-outline"
+                onClick={chooseFolder}
+              >
                 Alterar
               </button>
             </div>
@@ -341,8 +440,12 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <div className="tc-toggle-inline">
               <Toggle checked={autoStart} onChange={setAutoStart} />
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <strong style={{ color: "#ffffff", fontSize: 11.5 }}>Iniciar automaticamente</strong>
-                <span style={{ fontSize: 10, color: "var(--text-2)" }}>Inicia o download assim que for adicionado.</span>
+                <strong style={{ color: "#ffffff", fontSize: 11.5 }}>
+                  Iniciar automaticamente
+                </strong>
+                <span style={{ fontSize: 10, color: "var(--text-2)" }}>
+                  Inicia o download assim que for adicionado.
+                </span>
               </div>
             </div>
           </div>
@@ -372,31 +475,65 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   border: "1px solid var(--line, rgba(255, 255, 255, 0.08))",
                 }}
               >
-                <Loader2 size={36} className="animate-spin" style={{ color: "var(--ember-solid)" }} />
+                <Loader2
+                  size={36}
+                  className="tc-metadata-spinner"
+                  style={{ color: "var(--ember-solid)" }}
+                />
                 <div>
-                  <strong style={{ fontSize: 13, color: "#ffffff", display: "block" }}>
+                  <strong
+                    style={{ fontSize: 13, color: "#ffffff", display: "block" }}
+                  >
                     Obtendo metadados do torrent…
                   </strong>
-                  <span style={{ fontSize: 11, color: "var(--text-2)", marginTop: 4, display: "block" }}>
-                    Conectando aos pares da rede P2P BitTorrent para ler a estrutura de arquivos.
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--text-2)",
+                      marginTop: 4,
+                      display: "block",
+                    }}
+                  >
+                    Conectando aos pares da rede P2P BitTorrent para ler a
+                    estrutura de arquivos.
                   </span>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%", marginTop: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    width: "100%",
+                    marginTop: 8,
+                  }}
+                >
                   {infoHash && (
-                    <div className="tc-stat-pair" style={{ justifyContent: "center", gap: 6 }}>
+                    <div
+                      className="tc-stat-pair"
+                      style={{ justifyContent: "center", gap: 6 }}
+                    >
                       <Key size={12} style={{ color: "var(--text-2)" }} />
                       <span className="tc-stat-label">Info Hash:</span>
-                      <strong className="tc-stat-val text-truncate" style={{ maxWidth: 220 }} title={infoHash}>
+                      <strong
+                        className="tc-stat-val text-truncate"
+                        style={{ maxWidth: 220 }}
+                        title={infoHash}
+                      >
                         {infoHash}
                       </strong>
                     </div>
                   )}
 
-                  <div className="tc-stat-pair" style={{ justifyContent: "center", gap: 6 }}>
+                  <div
+                    className="tc-stat-pair"
+                    style={{ justifyContent: "center", gap: 6 }}
+                  >
                     <Clock size={12} style={{ color: "var(--text-2)" }} />
                     <span className="tc-stat-label">Tempo decorrido:</span>
-                    <strong className="tc-stat-val">{formatTime(elapsedSeconds)}</strong>
+                    <strong className="tc-stat-val">
+                      {formatTime(elapsedSeconds)}
+                    </strong>
                   </div>
                 </div>
               </div>
@@ -409,14 +546,21 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   <div className="tc-stat-pair">
                     <div>
                       <span className="tc-stat-label">Tamanho total</span>
-                      <strong className="tc-stat-val" title={`${totalSize.toLocaleString("pt-BR")} bytes`}>
+                      <strong
+                        className="tc-stat-val"
+                        title={`${totalSize.toLocaleString("pt-BR")} bytes`}
+                      >
                         {formatFileSize(totalSize)}
                       </strong>
                     </div>
                     <div className="text-right">
                       <span className="tc-stat-label">Selecionados</span>
-                      <strong className="tc-stat-val" title={`${selectedSize.toLocaleString("pt-BR")} bytes`}>
-                        {selectedCount} de {totalFilesCount} · {formatFileSize(selectedSize)}
+                      <strong
+                        className="tc-stat-val"
+                        title={`${selectedSize.toLocaleString("pt-BR")} bytes`}
+                      >
+                        {selectedCount} de {totalFilesCount} ·{" "}
+                        {formatFileSize(selectedSize)}
                       </strong>
                     </div>
                   </div>
@@ -424,10 +568,18 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
 
                 {/* Botões de Seleção */}
                 <div className="tc-actions-bar">
-                  <button type="button" className="tc-btn-outline" onClick={selectAll}>
+                  <button
+                    type="button"
+                    className="tc-btn-outline"
+                    onClick={selectAll}
+                  >
                     Selecionar tudo
                   </button>
-                  <button type="button" className="tc-btn-dark" onClick={clearSelection}>
+                  <button
+                    type="button"
+                    className="tc-btn-dark"
+                    onClick={clearSelection}
+                  >
                     Limpar seleção
                   </button>
                 </div>
@@ -441,7 +593,10 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                   <div className="tc-table-body">
                     {fileList.length === 1 ? (
                       /* Torrent de Arquivo Único: Apenas 1 linha real sem pasta fictícia */
-                      <div key={fileList[0].id} className="tc-file-row single-file">
+                      <div
+                        key={fileList[0].id}
+                        className="tc-file-row single-file"
+                      >
                         <input
                           type="checkbox"
                           checked={fileList[0].selected}
@@ -451,7 +606,10 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                         <span className="tc-file-name" title={fileList[0].name}>
                           {fileList[0].name}
                         </span>
-                        <span className="tc-file-size" title={`${fileList[0].size.toLocaleString("pt-BR")} bytes`}>
+                        <span
+                          className="tc-file-size"
+                          title={`${fileList[0].size.toLocaleString("pt-BR")} bytes`}
+                        >
                           {formatFileSize(fileList[0].size)}
                         </span>
                       </div>
@@ -462,11 +620,18 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                           <input
                             type="checkbox"
                             checked={selectedCount === totalFilesCount}
-                            onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
+                            onChange={(e) =>
+                              e.target.checked ? selectAll() : clearSelection()
+                            }
                           />
                           <FolderOpen size={14} className="tc-folder-icon" />
-                          <span className="tc-file-name" title={torrentName}>{torrentName}</span>
-                          <span className="tc-file-size" title={`${totalSize.toLocaleString("pt-BR")} bytes`}>
+                          <span className="tc-file-name" title={torrentName}>
+                            {torrentName}
+                          </span>
+                          <span
+                            className="tc-file-size"
+                            title={`${totalSize.toLocaleString("pt-BR")} bytes`}
+                          >
                             {formatFileSize(totalSize)}
                           </span>
                         </div>
@@ -479,8 +644,13 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                               onChange={() => toggleFile(f.id)}
                             />
                             {getFileItemIcon(f.name)}
-                            <span className="tc-file-name" title={f.name}>{f.name}</span>
-                            <span className="tc-file-size" title={`${f.size.toLocaleString("pt-BR")} bytes`}>
+                            <span className="tc-file-name" title={f.name}>
+                              {f.name}
+                            </span>
+                            <span
+                              className="tc-file-size"
+                              title={`${f.size.toLocaleString("pt-BR")} bytes`}
+                            >
                               {formatFileSize(f.size)}
                             </span>
                           </div>
@@ -505,8 +675,16 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                 }}
               >
                 <span style={{ fontSize: 13, color: "var(--text-2)" }}>
-                  Não foi possível ler os metadados deste torrent.
+                  {error || "Não foi possível ler os metadados deste torrent."}
                 </span>
+                <button
+                  type="button"
+                  className="tc-btn-outline"
+                  onClick={() => void retryMetadata()}
+                  style={{ marginTop: 14 }}
+                >
+                  Tentar novamente
+                </button>
               </div>
             )}
           </div>
@@ -524,8 +702,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               {status === "fetchingMetadata"
                 ? "Obtendo metadados P2P..."
                 : status === "ready"
-                ? `${selectedCount} arquivo${selectedCount !== 1 ? "s" : ""} selecionado${selectedCount !== 1 ? "s" : ""} · ${formatFileSize(selectedSize)}`
-                : "Erro nos metadados"}
+                  ? `${selectedCount} arquivo${selectedCount !== 1 ? "s" : ""} selecionado${selectedCount !== 1 ? "s" : ""} · ${formatFileSize(selectedSize)}`
+                  : "Erro nos metadados"}
             </strong>
           </div>
         </div>
@@ -538,7 +716,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             type="button"
             className="tc-btn-cyan-solid"
             onClick={finish}
-            disabled={busy || status !== "ready" || !!error || totalSize === 0 || fileList.length === 0 || selectedCount === 0}
+            disabled={
+              busy ||
+              status !== "ready" ||
+              !!error ||
+              totalSize === 0 ||
+              fileList.length === 0 ||
+              selectedCount === 0
+            }
           >
             <Plus size={16} />
             <span>{t.confirmation.startDownload}</span>

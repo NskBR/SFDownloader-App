@@ -1,6 +1,6 @@
 [package]
 name = "SFDownloader"
-version = "0.3.8"
+version = "1.0.0"
 description = "A modern desktop download manager"
 authors = ["SFDownloader Contributors"]
 edition = "2021"
@@ -15,6 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+chrono = { version = "0.4", features = ["clock"] }
 tauri = { version = "2", features = ["tray-icon", "devtools"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-deep-link = "2"
@@ -22,8 +23,8 @@ tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
-reqwest = { version = "0.12", features = ["stream", "rustls-tls"] }
-tokio = { version = "1", features = ["fs", "io-util", "time", "macros", "sync", "net"] }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
+tokio = { version = "1", features = ["fs", "io-util", "time", "macros", "sync", "net", "test-util"] }
 tokio-util = "0.7"
 futures-util = "0.3"
 axum = "0.8"
@@ -35,10 +36,10 @@ flate2 = "1"
 tar = "0.4"
 unrar-ng = "0.7.7"
 drag = "2.1.1"
-librqbit = "8.1.1"
+librqbit = "9.0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell"] }
 
 [dev-dependencies]
 sevenz-rust2 = { version = "0.21.2", features = ["aes256", "compress"] }

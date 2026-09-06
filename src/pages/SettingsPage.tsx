@@ -19,24 +19,28 @@ import {
   Sparkles,
   Dices,
   HardDrive,
-  Bot,
-  Bug,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
+import { SettingsHeader } from "../components/settings/SettingsHeader";
+import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
 import { invoke } from "@tauri-apps/api/core";
 import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
+import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
+import { ipcErrorMessage } from "../domain/ipcErrors";
+import { selectedSettingsThemeId, settingsThemePresets } from "../domain/settingsThemes";
 import { downloadCategories } from "../domain/categories";
+import { normalizedCategoryExtensions, validCustomCategoryName } from "../domain/customCategories";
+import { exportSettingsBackup, importSettingsBackup } from "../services/settingsStorage";
 import {
   chooseDownloadFolder,
   createCategoryFolders,
 } from "../services/folderService";
-import { isLaunchOnStartup, setLaunchOnStartup } from "../services/downloadService";
+import { getGlobalDownloadSchedule, isLaunchOnStartup, setLaunchOnStartup, updateGlobalDownloadSchedule } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
 import { CustomSelect } from "../components/ui/CustomSelect";
 import { ThemeCustomizerModal } from "../components/ui/DiscordThemeCustomizer";
 import { useTranslation } from "../i18n";
-
-type SettingsTab = "personalizacao" | "downloads" | "arquivos" | "idioma" | "avancado";
 
 interface Props {
   settings: AppSettings;
@@ -53,7 +57,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [categoryName, setCategoryName] = useState("");
 
   const navTabsRef = useRef<HTMLElement | null>(null);
-  const [tabsIndicator, setTabsIndicator] = useState<{ left: number; width: number; height: number; visible: boolean }>({
+  const [tabsIndicator, setTabsIndicator] = useState<TabIndicator>({
     left: 0,
     width: 0,
     height: 0,
@@ -96,74 +100,22 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [editExts, setEditExts] = useState("");
   const [customizerModalOpen, setCustomizerModalOpen] = useState(false);
 
-  const appThemes = [
-    {
-      id: "custom",
-      name: "Personalizado",
-      bg: "linear-gradient(135deg, #1d2028, #111319)",
-      accent: "#06b6d4",
-      isGradient: true,
-      stops: null,
-    },
-    {
-      id: "midnight-sapphire",
-      name: "Azul neon",
-      bg: "linear-gradient(135deg, #0b1638, #040714)",
-      accent: "#3b82f6",
-      isGradient: true,
-      stops: ["#0b1638", "#040714"],
-    },
-    {
-      id: "cyberpunk-violet",
-      name: "Roxo gradiente",
-      bg: "linear-gradient(135deg, #320938, #050a1e)",
-      accent: "#8b5cf6",
-      isGradient: true,
-      stops: ["#320938", "#050a1e"],
-    },
-    {
-      id: "high-contrast",
-      name: "Alto contraste",
-      bg: "linear-gradient(135deg, #0a0c10, #040507)",
-      accent: "#eab308",
-      isGradient: true,
-      stops: ["#0a0c10", "#040507"],
-    },
-    {
-      id: "crimson-void",
-      name: "Carmim Obscuro",
-      bg: "linear-gradient(135deg, #41010d, #080204)",
-      accent: "#ef4444",
-      isGradient: true,
-      stops: ["#41010d", "#080204"],
-    },
-    {
-      id: "emerald-dusk",
-      name: "Crepúsculo Esmeralda",
-      bg: "linear-gradient(135deg, #0a2818, #040d08)",
-      accent: "#10b981",
-      isGradient: true,
-      stops: ["#0a2818", "#040d08"],
-    },
-  ];
-
-  const getSelectedThemeId = (): string => {
-    if (draft.interfaceGradient.enabled) {
-      const firstStop = draft.interfaceGradient.stops[0]?.color.toLowerCase() || "";
-      if (firstStop === "#0b1638") return "midnight-sapphire";
-      if (firstStop === "#320938") return "cyberpunk-violet";
-      if (firstStop === "#0a0c10") return "high-contrast";
-      if (firstStop === "#41010d") return "crimson-void";
-      if (firstStop === "#0a2818") return "emerald-dusk";
-      return "custom";
-    }
-    return "slate";
-  };
-
-  const selectedThemeId = getSelectedThemeId();
+  const selectedThemeId = selectedSettingsThemeId(draft.interfaceGradient);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = { ...draft, [key]: value };
+    setDraft(next);
+    if (next.rootDownloadFolder.trim()) void save(next);
+    else setError("Escolha a pasta principal de downloads.");
+  };
+
+  const updateSpeedLimitText = (value: string) => {
+    const parsed = parseSpeedLimitMebibytesPerSecond(value);
+    const next = {
+      ...draft,
+      speedLimitText: value,
+      ...(parsed === null ? {} : { speedLimitDownloadMbps: parsed }),
+    };
     setDraft(next);
     if (next.rootDownloadFolder.trim()) void save(next);
     else setError("Escolha a pasta principal de downloads.");
@@ -193,6 +145,79 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     }
   };
 
+  const configureGlobalSchedule = async () => {
+    try {
+      const current = await getGlobalDownloadSchedule();
+      const format = (minute: number | null) =>
+        minute === null
+          ? ""
+          : `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+      const initial =
+        current.dailyStartMinute === null || current.dailyEndMinute === null
+          ? ""
+          : `${format(current.dailyStartMinute)}-${format(current.dailyEndMinute)}`;
+      const value = window.prompt(
+        t.settings.advancedTab.globalSchedulePrompt,
+        initial,
+      );
+      if (value === null) return;
+      if (!value.trim()) {
+        await updateGlobalDownloadSchedule({
+          dailyStartMinute: null,
+          dailyEndMinute: null,
+          weekdays: 127,
+          pauseOutsideSchedule: false,
+        });
+        return;
+      }
+      const match = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(value.trim());
+      if (!match) {
+        setError(t.settings.advancedTab.globalScheduleInvalid);
+        return;
+      }
+      const [, startHour, startMinute, endHour, endMinute] = match;
+      const start = Number(startHour) * 60 + Number(startMinute);
+      const end = Number(endHour) * 60 + Number(endMinute);
+      if (start >= 1_440 || end >= 1_440) {
+        setError(t.settings.advancedTab.globalScheduleInvalid);
+        return;
+      }
+      const pauseOutsideSchedule = window.confirm(
+        t.settings.advancedTab.globalSchedulePauseConfirm,
+      );
+      await updateGlobalDownloadSchedule({
+        dailyStartMinute: start,
+        dailyEndMinute: end,
+        weekdays: 127,
+        pauseOutsideSchedule,
+      });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : t.settings.advancedTab.globalScheduleInvalid,
+      );
+    }
+  };
+  const exportPreferences = () => {
+    const blob = new Blob([exportSettingsBackup(draft)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `sfdownloader-preferences-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importPreferences = async (file: File) => {
+    try {
+      const imported = importSettingsBackup(await file.text(), draft.language);
+      setDraft(imported);
+      await save(imported);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível importar as preferências.");
+    }
+  };
   const openBrowserIntegration = () => {
     void invoke("open_browser_integration_window").catch(console.error);
   };
@@ -231,7 +256,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
   const addCategory = () => {
     const name = categoryName.trim();
-    if (!name || /[<>:"/\\|?*]/.test(name) || name === "." || name === "..") {
+    if (!validCustomCategoryName(name)) {
       setError("Informe um nome de categoria válido, sem caracteres de caminho.");
       return;
     }
@@ -243,14 +268,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
       setError("Já existe uma categoria com esse nome.");
       return;
     }
-    const extensions = [
-      ...new Set(
-        categoryExtensions
-          .split(/[\s,;]+/)
-          .map((extension) => extension.replace(/^\./, "").toLowerCase())
-          .filter((extension) => /^[a-z0-9]+$/.test(extension)),
-      ),
-    ];
+    const extensions = normalizedCategoryExtensions(categoryExtensions);
     update("customCategories", [
       ...draft.customCategories,
       { id: crypto.randomUUID(), name, extensions },
@@ -260,11 +278,13 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     setError(null);
   };
 
-  const removeCategory = (id: string) =>
+  const removeCategory = (id: string) => {
+    if (!window.confirm(t.settings.filesTab.deleteCategoryConfirm)) return;
     update(
       "customCategories",
       draft.customCategories.filter((category) => category.id !== id),
     );
+  };
 
   const startEditCategory = (cat: { id: string; name: string; extensions: string[] }) => {
     setEditingCatId(cat.id);
@@ -275,14 +295,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const saveEditCategory = (id: string) => {
     const name = editName.trim();
     if (!name) return;
-    const extensions = Array.from(
-      new Set(
-        editExts
-          .split(/[\s,;]+/)
-          .map((ext) => ext.replace(/^\./, "").toLowerCase())
-          .filter((ext) => /^[a-z0-9]+$/.test(ext)),
-      ),
-    );
+    const extensions = normalizedCategoryExtensions(editExts);
     const next = draft.customCategories.map((c) =>
       c.id === id ? { ...c, name, extensions } : c,
     );
@@ -290,7 +303,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     setEditingCatId(null);
   };
 
-  const tabs = [
+  const tabs: TabItem[] = [
     { id: "personalizacao", label: t.settings.tabs.personalization, icon: <Palette size={16} /> },
     { id: "downloads", label: t.settings.tabs.downloads, icon: <Download size={16} /> },
     { id: "arquivos", label: t.settings.tabs.files, icon: <Folder size={16} /> },
@@ -300,47 +313,24 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
   return (
     <section className="cfg-container">
-      {/* Cabeçalho da Página */}
-      <header className="cfg-header">
-        <div>
-          <h1 className="cfg-title">{t.settings.title}</h1>
-          <p className="cfg-subtitle">{t.settings.subtitle}</p>
-        </div>
-        {saved && <span className="cfg-autosave">{t.settings.autoSaved}</span>}
-      </header>
+      <SettingsHeader
+        title={t.settings.title}
+        subtitle={t.settings.subtitle}
+        autoSavedLabel={t.settings.autoSaved}
+        saved={saved}
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
       {/* Navegação por Abas Horizontais */}
-      <nav
-        className={`cfg-nav-tabs ${draft.sidebarAnimation !== false ? "" : "cfg-nav-tabs--no-animation"}`}
-        ref={navTabsRef}
-      >
-        <span
-          className="cfg-tabs-indicator"
-          style={{
-            transform: `translateX(${tabsIndicator.left}px)`,
-            width: tabsIndicator.width,
-            height: tabsIndicator.height,
-            opacity: tabsIndicator.visible ? 1 : 0,
-          }}
-          aria-hidden="true"
-        />
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              className={`cfg-tab-btn ${isActive ? "is-active" : ""}`}
-              onClick={() => setActiveTab(tab.id as SettingsTab)}
-            >
-              <span className="cfg-tab-icon">{tab.icon}</span>
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      <SettingsTabNavigation
+        tabs={tabs}
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        navRef={navTabsRef}
+        indicator={tabsIndicator}
+        animationsEnabled={draft.sidebarAnimation !== false}
+      />
 
       {/* Conteúdo da Aba Ativa */}
       <div className="cfg-tab-content">
@@ -423,7 +413,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                             { value: "25 MB/s", label: "25 MB/s" },
                             { value: "50 MB/s", label: "50 MB/s" },
                           ]}
-                          onChange={(val) => update("speedLimitText", val)}
+                          onChange={updateSpeedLimitText}
                         />
                       </div>
                     </div>
@@ -443,7 +433,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           style={{ width: "110px", height: "32px", textAlign: "center" }}
                           value={draft.speedLimitText || ""}
                           placeholder={t.settings.downloadsTab.customSpeedPlaceholder}
-                          onChange={(e) => update("speedLimitText", e.target.value)}
+                          onChange={(e) => updateSpeedLimitText(e.target.value)}
                         />
                       </div>
                     </div>
@@ -554,7 +544,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
               <div className="cfg-card-content">
                 <div className="cfg-themes-grid">
-                  {appThemes.map((theme) => {
+                  {settingsThemePresets.map((theme) => {
                     const isSelected = selectedThemeId === theme.id;
 
                     return (
@@ -825,6 +815,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                                         className="cfg-cat-action-btn edit"
                                         onClick={() => saveEditCategory(cat.id)}
                                         title={t.settings.filesTab.saveChangesTooltip}
+                                        aria-label={t.settings.filesTab.saveChangesTooltip}
                                         style={{ color: "var(--ember, #22d3ee)" }}
                                       >
                                         <Check size={13} />
@@ -835,6 +826,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                                         className="cfg-cat-action-btn edit"
                                         onClick={() => startEditCategory(cat)}
                                         title={t.settings.filesTab.editCategoryTooltip}
+                                        aria-label={t.settings.filesTab.editCategoryTooltip}
                                       >
                                         <Pencil size={13} />
                                       </button>
@@ -844,6 +836,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                                       className="cfg-cat-action-btn delete"
                                       onClick={() => removeCategory(cat.id)}
                                       title={t.settings.filesTab.deleteCategoryTooltip}
+                                      aria-label={t.settings.filesTab.deleteCategoryTooltip}
                                     >
                                       <Trash2 size={13} />
                                     </button>
@@ -974,114 +967,22 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
         {/* ABA: AVANÇADO */}
         {activeTab === "avancado" && (
-          <div className="cfg-tab-view">
-            <div className="cfg-card">
-              <div className="cfg-card-header">
-                <div className="cfg-card-icon-box">
-                  <Settings2 className="cfg-card-icon" size={20} />
-                </div>
-                <div>
-                  <h3 className="cfg-card-title">{t.settings.advancedTab.startupTrayTitle}</h3>
-                  <p className="cfg-card-subtitle">{t.settings.advancedTab.startupTraySubtitle}</p>
-                </div>
-              </div>
-              <div className="cfg-card-content cfg-list-items">
-                <div className="cfg-item-row">
-                  <div className="cfg-item-left">
-                    <Settings2 size={18} className="cfg-item-icon" />
-                    <div>
-                      <strong className="cfg-item-label">{t.settings.advancedTab.launchOnStartupLabel}</strong>
-                      <span className="cfg-item-desc">{t.settings.advancedTab.launchOnStartupDesc}</span>
-                    </div>
-                  </div>
-                  <div className="cfg-item-right">
-                    <Toggle
-                      checked={draft.launchOnStartup}
-                      onChange={(value) => {
-                        update("launchOnStartup", value);
-                        void setLaunchOnStartup(value).catch(console.error);
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="cfg-item-row">
-                  <div className="cfg-item-left">
-                    <Bot size={18} className="cfg-item-icon" />
-                    <div>
-                      <strong className="cfg-item-label">{t.settings.advancedTab.floatingAiLabel}</strong>
-                      <span className="cfg-item-desc">{t.settings.advancedTab.floatingAiDesc}</span>
-                    </div>
-                  </div>
-                  <div className="cfg-item-right">
-                    <Toggle
-                      checked={draft.showAiAssistant ?? true}
-                      onChange={(value) => update("showAiAssistant", value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="cfg-card">
-              <div className="cfg-card-header" style={{ justifyContent: "space-between", width: "100%" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div className="cfg-card-icon-box">
-                    <Globe className="cfg-card-icon" size={20} />
-                  </div>
-                  <div>
-                    <h3 className="cfg-card-title">{t.settings.advancedTab.browserIntegrationCardTitle}</h3>
-                    <p className="cfg-card-subtitle">{t.settings.advancedTab.browserIntegrationCardSubtitle}</p>
-                  </div>
-                </div>
-                <span className="cfg-autosave" style={{ fontSize: "11px", height: "fit-content" }}>
-                  {t.settings.advancedTab.extensionBadge}
-                </span>
-              </div>
-              <div className="cfg-card-content">
-                <p style={{ fontSize: "12.5px", color: "var(--text-2)", marginBottom: "12px" }}>
-                  {t.settings.advancedTab.extensionCardDesc}
-                </p>
-                <button
-                  type="button"
-                  className="cfg-btn-alterar"
-                  onClick={openBrowserIntegration}
-                >
-                  <Globe size={15} />
-                  <span>{t.settings.advancedTab.configureIntegrationBtn}</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="cfg-card">
-              <div className="cfg-card-header" style={{ justifyContent: "space-between", width: "100%" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <div className="cfg-card-icon-box">
-                    <Bug className="cfg-card-icon" size={20} />
-                  </div>
-                  <div>
-                    <h3 className="cfg-card-title">{t.settings.advancedTab.debugMenuTitle}</h3>
-                    <p className="cfg-card-subtitle">{t.settings.advancedTab.debugMenuSubtitle}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="cfg-card-content">
-                <p style={{ fontSize: "12.5px", color: "var(--text-2)", marginBottom: "12px" }}>
-                  {t.settings.advancedTab.debugMenuDesc}
-                </p>
-                <button
-                  type="button"
-                  className="cfg-btn-alterar"
-                  onClick={openDebugWindow}
-                >
-                  <Bug size={15} />
-                  <span>{t.settings.advancedTab.openDebugMenuBtn}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+          <SettingsAdvancedTab
+            t={t}
+            launchOnStartup={draft.launchOnStartup}
+            showAiAssistant={draft.showAiAssistant ?? true}
+            onLaunchOnStartupChange={(value) => {
+              update("launchOnStartup", value);
+              void setLaunchOnStartup(value).catch(console.error);
+            }}
+            onShowAiAssistantChange={(value) => update("showAiAssistant", value)}
+            onOpenBrowserIntegration={openBrowserIntegration}
+            onOpenDebugWindow={openDebugWindow}
+            onExportPreferences={exportPreferences}
+            onImportPreferences={importPreferences}
+            onConfigureGlobalSchedule={() => void configureGlobalSchedule()}
+          />
+        )}      </div>
     </section>
   );
 }

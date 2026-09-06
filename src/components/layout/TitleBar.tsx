@@ -1,14 +1,27 @@
-import { Minus, Square, X, Puzzle, Sparkles, ExternalLink, Settings, BarChart3, Info } from "lucide-react";
+import { Minus, Square, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
-import { version } from "../../../package.json";
-import type { UpdateCheckResult } from "../../services/downloadService";
-import { openUrl } from "../../services/downloadService";
+import type { UpdateCheckResult, UpdateDownloadProgress } from "../../services/downloadService";
+import * as downloadService from "../../services/downloadService";
 import type { PageId } from "../../app/navigation";
 import { useTranslation } from "../../i18n";
 
 const appWindow = getCurrentWindow();
+
+const idleUpdateProgress: UpdateDownloadProgress = {
+  status: "idle",
+  downloaded_bytes: 0,
+  total_bytes: null,
+  bytes_per_second: 0,
+};
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 interface TitleBarProps {
   updateInfo?: UpdateCheckResult | null;
@@ -27,6 +40,7 @@ export function TitleBar({
 }: TitleBarProps) {
   const { t } = useTranslation();
   const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
+  const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress>(idleUpdateProgress);
   useEffect(() => {
     const updateStatus = () => {
       invoke<boolean>("browser_extension_status")
@@ -38,11 +52,29 @@ export function TitleBar({
     return () => clearInterval(timer);
   }, []);
 
-  const handleOpenRelease = () => {
-    if (updateInfo?.release_url) {
-      void openUrl(updateInfo.release_url);
+  useEffect(() => {
+    if (!updateInfo?.available) return;
+    let unlisten: (() => void) | undefined;
+    void downloadService.updateDownloadStatus().then(setUpdateProgress).catch(console.error);
+    void listen<UpdateDownloadProgress>("update-download-progress", ({ payload }) => {
+      setUpdateProgress(payload);
+    }).then((dispose) => { unlisten = dispose; }).catch(console.error);
+    return () => unlisten?.();
+  }, [updateInfo?.available]);
+
+  const startUpdateDownload = () => {
+    if (!updateInfo?.installer_url || !updateInfo.installer_name) {
+      void downloadService.openUrl(updateInfo?.release_url ?? "https://github.com/NskBR/SFDownloader-App/releases");
+      return;
     }
+    void downloadService.downloadUpdate(updateInfo.installer_url, updateInfo.installer_name).catch((error) => {
+      setUpdateProgress({ ...idleUpdateProgress, status: "failed", message: String(error) });
+    });
   };
+
+  const percentage = updateProgress.total_bytes && updateProgress.total_bytes > 0
+    ? Math.min(100, Math.round((updateProgress.downloaded_bytes / updateProgress.total_bytes) * 100))
+    : null;
 
   return (
     <header
@@ -51,21 +83,35 @@ export function TitleBar({
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
       <div className="titlebar-side" data-tauri-drag-region>
-        {updateInfo?.available && (
-          <button
-            className="nodrag titlebar-update-badge"
-            onClick={handleOpenRelease}
-            title={t.titlebar.newVersionTooltip}
-          >
+        {updateInfo?.available && updateProgress.status !== "downloading" && updateProgress.status !== "cancelling" && updateProgress.status !== "ready" && (
+          <button className="nodrag titlebar-update-badge" onClick={startUpdateDownload} title={updateInfo.installer_url ? t.titlebar.downloadUpdate : t.titlebar.locateUpdateInstaller}>
             <Sparkles size={12} className="icon-pulse" />
-            <span>{t.titlebar.newVersionAvailable}</span>
-            <ExternalLink size={11} />
+            <span>{updateProgress.status === "failed" ? t.titlebar.retryUpdateDownload : t.titlebar.downloadUpdate}</span>
+            <Download size={12} />
+          </button>
+        )}
+        {updateInfo?.available && (updateProgress.status === "downloading" || updateProgress.status === "cancelling") && (
+          <div className="nodrag titlebar-update-download" title={updateProgress.message ?? t.titlebar.downloadingUpdate}>
+            <LoaderCircle size={13} className="titlebar-update-spinner" />
+            <div className="titlebar-update-download__body">
+              <span>{updateProgress.status === "cancelling" ? t.titlebar.cancellingUpdate : percentage === null ? t.titlebar.downloadingUpdate : `${t.titlebar.downloadingUpdate.replace("…", "")} ${percentage}%`}</span>
+              <div className="titlebar-update-progress" role="progressbar" aria-label={t.titlebar.updateDownloadProgress} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage ?? undefined}>
+                <i style={{ width: `${percentage ?? 8}%` }} />
+              </div>
+              <small>{formatBytes(updateProgress.downloaded_bytes)}{updateProgress.total_bytes ? ` de ${formatBytes(updateProgress.total_bytes)}` : ""}</small>
+            </div>
+            {updateProgress.status === "downloading" && <button className="titlebar-update-cancel" onClick={() => void downloadService.cancelUpdateDownload()} title={t.titlebar.cancelUpdateDownload} aria-label={t.titlebar.cancelUpdateDownload}><X size={13} /></button>}
+          </div>
+        )}
+        {updateInfo?.available && updateProgress.status === "ready" && (
+          <button className="nodrag titlebar-update-badge titlebar-update-badge--install" onClick={() => void downloadService.installDownloadedUpdate().catch(console.error)} title={t.titlebar.installUpdateTooltip}>
+            <PackageCheck size={13} />
+            <span>{t.titlebar.installUpdate}</span>
           </button>
         )}
       </div>
       <div className="titlebar-center" data-tauri-drag-region>
         <strong>{t.titlebar.title}</strong>
-        <span className="titlebar-version">v{version}</span>
       </div>
       <div className="titlebar-side titlebar-actions" data-tauri-drag-region>
         {showFooterActionsInTitleBar && (
@@ -74,6 +120,7 @@ export function TitleBar({
               className={`titlebar-theme-btn ${activePage === "settings" ? "active" : ""}`}
               onClick={() => onNavigate?.("settings")}
               title={t.sidebar.settings}
+              aria-label={t.sidebar.settings}
             >
               <Settings size={16} />
             </button>
@@ -81,6 +128,7 @@ export function TitleBar({
               className={`titlebar-theme-btn ${activePage === "metrics" ? "active" : ""}`}
               onClick={() => onNavigate?.("metrics")}
               title={t.sidebar.metrics}
+              aria-label={t.sidebar.metrics}
             >
               <BarChart3 size={16} />
             </button>
@@ -88,6 +136,7 @@ export function TitleBar({
               className="titlebar-theme-btn"
               onClick={() => onOpenHelp?.()}
               title={t.sidebar.about}
+              aria-label={t.sidebar.about}
             >
               <Info size={16} />
             </button>
@@ -99,6 +148,7 @@ export function TitleBar({
             className="titlebar-theme-btn"
             onClick={() => void invoke("open_browser_integration_window").catch(console.error)}
             title={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
+            aria-label={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
           >
             <Puzzle size={16} />
             <span

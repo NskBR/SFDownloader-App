@@ -11,7 +11,7 @@ import { TorrentConfirmationPage } from "./pages/TorrentConfirmationPage";
 import { TorrentProgressWindow } from "./pages/TorrentProgressWindow";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { DebugLogsWindow } from "./pages/DebugLogsWindow";
-import { loadSettings } from "./services/settingsStorage";
+import { applyExternalSettings, loadSettings, SETTINGS_STORAGE_KEY } from "./services/settingsStorage";
 import { applyThemeSettings } from "./services/theme";
 import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
@@ -27,6 +27,16 @@ const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow && !
 const isBrowserIntegrationWindow = label === "browser-integration";
 const isDebugWindow = label === "debug-logs";
 const isMainWindow = label === "main";
+
+// Só a janela principal possui a permissão Tauri para controlar o zoom do
+// webview. As janelas auxiliares ainda recebem tema, mas não devem tentar
+// chamar a API, pois isso polui o console com um erro de permissão a cada
+// abertura de confirmação de torrent.
+const applyWindowZoom = (scale: number) => {
+  if (isMainWindow) {
+    void getCurrentWebview().setZoom(scale).catch(console.error);
+  }
+};
 
 if (isMainWindow) {
   document.documentElement.classList.add("window-type-main");
@@ -47,44 +57,23 @@ if (isMainWindow) {
 
 const initialSettings = loadSettings();
 applyThemeSettings(initialSettings);
-void getCurrentWebview().setZoom(initialSettings.uiScale).catch(console.error);
+applyWindowZoom(initialSettings.uiScale);
 
 void listen<AppSettings>("settings-changed", (event) => {
   if (event.payload) {
-    applyThemeSettings(event.payload);
-    void getCurrentWebview().setZoom(event.payload.uiScale).catch(console.error);
+    const settings = applyExternalSettings(event.payload);
+    applyThemeSettings(settings);
+    applyWindowZoom(settings.uiScale);
   }
 });
 
 window.addEventListener("storage", (event) => {
-  if (event.key === "sf-downloader.settings.v1" && event.newValue) {
-    try {
-      const updated = JSON.parse(event.newValue);
-      applyThemeSettings(updated);
-      void getCurrentWebview().setZoom(updated.uiScale).catch(console.error);
-    } catch {}
+  if (event.key === SETTINGS_STORAGE_KEY && event.newValue) {
+    const updated = loadSettings();
+    applyThemeSettings(updated);
+    applyWindowZoom(updated.uiScale);
   }
 });
-
-if (label === "main") {
-  invoke<boolean>("is_autostart_boot")
-    .then((isAutostart) => {
-      if (!isAutostart) {
-        const win = getCurrentWindow();
-        void win.unminimize().catch(() => {});
-        void win.setSkipTaskbar(false).catch(() => {});
-        void win.show().catch(console.error);
-        void win.setFocus().catch(() => {});
-      }
-    })
-    .catch(() => {
-      const win = getCurrentWindow();
-      void win.unminimize().catch(() => {});
-      void win.setSkipTaskbar(false).catch(() => {});
-      void win.show().catch(console.error);
-      void win.setFocus().catch(() => {});
-    });
-}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -5,6 +5,37 @@ use crate::database::{
 };
 use tauri::State;
 
+#[cfg(target_os = "windows")]
+fn shell_open(path: &std::path::Path) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+
+    let operation = "open\0".encode_utf16().collect::<Vec<_>>();
+    let target = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    // ShellExecuteW delega à associação registrada no Windows, sem iniciar cmd.exe.
+    let result = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            operation.as_ptr(),
+            target.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1,
+        )
+    };
+    let code = result as usize;
+    if code <= 32 {
+        return Err(format!(
+            "O Windows não conseguiu abrir o arquivo (código {code})."
+        ));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn create_download(
     database: State<'_, Database>,
@@ -48,22 +79,22 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
         let normalized = path.replace('/', "\\");
         let p = std::path::Path::new(&normalized);
         if p.is_file() {
+            let canonical = crate::download::paths::canonical_existing_file(p)?;
             std::process::Command::new("explorer.exe")
                 .arg("/select,")
-                .arg(&normalized)
+                .arg(&canonical)
                 .spawn()
                 .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
         } else if p.is_dir() {
+            let canonical = crate::download::paths::canonical_existing_directory(p)?;
             std::process::Command::new("explorer.exe")
-                .arg(&normalized)
+                .arg(&canonical)
                 .spawn()
                 .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
-        } else if let Some(parent) = p.parent() {
-            if !parent.exists() {
-                let _ = std::fs::create_dir_all(parent);
-            }
+        } else if let Some(parent) = p.parent().filter(|parent| parent.exists()) {
+            let canonical = crate::download::paths::canonical_existing_directory(parent)?;
             std::process::Command::new("explorer.exe")
-                .arg(parent)
+                .arg(canonical)
                 .spawn()
                 .map_err(|error| format!("Não foi possível abrir a pasta: {error}"))?;
         } else {
@@ -89,34 +120,31 @@ pub fn reveal_in_folder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn open_file(path: String) -> Result<(), String> {
-    let normalized = path.replace('/', "\\");
-    if !std::path::Path::new(&normalized).exists() {
-        return Err("Arquivo não encontrado no disco.".into());
-    }
+    let target = crate::download::paths::canonical_existing_file(std::path::Path::new(&path))?;
+
     #[cfg(target_os = "windows")]
     {
-        if normalized.to_lowercase().ends_with(".xpi") {
-            if std::process::Command::new("cmd")
-                .args(["/C", "start", "firefox", &normalized])
+        if target
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("xpi"))
+            && std::process::Command::new("firefox")
+                .arg(&target)
                 .spawn()
                 .is_ok()
-            {
-                return Ok(());
-            }
+        {
+            return Ok(());
         }
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &normalized])
-            .spawn()
-            .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
+        shell_open(&target)?;
     }
     #[cfg(target_os = "linux")]
     std::process::Command::new("xdg-open")
-        .arg(&path)
+        .arg(&target)
         .spawn()
         .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
     #[cfg(target_os = "macos")]
     std::process::Command::new("open")
-        .arg(&path)
+        .arg(&target)
         .spawn()
         .map_err(|error| format!("Não foi possível abrir o arquivo: {error}"))?;
     Ok(())
@@ -139,8 +167,16 @@ pub fn update_download(
 }
 
 #[tauri::command]
-pub fn remove_download(database: State<'_, Database>, id: String) -> Result<bool, String> {
+pub fn remove_download(
+    database: State<'_, Database>,
+    browser_bridge: State<'_, crate::browser_bridge::BrowserBridge>,
+    id: String,
+) -> Result<bool, String> {
     let connection = database.connect()?;
-    downloads::remove(&connection, &id)
-        .map_err(|error| format!("Falha ao remover download: {error}"))
+    let removed = downloads::remove(&connection, &id)
+        .map_err(|error| format!("Falha ao remover download: {error}"))?;
+    if removed {
+        browser_bridge.remove_headers(&id);
+    }
+    Ok(removed)
 }

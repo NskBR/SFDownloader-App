@@ -19,6 +19,8 @@ export interface DownloadTask {
   speedCurrent: number;
   speedAverage: number;
   speedLimitDownload: number;
+  /** False also covers tasks persisted before the inheritance marker existed. */
+  speedLimitInherited?: boolean;
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -28,6 +30,23 @@ export interface DownloadTask {
   peers?: number;
   uploadSpeed?: number;
   totalUploaded?: number;
+  priority: number;
+  queueOrder: number;
+  scheduledStartAt?: string | null;
+  dailyScheduleStartMinute?: number | null;
+  dailyScheduleEndMinute?: number | null;
+  scheduledWeekdays?: number;
+  pauseOutsideSchedule?: boolean;
+  skipScheduleOnce?: boolean;
+  scheduledLastStartedAt?: string | null;
+}
+
+export interface DownloadScheduleInput {
+  scheduledStartAt?: string | null;
+  dailyScheduleStartMinute?: number | null;
+  dailyScheduleEndMinute?: number | null;
+  scheduledWeekdays?: number;
+  pauseOutsideSchedule?: boolean;
 }
 
 export interface TorrentFileItem {

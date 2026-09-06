@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, Bot, X, Send, Wand2, Zap, MessageSquare } from "lucide-react";
+import { useTranslation } from "../../i18n";
 
 export function FloatingAiWidget() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const widgetRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +27,8 @@ export function FloatingAiWidget() {
         type="button"
         className="ai-widget-bubble"
         onClick={() => setOpen((prev) => !prev)}
-        title="Assistente de IA SF Downloader (Preview)"
+        title={t.ai.previewButton}
+        aria-label={t.ai.previewButton}
       >
         <div className="ai-widget-glow" />
         <div className="ai-widget-icon">
@@ -42,11 +45,11 @@ export function FloatingAiWidget() {
                 <Bot size={18} />
               </div>
               <div>
-                <span className="ai-popover-title">SF AI Assistant</span>
-                <span className="ai-popover-tag">Em desenvolvimento</span>
+                <span className="ai-popover-title">{t.ai.title}</span>
+                <span className="ai-popover-tag">{t.ai.inDevelopment}</span>
               </div>
             </div>
-            <button className="ai-popover-close" onClick={() => setOpen(false)} title="Fechar">
+            <button className="ai-popover-close" onClick={() => setOpen(false)} title={t.ai.close} aria-label={t.ai.close}>
               <X size={15} />
             </button>
           </div>
@@ -55,22 +58,22 @@ export function FloatingAiWidget() {
             <div className="ai-popover-msg">
               <Sparkles size={16} className="ai-sparkle-gold" />
               <p>
-                Em breve você poderá conversar com a Inteligência Artificial para otimizar rotas, analisar vírus, resumir downloads e organizar seus arquivos automaticamente!
+                {t.ai.description}
               </p>
             </div>
 
             <div className="ai-popover-chips">
               <button type="button" className="ai-chip">
                 <Wand2 size={12} />
-                <span>Otimizar downloads</span>
+                <span>{t.ai.optimizeDownloads}</span>
               </button>
               <button type="button" className="ai-chip">
                 <Zap size={12} />
-                <span>Testar velocidade</span>
+                <span>{t.ai.testSpeed}</span>
               </button>
               <button type="button" className="ai-chip">
                 <MessageSquare size={12} />
-                <span>Perguntar algo</span>
+                <span>{t.ai.askQuestion}</span>
               </button>
             </div>
 
@@ -78,10 +81,10 @@ export function FloatingAiWidget() {
               <input
                 type="text"
                 className="ai-popover-input"
-                placeholder="Pergunte à IA (Preview)..."
+                placeholder={t.ai.inputPlaceholder}
                 disabled
               />
-              <button className="ai-popover-send" disabled title="Enviar">
+              <button className="ai-popover-send" disabled title={t.ai.send} aria-label={t.ai.send}>
                 <Send size={14} />
               </button>
             </div>

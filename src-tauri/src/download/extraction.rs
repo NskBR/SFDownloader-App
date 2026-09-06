@@ -82,9 +82,10 @@ pub async fn extract_archive(path: String, password: Option<String>) -> Result<P
         .await
         .map_err(|_| "A fila de extração foi encerrada.".to_string())?;
     let archive_key = path.clone();
+    let canonical_archive = crate::download::paths::canonical_existing_file(Path::new(&path))?;
     let result = tauri::async_runtime::spawn_blocking(move || {
         let _background_resources = BackgroundResourceGuard::enter();
-        let archive_path = Path::new(&path);
+        let archive_path = canonical_archive.as_path();
         match archive_path
             .extension()
             .and_then(|value| value.to_str())
@@ -222,6 +223,9 @@ fn extract_tar_blocking(archive_path: &Path, gzip: bool) -> Result<PathBuf, Stri
         if !safe_archive_path(&path) {
             return Err("O TAR contém um caminho inseguro.".into());
         }
+        if !entry.header().entry_type().is_file() && !entry.header().entry_type().is_dir() {
+            return Err("O TAR contém links ou um tipo de entrada não suportado.".into());
+        }
         count += 1;
         expanded = expanded.saturating_add(entry.size());
     }
@@ -249,6 +253,21 @@ fn extract_tar_blocking(archive_path: &Path, gzip: bool) -> Result<PathBuf, Stri
 }
 
 fn extract_gzip_blocking(archive_path: &Path) -> Result<PathBuf, String> {
+    extract_gzip_blocking_with_copy(archive_path, |reader, writer| io::copy(reader, writer))
+}
+
+fn extract_gzip_blocking_with_copy<F>(archive_path: &Path, copy: F) -> Result<PathBuf, String>
+where
+    F: FnOnce(&mut dyn io::Read, &mut dyn io::Write) -> io::Result<u64>,
+{
+    fn format_write_error(error: io::Error) -> String {
+        if error.kind() == io::ErrorKind::StorageFull {
+            "Espaço em disco insuficiente durante a extração.".into()
+        } else {
+            error.to_string()
+        }
+    }
+
     let compressed = fs::metadata(archive_path)
         .map(|metadata| metadata.len())
         .map_err(|error| error.to_string())?;
@@ -266,11 +285,11 @@ fn extract_gzip_blocking(archive_path: &Path) -> Result<PathBuf, String> {
             .create_new(true)
             .open(&output_path)
             .map_err(|error| error.to_string())?;
-        io::copy(&mut decoder.take(50 * 1024 * 1024 * 1024 + 1), &mut output)
+        copy(&mut decoder.take(50 * 1024 * 1024 * 1024 + 1), &mut output)
     };
     let expanded = match result {
         Ok(expanded) => expanded,
-        Err(error) => return fail_extraction(temporary, error.to_string()),
+        Err(error) => return fail_extraction(temporary, format_write_error(error)),
     };
     if validate_archive_size(1, expanded, compressed).is_err() {
         return fail_extraction(
@@ -414,6 +433,12 @@ fn extract_zip_blocking(archive_path: &Path, password: Option<&str>) -> Result<P
         let entry = archive
             .by_index_raw(index)
             .map_err(|error| format!("Falha ao inspecionar ZIP: {error}"))?;
+        if entry
+            .unix_mode()
+            .is_some_and(|mode| mode & 0o170000 == 0o120000)
+        {
+            return Err("O ZIP contém um link simbólico e foi bloqueado.".into());
+        }
         expanded_size = expanded_size.saturating_add(entry.size());
         compressed_size = compressed_size.saturating_add(entry.compressed_size());
     }
@@ -469,10 +494,12 @@ fn extract_zip_blocking(archive_path: &Path, password: Option<&str>) -> Result<P
 #[cfg(test)]
 mod tests {
     use super::{
-        extract_7z_blocking, extract_gzip_blocking, extract_tar_blocking, extraction_destination,
+        extract_7z_blocking, extract_gzip_blocking, extract_gzip_blocking_with_copy,
+        extract_tar_blocking, extract_zip_blocking, extraction_destination,
     };
     use std::{fs, io::Write};
 
+    use zip::unstable::write::FileOptionsExt;
     #[test]
     fn extracts_a_real_7z_archive() {
         let root = std::env::temp_dir().join(format!("sf-7z-test-{}", uuid::Uuid::new_v4()));
@@ -547,6 +574,143 @@ mod tests {
             })
             .count();
         assert_eq!(leftovers, 0);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn disk_full_during_gzip_extraction_is_reported_and_cleaned_up() {
+        let root = std::env::temp_dir().join(format!("sf-gzip-disk-full-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("dados.gz");
+        let mut encoder = flate2::write::GzEncoder::new(
+            fs::File::create(&archive).unwrap(),
+            flate2::Compression::default(),
+        );
+        encoder
+            .write_all(b"conteudo suficiente para iniciar a extracao")
+            .unwrap();
+        encoder.finish().unwrap();
+
+        let destination = extraction_destination(&archive).unwrap();
+        let error = extract_gzip_blocking_with_copy(&archive, |_, _| {
+            Err(std::io::Error::from(std::io::ErrorKind::StorageFull))
+        })
+        .unwrap_err();
+
+        assert_eq!(error, "Espaço em disco insuficiente durante a extração.");
+        assert!(!destination.exists());
+        assert_eq!(
+            fs::read_dir(&root)
+                .unwrap()
+                .filter_map(Result::ok)
+                .filter(|entry| entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".sf-extracting-"))
+                .count(),
+            0
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn zip_with_traversal_path_is_rejected_without_leaving_files() {
+        let root = std::env::temp_dir().join(format!("sf-zip-slip-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("malicioso.zip");
+        let mut writer = zip::ZipWriter::new(fs::File::create(&archive).unwrap());
+        writer
+            .start_file("../fora.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(b"nao deve ser extraido").unwrap();
+        writer.finish().unwrap();
+
+        let destination = extraction_destination(&archive).unwrap();
+        let error = extract_zip_blocking(&archive, None).unwrap_err();
+
+        assert_eq!(error, "O ZIP contém um caminho inseguro.");
+        assert!(!destination.exists());
+        assert!(!root.parent().unwrap().join("fora.txt").exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn tar_symlink_is_rejected_without_leaving_files() {
+        let root = std::env::temp_dir().join(format!("sf-tar-link-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("malicioso.tar");
+        let mut builder = tar::Builder::new(fs::File::create(&archive).unwrap());
+        let mut header = tar::Header::new_gnu();
+        header.set_entry_type(tar::EntryType::Symlink);
+        header.set_size(0);
+        header.set_mode(0o777);
+        header.set_link_name("../fora.txt").unwrap();
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "atalho.txt", std::io::empty())
+            .unwrap();
+        builder.finish().unwrap();
+
+        let destination = extraction_destination(&archive).unwrap();
+        let error = extract_tar_blocking(&archive, false).unwrap_err();
+        assert_eq!(
+            error,
+            "O TAR contém links ou um tipo de entrada não suportado."
+        );
+        assert!(!destination.exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn zip_symlink_is_rejected_without_leaving_files() {
+        let root = std::env::temp_dir().join(format!("sf-zip-link-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("malicioso.zip");
+        let mut writer = zip::ZipWriter::new(fs::File::create(&archive).unwrap());
+        writer
+            .add_symlink(
+                "atalho.txt",
+                "../fora.txt",
+                zip::write::SimpleFileOptions::default(),
+            )
+            .unwrap();
+        writer.finish().unwrap();
+
+        let destination = extraction_destination(&archive).unwrap();
+        let error = extract_zip_blocking(&archive, None).unwrap_err();
+        assert_eq!(error, "O ZIP contém um link simbólico e foi bloqueado.");
+        assert!(!destination.exists());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn encrypted_zip_with_incorrect_password_is_rejected_and_cleaned_up() {
+        let root = std::env::temp_dir().join(format!("sf-zip-password-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&root).unwrap();
+        let archive = root.join("protegido.zip");
+        let options =
+            zip::write::SimpleFileOptions::default().with_deprecated_encryption(b"senha-correta");
+        let mut writer = zip::ZipWriter::new(fs::File::create(&archive).unwrap());
+        writer.start_file("segredo.txt", options).unwrap();
+        writer.write_all(b"conteudo protegido").unwrap();
+        writer.finish().unwrap();
+
+        let destination = extraction_destination(&archive).unwrap();
+        let error = extract_zip_blocking(&archive, Some("senha-incorreta")).unwrap_err();
+
+        assert_eq!(error, "Senha incorreta ou ausente.");
+        assert!(!destination.exists());
+        assert_eq!(
+            fs::read_dir(&root)
+                .unwrap()
+                .filter_map(Result::ok)
+                .filter(|entry| entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".sf-extracting-"))
+                .count(),
+            0
+        );
         let _ = fs::remove_dir_all(root);
     }
 }

@@ -2,6 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import type { GradientConfig, GradientStop } from "../../domain/settings";
 import { buildGradient } from "../../services/theme";
+import { useTranslation } from "../../i18n";
 
 interface Props {
   config: GradientConfig;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function GradientEditor({ config, onChange, label, presets }: Props) {
+  const { t } = useTranslation();
   const [custom, setCustom] = useState(false);
 
   const set = (patch: Partial<GradientConfig>) =>
@@ -57,7 +59,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
             onChange({ ...config, enabled: event.target.checked })
           }
         />
-        <span>Ativar gradiente de {label}</span>
+        <span>{t.gradient.enable} {label}</span>
       </label>
 
       <div className="gradient-preview" style={{ background: preview }} />
@@ -70,7 +72,8 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
                 key={index}
                 type="button"
                 className="gradient-preset"
-                title="Aplicar este gradiente"
+                title={t.gradient.applyPreset}
+                aria-label={t.gradient.applyPreset}
                 style={{ background: buildGradient(preset) }}
                 onClick={() => applyPreset(preset)}
               />
@@ -82,13 +85,13 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
             className="gradient-custom-toggle"
             onClick={() => setCustom((value) => !value)}
           >
-            {custom ? "Ocultar personalização" : "Gradiente personalizado"}
+            {custom ? t.gradient.hideCustomization : t.gradient.customize}
           </button>
 
           {custom && (
             <div className="gradient-custom">
               <div className="gradient-row">
-                <span>Tipo</span>
+                <span>{t.gradient.type}</span>
                 <div className="gradient-segmented">
                   {(["linear", "radial"] as const).map((type) => (
                     <button
@@ -97,7 +100,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
                       className={config.type === type ? "active" : ""}
                       onClick={() => set({ type })}
                     >
-                      {type === "linear" ? "Linear" : "Radial"}
+                      {type === "linear" ? t.gradient.linear : t.gradient.radial}
                     </button>
                   ))}
                 </div>
@@ -105,7 +108,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
 
               {config.type === "linear" && (
                 <div className="gradient-row">
-                  <span>Direção</span>
+                  <span>{t.gradient.direction}</span>
                   <div className="gradient-slider">
                     <input
                       type="range"
@@ -122,7 +125,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
               )}
 
               <div className="gradient-row">
-                <span>Intensidade</span>
+                <span>{t.gradient.intensity}</span>
                 <div className="gradient-slider">
                   <input
                     type="range"
@@ -146,7 +149,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
                       onChange={(event) =>
                         setStop(index, { color: event.target.value })
                       }
-                      aria-label={`Cor ${index + 1}`}
+                      aria-label={`${t.gradient.color} ${index + 1}`}
                     />
                     <div className="gradient-slider">
                       <input
@@ -165,7 +168,8 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
                       className="gradient-stop-remove"
                       onClick={() => removeStop(index)}
                       disabled={config.stops.length <= 2}
-                      title="Remover cor"
+                      title={t.gradient.removeColor}
+                      aria-label={t.gradient.removeColor}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -176,7 +180,7 @@ export function GradientEditor({ config, onChange, label, presets }: Props) {
                   className="gradient-add"
                   onClick={addStop}
                 >
-                  <Plus size={13} /> Adicionar cor
+                  <Plus size={13} /> {t.gradient.addColor}
                 </button>
               </div>
             </div>

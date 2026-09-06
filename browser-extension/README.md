@@ -1,6 +1,6 @@
 # SF Downloader Integration
 
-Versão atual: **0.2.7**.
+Versão atual: **0.3.4**.
 
 Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
@@ -29,3 +29,6 @@ Carregue como extensão descompactada:
 - Firefox: `browser-extension/dist/firefox`
 
 Após reconstruir, recarregue a extensão na página de extensões do navegador.
+
+As justificativas completas de permissões e uso de dados para publicação estão em [`STORE_SUBMISSION.md`](STORE_SUBMISSION.md).
+A política de privacidade está em [`PRIVACY.md`](PRIVACY.md).

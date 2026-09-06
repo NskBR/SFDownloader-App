@@ -11,6 +11,8 @@ import {
   Package,
   ExternalLink,
   FolderOpen,
+  AlertTriangle,
+  CircleCheck,
 } from "lucide-react";
 import * as service from "../services/downloadService";
 import { useTranslation } from "../i18n";
@@ -23,6 +25,7 @@ export function BrowserIntegrationPage() {
   const [chromiumFolder, setChromiumFolder] = useState("");
   const [firefoxFolder, setFirefoxFolder] = useState("");
   const [copied, setCopied] = useState(false);
+  const [bridgeStatus, setBridgeStatus] = useState<service.BrowserBridgeDiagnostics | null>(null);
   const appWindow = getCurrentWindow();
 
   useEffect(() => {
@@ -34,13 +37,28 @@ export function BrowserIntegrationPage() {
       .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      void service.browserExtensionDiagnostics().then((result) => {
+        if (active) setBridgeStatus(result);
+      }).catch(() => {});
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 2000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const copy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     });
   };
-  const xpiFileName = "7c2944a3066543438b23-0.3.4.xpi";
+  const xpiFileName = "integration.xpi";
   const openXpi = () =>
     firefoxFolder && void service.openFile(`${firefoxFolder}/${xpiFileName}`).catch(console.error);
   const close = () => void appWindow.close();
@@ -55,7 +73,7 @@ export function BrowserIntegrationPage() {
             <span>{t.browserIntegration.subtitle}</span>
           </div>
         </div>
-        <button className="integr-close nodrag" onClick={close} title={t.common.close}>
+        <button className="integr-close nodrag" type="button" onClick={close} title={t.common.close} aria-label={t.common.close}>
           <X size={16} />
         </button>
       </header>
@@ -80,6 +98,21 @@ export function BrowserIntegrationPage() {
       </div>
 
       <main className="integr-body">
+        {bridgeStatus && (
+          <div className={`integr-bridge-status ${bridgeStatus.error ? "error" : bridgeStatus.connected ? "connected" : "waiting"}`} role={bridgeStatus.error ? "alert" : "status"}>
+            {bridgeStatus.error ? <AlertTriangle size={17} /> : <CircleCheck size={17} />}
+            <div>
+              <strong>
+                {bridgeStatus.error
+                  ? t.browserIntegration.bridgeErrorTitle
+                  : bridgeStatus.connected
+                    ? t.browserIntegration.bridgeConnected
+                    : t.browserIntegration.bridgeWaiting}
+              </strong>
+              <span>{bridgeStatus.error ?? `${t.browserIntegration.localPort}: ${bridgeStatus.port}`}</span>
+            </div>
+          </div>
+        )}
         {tab === "chromium" ? (
           <div className="integr-install">
             <div className="integr-drop" onMouseDown={(e) => { e.preventDefault(); chromiumFolder && void invoke("start_drag_folder", { path: chromiumFolder }).catch(console.error); }} title={t.browserIntegration.dragToChromiumTooltip}>

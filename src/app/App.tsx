@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen } from "@tauri-apps/api/event";
@@ -15,7 +16,7 @@ import { FloatingAiWidget } from "../components/ui/FloatingAiWidget";
 import { UpdateBanner } from "../components/UpdateBanner";
 import { SplashScreen } from "../components/ui/SplashScreen";
 interface BrowserDownloadRequest { requestId:string;url:string;fileName:string|null;fileSize:number|null;mimeType:string|null }
-const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","torrents","calculator"];
+const categoryPages:PageId[]=["downloads","active","completed","documents","music","videos","archives","applications","torrents","others"];
 const normalizePage=(page:PageId):PageId=>({home:"downloads",organization:"settings",active:"downloads",completed:"downloads"} as Partial<Record<PageId,PageId>>)[page]??page;
 const pageFromHash = (): PageId => { const hash = location.hash.slice(1); if(isPageId(hash))return normalizePage(hash); const saved=localStorage.getItem("sf-downloader.last-page")??""; return isPageId(saved)?normalizePage(saved):"active"; };
 export function App() {
@@ -26,6 +27,14 @@ export function App() {
   const [updateInfo, setUpdateInfo] = useState<downloadService.UpdateCheckResult | null>(null);
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashFading, setSplashFading] = useState(false);
+  const revealMainAfterSplashPaint = useCallback(() => {
+    void invoke<boolean>("is_autostart_boot")
+      .then((isAutostart) => {
+        if (!isAutostart) return invoke<void>("show_ready_window");
+        return undefined;
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -64,7 +73,7 @@ export function App() {
     : <DownloadsPage settings={settings} onSave={persist} filter={categoryPages.includes(activePage)?activePage:"active"} />;
    return (
      <>
-       {splashVisible && <SplashScreen fade={splashFading} />}
+       {splashVisible && <SplashScreen fade={splashFading} onReady={revealMainAfterSplashPaint} />}
        <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation} updateInfo={updateInfo}>{content}</AppShell>
        {!["settings", "metrics", "profile"].includes(activePage) && (settings.showAiAssistant ?? true) && <FloatingAiWidget />}
      </>

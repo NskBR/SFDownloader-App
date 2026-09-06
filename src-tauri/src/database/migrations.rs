@@ -97,6 +97,40 @@ ALTER TABLE download_tasks ADD COLUMN peers INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE download_tasks ADD COLUMN upload_speed REAL NOT NULL DEFAULT 0.0;
 ALTER TABLE download_tasks ADD COLUMN total_uploaded INTEGER NOT NULL DEFAULT 0;
 "#;
+const MIGRATION_009: &str = r#"
+ALTER TABLE download_tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE download_tasks ADD COLUMN queue_order INTEGER NOT NULL DEFAULT 0;
+UPDATE download_tasks SET queue_order = rowid WHERE queue_order = 0;
+CREATE INDEX IF NOT EXISTS idx_download_tasks_queue ON download_tasks(priority DESC, queue_order ASC);
+"#;
+const MIGRATION_010: &str = r#"
+ALTER TABLE download_tasks ADD COLUMN speed_limit_inherited INTEGER NOT NULL DEFAULT 0;
+"#;
+const MIGRATION_011: &str = r#"
+ALTER TABLE download_tasks ADD COLUMN scheduled_start_at TEXT;
+ALTER TABLE download_tasks ADD COLUMN daily_schedule_start_minute INTEGER;
+ALTER TABLE download_tasks ADD COLUMN daily_schedule_end_minute INTEGER;
+ALTER TABLE download_tasks ADD COLUMN scheduled_weekdays INTEGER NOT NULL DEFAULT 127;
+ALTER TABLE download_tasks ADD COLUMN pause_outside_schedule INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE download_tasks ADD COLUMN skip_schedule_once INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE download_tasks ADD COLUMN scheduled_last_started_at TEXT;
+CREATE INDEX IF NOT EXISTS idx_download_tasks_schedule ON download_tasks(scheduled_start_at, daily_schedule_start_minute);
+"#;
+const MIGRATION_013: &str = r#"
+ALTER TABLE download_tasks ADD COLUMN torrent_selected_file_indexes TEXT;
+"#;
+
+const MIGRATION_012: &str = r#"
+CREATE TABLE IF NOT EXISTS global_download_schedule (
+  id INTEGER PRIMARY KEY CHECK(id = 1),
+  daily_start_minute INTEGER,
+  daily_end_minute INTEGER,
+  weekdays INTEGER NOT NULL DEFAULT 127,
+  pause_outside_schedule INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+INSERT OR IGNORE INTO global_download_schedule(id) VALUES(1);
+"#;
 
 pub fn run(connection: &mut Connection) -> Result<()> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
@@ -148,6 +182,36 @@ pub fn run(connection: &mut Connection) -> Result<()> {
         let _ = transaction.execute_batch("PRAGMA user_version = 8");
         transaction.commit()?;
     }
+    if version < 9 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_009)?;
+        transaction.execute_batch("PRAGMA user_version = 9")?;
+        transaction.commit()?;
+    }
+    if version < 10 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_010)?;
+        transaction.execute_batch("PRAGMA user_version = 10")?;
+        transaction.commit()?;
+    }
+    if version < 11 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_011)?;
+        transaction.execute_batch("PRAGMA user_version = 11")?;
+        transaction.commit()?;
+    }
+    if version < 12 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_012)?;
+        transaction.execute_batch("PRAGMA user_version = 12")?;
+        transaction.commit()?;
+    }
+    if version < 13 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_013)?;
+        transaction.execute_batch("PRAGMA user_version = 13")?;
+        transaction.commit()?;
+    }
     Ok(())
 }
 
@@ -158,11 +222,8 @@ mod tests {
     #[test]
     fn version_four_backfills_completed_history() {
         let mut connection = Connection::open_in_memory().unwrap();
-        run(&mut connection).unwrap();
+        apply_schema_through(&connection, 3);
         connection.execute("INSERT INTO history_items(id,file_name,file_size,action_type,status,path,created_at) VALUES('old','archive.zip',512,'download','completed','x','2026-07-05 12:00:00')", []).unwrap();
-        connection
-            .execute_batch("DROP TABLE usage_downloads; PRAGMA user_version = 3;")
-            .unwrap();
         run(&mut connection).unwrap();
         let values: (i64, i64, i64) = connection.query_row(
             "SELECT network_bytes,disk_written_bytes,io_measured FROM usage_downloads WHERE download_id='history:old'",
@@ -170,5 +231,57 @@ mod tests {
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         ).unwrap();
         assert_eq!(values, (512, 512, 0));
+    }
+    fn apply_schema_through(connection: &Connection, version: i64) {
+        let migrations = [
+            MIGRATION_001,
+            MIGRATION_002,
+            MIGRATION_003,
+            MIGRATION_004,
+            MIGRATION_005,
+            MIGRATION_006,
+            MIGRATION_007,
+            MIGRATION_008,
+            MIGRATION_009,
+            MIGRATION_010,
+            MIGRATION_011,
+            MIGRATION_012,
+            MIGRATION_013,
+        ];
+        for migration in migrations.iter().take(version as usize) {
+            connection.execute_batch(migration).unwrap();
+        }
+        connection
+            .execute_batch(&format!("PRAGMA user_version = {version}"))
+            .unwrap();
+    }
+
+    #[test]
+    fn every_supported_legacy_schema_upgrades_to_the_current_version() {
+        for version in 0..13 {
+            let mut connection = Connection::open_in_memory().unwrap();
+            if version > 0 {
+                apply_schema_through(&connection, version);
+            }
+            run(&mut connection).unwrap();
+            let final_version: i64 = connection
+                .query_row("PRAGMA user_version", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(final_version, 13, "legacy schema v{version}");
+            connection
+                .query_row(
+                    "SELECT priority,queue_order FROM download_tasks LIMIT 1",
+                    [],
+                    |_| Ok(()),
+                )
+                .unwrap_or(());
+            connection
+                .query_row(
+                    "SELECT weekdays,pause_outside_schedule FROM global_download_schedule WHERE id=1",
+                    [],
+                    |_| Ok(()),
+                )
+                .unwrap();
+        }
     }
 }

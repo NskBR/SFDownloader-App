@@ -220,7 +220,7 @@ export function AppShell({
     { id: "videos" as PageId, label: t.sidebar.videos, icon: Video, count: videosCount },
     { id: "music" as PageId, label: t.sidebar.music, icon: Music2, count: musicCount },
     { id: "applications" as PageId, label: t.sidebar.applications, icon: Grid2X2, count: applicationsCount },
-    { id: "calculator" as PageId, label: t.sidebar.others, icon: MoreHorizontal, count: othersCount },
+    { id: "others" as PageId, label: t.sidebar.others, icon: MoreHorizontal, count: othersCount },
   ];
 
   return (
@@ -397,13 +397,16 @@ export function AppShell({
                 </button>
               </div>
               <div className="help-meta-row"><span>{t.about.technology}</span><b>Tauri · React · Rust</b></div>
-              <div className="help-meta-row"><span>{t.about.license}</span><b>MIT</b></div>
+              <div className="help-meta-row">
+                <span>{t.about.releaseStatus}</span>
+                <b>{t.about.privateBetaFuture}</b>
+              </div>
             </div>
 
             <footer>
               <button
                 className="help-link"
-                onClick={() => openExternal("https://github.com/NskBR/SFDownloader-BETA")}
+                onClick={() => openExternal("https://github.com/NskBR/SFDownloader-App")}
               >
                 {t.about.githubRepo}
               </button>

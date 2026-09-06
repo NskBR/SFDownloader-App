@@ -1,14 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "../../i18n";
 
 interface SplashScreenProps {
   text?: string;
   fade?: boolean;
+  onReady?: () => void;
 }
 
-export function SplashScreen({ text, fade = false }: SplashScreenProps) {
+export function SplashScreen({ text, fade = false, onReady }: SplashScreenProps) {
   const { t } = useTranslation();
   const displayText = text ?? t.common.loading;
+
+  useEffect(() => {
+    if (!onReady) return;
+    let secondFrame = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(onReady);
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+    };
+  }, [onReady]);
 
   return (
     <div className={`sf-splash-screen ${fade ? "sf-splash-fade" : ""}`}>
@@ -23,28 +36,6 @@ export function SplashScreen({ text, fade = false }: SplashScreenProps) {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <defs>
-              {/* Coffee Liquid Gradient */}
-              <linearGradient id="sf-coffee-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f59e0b" />
-                <stop offset="50%" stopColor="#d97706" />
-                <stop offset="100%" stopColor="#b45309" />
-              </linearGradient>
-
-              {/* Cup Gradient */}
-              <linearGradient id="sf-cup-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#252b37" />
-                <stop offset="100%" stopColor="#141820" />
-              </linearGradient>
-
-              {/* Cup Border Highlight */}
-              <linearGradient id="sf-rim-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#3b4457" />
-                <stop offset="50%" stopColor="#4f5b73" />
-                <stop offset="100%" stopColor="#2b3342" />
-              </linearGradient>
-            </defs>
-
             {/* Base Shadow */}
             <ellipse cx="76" cy="128" rx="46" ry="7" fill="#000000" fillOpacity="0.45" />
 
@@ -73,14 +64,14 @@ export function SplashScreen({ text, fade = false }: SplashScreenProps) {
             {/* Cup Handle */}
             <path
               d="M112 55 C132 55, 136 92, 114 97"
-              stroke="#2e3646"
+              stroke="#5b6b84"
               strokeWidth="7"
               strokeLinecap="round"
               fill="none"
             />
             <path
               d="M112 55 C132 55, 136 92, 114 97"
-              stroke="url(#sf-cup-grad)"
+              stroke="#34435a"
               strokeWidth="4"
               strokeLinecap="round"
               fill="none"
@@ -89,16 +80,16 @@ export function SplashScreen({ text, fade = false }: SplashScreenProps) {
             {/* Cup Outer Body */}
             <path
               d="M34 48 C34 98, 52 120, 76 120 C100 120, 118 98, 118 48 Z"
-              fill="url(#sf-cup-grad)"
-              stroke="url(#sf-rim-grad)"
+              fill="#273449"
+              stroke="#7c8ba5"
               strokeWidth="2"
             />
 
             {/* Cup Rim Opening */}
-            <ellipse cx="76" cy="48" rx="42" ry="12" fill="#13161d" stroke="url(#sf-rim-grad)" strokeWidth="2" />
+            <ellipse cx="76" cy="48" rx="42" ry="12" fill="#111827" stroke="#94a3b8" strokeWidth="2" />
 
             {/* Coffee Liquid Surface */}
-            <ellipse cx="76" cy="53" rx="36" ry="9" fill="url(#sf-coffee-grad)" />
+            <ellipse cx="76" cy="53" rx="36" ry="9" fill="#f59e0b" />
 
             {/* Download Arrow Icon inside Coffee Cup */}
             <g className="sf-splash-arrow" transform="translate(76, 85)">

@@ -15,6 +15,10 @@ pub enum DownloadStatus {
 }
 
 impl DownloadStatus {
+    pub fn can_transition_to(&self, next: &Self) -> bool {
+        crate::download::state::can_transition(self, next)
+    }
+
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Pending => "pending",
@@ -61,6 +65,7 @@ pub struct DownloadTask {
     pub max_connections: i64,
     pub max_parallel_downloads: i64,
     pub speed_limit_download: i64,
+    pub speed_limit_inherited: bool,
     pub etag: Option<String>,
     pub last_modified: Option<String>,
     pub total_downloaded: i64,
@@ -76,6 +81,43 @@ pub struct DownloadTask {
     pub peers: i64,
     pub upload_speed: f64,
     pub total_uploaded: i64,
+    pub priority: i64,
+    pub queue_order: i64,
+    pub scheduled_start_at: Option<String>,
+    pub daily_schedule_start_minute: Option<i64>,
+    pub daily_schedule_end_minute: Option<i64>,
+    pub scheduled_weekdays: i64,
+    pub pause_outside_schedule: bool,
+    pub skip_schedule_once: bool,
+    pub scheduled_last_started_at: Option<String>,
+    #[serde(default)]
+    pub torrent_selected_file_indexes: Vec<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadScheduleInput {
+    pub scheduled_start_at: Option<String>,
+    pub daily_schedule_start_minute: Option<i64>,
+    pub daily_schedule_end_minute: Option<i64>,
+    #[serde(default = "default_schedule_weekdays")]
+    pub scheduled_weekdays: i64,
+    #[serde(default)]
+    pub pause_outside_schedule: bool,
+}
+
+fn default_schedule_weekdays() -> i64 {
+    0b111_1111
+}
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalDownloadSchedule {
+    pub daily_start_minute: Option<i64>,
+    pub daily_end_minute: Option<i64>,
+    #[serde(default = "default_schedule_weekdays")]
+    pub weekdays: i64,
+    #[serde(default)]
+    pub pause_outside_schedule: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,12 +138,16 @@ pub struct CreateDownloadInput {
     pub max_parallel_downloads: i64,
     #[serde(default)]
     pub speed_limit_download: i64,
+    #[serde(default)]
+    pub speed_limit_inherited: bool,
     pub etag: Option<String>,
     pub last_modified: Option<String>,
     pub delete_archive_after_extract: bool,
     #[serde(default = "default_download_type")]
     pub download_type: String,
     pub info_hash: Option<String>,
+    #[serde(default = "default_priority")]
+    pub priority: i64,
 }
 
 fn default_download_type() -> String {
@@ -113,6 +159,9 @@ fn default_max_connections() -> i64 {
 }
 fn default_parallel_downloads() -> i64 {
     3
+}
+fn default_priority() -> i64 {
+    1
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,6 +183,43 @@ pub struct UpdateDownloadInput {
 }
 
 #[allow(dead_code)]
+#[cfg(test)]
+mod tests {
+    use super::DownloadStatus;
+
+    #[test]
+    fn accepts_expected_download_lifecycle_transitions() {
+        use DownloadStatus::*;
+        for (current, next) in [
+            (Pending, CheckingFiles),
+            (CheckingFiles, Downloading),
+            (Downloading, Paused),
+            (Paused, Downloading),
+            (Downloading, Assembling),
+            (Assembling, Completed),
+            (Completed, Extracting),
+            (Extracting, Completed),
+            (Failed, Downloading),
+            (Cancelled, Downloading),
+        ] {
+            assert!(current.can_transition_to(&next), "{current:?} -> {next:?}");
+        }
+    }
+
+    #[test]
+    fn rejects_terminal_or_out_of_order_transitions() {
+        use DownloadStatus::*;
+        for (current, next) in [
+            (Completed, Downloading),
+            (Assembling, Downloading),
+            (Extracting, Downloading),
+            (Pending, Completed),
+        ] {
+            assert!(!current.can_transition_to(&next), "{current:?} -> {next:?}");
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadChunk {

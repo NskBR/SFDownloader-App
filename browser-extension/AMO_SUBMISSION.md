@@ -1,10 +1,10 @@
-# SF Downloader Integration 0.2.9 — notas para revisão AMO
+# SF Downloader Integration 0.3.4 — notas para revisão AMO
 
-## Alterações da versão 0.2.9
+## Alterações da versão 0.3.4
 
 - Corrige a detecção incorreta de recursos que não são downloads: a interceptação em `onHeadersReceived` agora só atua em navegações do usuário (`main_frame`/`sub_frame`) ou em respostas com `Content-Disposition: attachment`. Isso evita que prefetches passivos — como as miniaturas de vídeo do YouTube exibidas ao passar o mouse — sejam erroneamente tratados como downloads.
-- Mantém a correção da 0.2.8: o download é transferido ao aplicativo desktop antes de o navegador nativo detectá-lo, sem registro no histórico e sem a janela de download nativa piscando.
-- Versão alinhada à 0.2.8 em tudo o mais (filtros por extensão, content script de clique, ícones `sf-small.png`/`sf-large.png`).
+- Mantém a captura antecipada: o download é transferido ao aplicativo desktop antes de o navegador nativo detectá-lo, sem registro no histórico e sem a janela de download nativa piscando.
+- Inclui filtros por extensão, content script de clique e ícones `sf-small.png`/`sf-large.png`.
 
 ## Finalidade
 
@@ -41,7 +41,7 @@ Na raiz do projeto:
 
 ```powershell
 npm run extension:build
-npx --yes web-ext@10.4.0 lint --source-dir browser-extension/dist/firefox
+npm run extension:lint
 ```
 
 O diretório pronto para empacotamento é `browser-extension/dist/firefox`. O `manifest.json` deve ficar na raiz do ZIP.

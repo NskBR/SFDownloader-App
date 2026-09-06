@@ -10,8 +10,7 @@
     "downloads",
     "cookies",
     "alarms",
-    "webRequest",
-    "webRequestBlocking"
+    "webRequest"
   ],
   "host_permissions": [
     "<all_urls>",

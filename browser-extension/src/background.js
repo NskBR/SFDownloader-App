@@ -70,6 +70,8 @@ const requests = new Map();
 const recentHeaders = new Map();
 const intercepted = new Set();
 const interceptedUrls = new Map();
+const MAX_TRACKED_REQUESTS = 500;
+const TRACKED_REQUEST_TTL_MS = 30_000;
 
 const validUrl = url => /^(https?:\/\/|magnet:\?)/i.test(url || "") || (url || "").startsWith("magnet:");
 
@@ -100,6 +102,22 @@ function markInterceptedUrl(url) {
 
 function wasInterceptedUrl(url) {
   return Boolean(url) && interceptedUrls.has(url);
+}
+
+function rememberRequest(requestId, request) {
+  requests.set(requestId, request);
+  while (requests.size > MAX_TRACKED_REQUESTS) {
+    requests.delete(requests.keys().next().value);
+  }
+  setTimeout(() => requests.delete(requestId), TRACKED_REQUEST_TTL_MS);
+}
+
+function rememberHeaders(url, headers) {
+  recentHeaders.set(url, headers);
+  while (recentHeaders.size > MAX_TRACKED_REQUESTS) {
+    recentHeaders.delete(recentHeaders.keys().next().value);
+  }
+  setTimeout(() => recentHeaders.delete(url), TRACKED_REQUEST_TTL_MS);
 }
 
 const normalizeExtension = value => {
@@ -346,35 +364,32 @@ function shouldInterceptHeaders(info) {
   return null;
 }
 
-function cookiesFor(url, referrer) {
+function cookiesFor(url) {
   return new Promise(resolve => {
     chrome.cookies.getAll({ url }, cookies => {
       void chrome.runtime.lastError;
       const list = (cookies || []).map(cookie => `${cookie.name}=${cookie.value}`);
-      if (referrer && referrer.startsWith("http")) {
-        chrome.cookies.getAll({ url: referrer }, refCookies => {
-          void chrome.runtime.lastError;
-          const refList = (refCookies || []).map(c => `${c.name}=${c.value}`);
-          const combined = Array.from(new Set([...list, ...refList])).join("; ");
-          resolve(combined);
-        });
-      } else {
-        resolve(list.join("; "));
-      }
+      resolve(list.join("; "));
     });
   });
 }
 
 async function sendToApp(download) {
   const url = download.finalUrl || download.url;
+  if (!validUrl(url) || (!url.startsWith("magnet:") && isBlockedHost(url))) {
+    throw new Error("Unsafe download URL");
+  }
 
   const observed = recentHeaders.get(url) || {};
+  if (observed.reproducible === false) {
+    throw new Error("This download request cannot be safely reproduced");
+  }
   const referrer = download.referrer || observed.referrer || null;
-  const cookie = await cookiesFor(url, referrer);
+  const cookie = await cookiesFor(url);
   const payload = {
     token: bridge.token,
     url,
-    filename: download.filename || null,
+    filename: download.filename || observed.filename || null,
     fileSize: download.fileSize > 0 ? download.fileSize : observed.fileSize || null,
     mimeType: download.mime || observed.mimeType || null,
     referrer,
@@ -384,8 +399,11 @@ async function sendToApp(download) {
   try {
     const response = await fetch(`${BRIDGE}/download`, { method: "POST", body: JSON.stringify(payload) });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  } catch {
+    return "bridge";
+  } catch (error) {
+    if (download.allowProtocolFallback === false) throw error;
     await launchProtocol(url);
+    return "protocol";
   }
 }
 
@@ -412,9 +430,13 @@ function onDeterminingFilename(download, suggest) {
       return;
     }
     intercepted.add(download.id);
-    markInterceptedUrl(url);
-    eraseDownload(download.id);
-    sendToApp(download)
+    sendToApp({ ...download, allowProtocolFallback: false })
+      .then(delivery => {
+        if (delivery === "bridge") {
+          markInterceptedUrl(url);
+          eraseDownload(download.id);
+        }
+      })
       .catch(() => {})
       .finally(() => {
         setTimeout(() => intercepted.delete(download.id), 5000);
@@ -428,99 +450,51 @@ function onDeterminingFilename(download, suggest) {
 
 try {
   chrome.webRequest.onSendHeaders.addListener(info => {
-    if (info.method !== "GET") return;
     const headers = {};
-    for (const header of info.requestHeaders || []) {
-      if (!header.value) continue;
-      (headers[header.name] ||= []).push(header.value);
+    if (info.method === "GET") {
+      for (const header of info.requestHeaders || []) {
+        if (!header.value) continue;
+        (headers[header.name] ||= []).push(header.value);
+      }
     }
-    requests.set(info.requestId, { url: info.url, requestHeaders: headers, referrer: info.initiator || null });
+    rememberRequest(info.requestId, { url: info.url, requestHeaders: headers, referrer: info.initiator || null, reproducible: info.method === "GET" });
   }, { urls: ["<all_urls>"] }, ["requestHeaders", "extraHeaders"]);
 } catch {
   chrome.webRequest.onSendHeaders.addListener(info => {
-    if (info.method !== "GET") return;
     const headers = {};
-    for (const header of info.requestHeaders || []) {
-      if (!header.value) continue;
-      (headers[header.name] ||= []).push(header.value);
+    if (info.method === "GET") {
+      for (const header of info.requestHeaders || []) {
+        if (!header.value) continue;
+        (headers[header.name] ||= []).push(header.value);
+      }
     }
-    requests.set(info.requestId, { url: info.url, requestHeaders: headers, referrer: info.initiator || null });
+    rememberRequest(info.requestId, { url: info.url, requestHeaders: headers, referrer: info.initiator || null, reproducible: info.method === "GET" });
   }, { urls: ["<all_urls>"] }, ["requestHeaders"]);
 }
 
-let registered = false;
-
-try {
-  chrome.webRequest.onHeadersReceived.addListener(info => {
-    const interceptDetails = shouldInterceptHeaders(info);
-    if (interceptDetails) {
-      const request = requests.get(info.requestId) || {};
-      requests.delete(info.requestId);
-
-      const download = {
-        url: info.url,
-        finalUrl: info.url,
-        filename: interceptDetails.filename || request.filename || null,
-        fileSize: interceptDetails.fileSize || request.fileSize || -1,
-        mime: interceptDetails.mimeType || request.mimeType || null,
-        referrer: request.referrer || null,
-        requestHeaders: request.requestHeaders || null
-      };
-
-      intercepted.add(info.requestId);
-      markInterceptedUrl(info.url);
-      void sendToApp(download).finally(() => setTimeout(() => intercepted.delete(info.requestId), 5000));
-
-      return { cancel: true };
-    }
-
-    const request = requests.get(info.requestId);
-    requests.delete(info.requestId);
-    if (!request) return;
-    let fileSize = null, mimeType = null;
-    for (const header of info.responseHeaders || []) {
-      const name = header.name.toLowerCase();
-      if (name === "content-length") fileSize = Number(header.value) || null;
-      if (name === "content-type") mimeType = header.value || null;
-    }
-    recentHeaders.set(info.url, { ...request, fileSize, mimeType });
-    setTimeout(() => recentHeaders.delete(info.url), 30000);
-  }, { urls: ["<all_urls>"] }, ["blocking", "responseHeaders"]);
-  registered = true;
-} catch (e) {
-  // Failed to register blocking (e.g. Chrome MV3)
+function rememberResponse(info) {
+  const request = requests.get(info.requestId) || {};
+  requests.delete(info.requestId);
+  const details = shouldInterceptHeaders(info);
+  let fileSize = details?.fileSize || null;
+  let mimeType = details?.mimeType || null;
+  for (const header of info.responseHeaders || []) {
+    const name = header.name.toLowerCase();
+    if (name === "content-length" && !fileSize) fileSize = Number(header.value) || null;
+    if (name === "content-type" && !mimeType) mimeType = header.value || null;
+  }
+  rememberHeaders(info.url, {
+    ...request,
+    filename: details?.filename || request.filename || null,
+    fileSize,
+    mimeType,
+  });
 }
 
-if (!registered) {
-  try {
-    chrome.webRequest.onHeadersReceived.addListener(info => {
-      const request = requests.get(info.requestId);
-      requests.delete(info.requestId);
-      if (!request) return;
-      let fileSize = null, mimeType = null;
-      for (const header of info.responseHeaders || []) {
-        const name = header.name.toLowerCase();
-        if (name === "content-length") fileSize = Number(header.value) || null;
-        if (name === "content-type") mimeType = header.value || null;
-      }
-      recentHeaders.set(info.url, { ...request, fileSize, mimeType });
-      setTimeout(() => recentHeaders.delete(info.url), 30000);
-    }, { urls: ["<all_urls>"] }, ["responseHeaders", "extraHeaders"]);
-  } catch (e) {
-    chrome.webRequest.onHeadersReceived.addListener(info => {
-      const request = requests.get(info.requestId);
-      requests.delete(info.requestId);
-      if (!request) return;
-      let fileSize = null, mimeType = null;
-      for (const header of info.responseHeaders || []) {
-        const name = header.name.toLowerCase();
-        if (name === "content-length") fileSize = Number(header.value) || null;
-        if (name === "content-type") mimeType = header.value || null;
-      }
-      recentHeaders.set(info.url, { ...request, fileSize, mimeType });
-      setTimeout(() => recentHeaders.delete(info.url), 30000);
-    }, { urls: ["<all_urls>"] }, ["responseHeaders"]);
-  }
+try {
+  chrome.webRequest.onHeadersReceived.addListener(rememberResponse, { urls: ["<all_urls>"] }, ["responseHeaders", "extraHeaders"]);
+} catch {
+  chrome.webRequest.onHeadersReceived.addListener(rememberResponse, { urls: ["<all_urls>"] }, ["responseHeaders"]);
 }
 
 chrome.webRequest.onErrorOccurred.addListener(info => requests.delete(info.requestId), { urls: ["<all_urls>"] });
@@ -586,7 +560,7 @@ chrome.contextMenus.onClicked.addListener(info => {
   if (info.menuItemId !== MENU_ID) return;
   const url = info.linkUrl || info.srcUrl || info.pageUrl;
   if (!validUrl(url)) return;
-  if (bridge.connected) void sendToApp({ url, finalUrl: url, filename: null, fileSize: -1, mime: null, referrer: info.pageUrl });
+  if (bridge.connected) void sendToApp({ url, finalUrl: url, filename: null, fileSize: -1, mime: null, referrer: info.pageUrl }).catch(() => {});
   else void launchProtocol(url);
 });
 
@@ -604,7 +578,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         filename: message.filename || null,
         fileSize: -1,
         mime: null,
-        referrer: message.referrer || null
+        referrer: message.referrer || null,
+        allowProtocolFallback: false,
       }).then(() => sendResponse({ handled: true }))
         .catch(() => sendResponse({ handled: false }));
     }).catch(() => {
@@ -619,6 +594,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message?.type === "extension-filters-updated") {
     disabledExtensionsState = message.disabledExtensions || [];
+    chrome.storage.local.set({ disabledExtensions: disabledExtensionsState });
     bridge.fileExts = applyExtensionFilters(bridge.allFileExts || bridge.fileExts, disabledExtensionsState);
     saveBridgeToStorage();
     sendResponse({ ok: true });

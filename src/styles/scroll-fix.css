@@ -1,7 +1,0 @@
-/* Keep scrollable page content below the custom titlebar. */
-.window-frame .main-content {
-  height: calc(100% - 36px);
-  margin-top: 36px;
-  padding-top: 3px;
-  overscroll-behavior: contain;
-}

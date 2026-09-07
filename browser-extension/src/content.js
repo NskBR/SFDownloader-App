@@ -58,7 +58,12 @@ document.addEventListener("click", event => {
     return;
   }
 
-  // Verifica se o arquivo/link corresponde a uma das extensões monitoradas pelo aplicativo
+  // Uma URL que termina em .rar/.zip pode ser apenas uma página intermediária
+  // do provedor. Só interrompemos o clique quando a própria página declara o
+  // link como download; o restante será capturado depois, pelo evento nativo
+  // de download do navegador, quando a resposta real estiver disponível.
+  if (!anchor.hasAttribute("download")) return;
+
   const filename = anchor.getAttribute("download") || null;
   let target = "";
   try {
@@ -70,8 +75,8 @@ document.addEventListener("click", event => {
 
   const shouldIntercept = fileExts.some(ext => target.endsWith(ext.toUpperCase()));
 
-  // Se não corresponder a uma extensão monitorada (ex: página de download do datanodes),
-  // não interrompe o clique e deixa os scripts da página rodarem normalmente.
+  // Se não corresponder a uma extensão monitorada, deixa o navegador tratar
+  // o clique normalmente.
   if (!shouldIntercept) return;
 
   event.preventDefault();

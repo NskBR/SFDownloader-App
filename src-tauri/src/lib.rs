@@ -283,6 +283,7 @@ pub fn run() {
             commands::scheduling::update_global_download_schedule,
             commands::windows::open_browser_integration_window,
             commands::browser_extension::get_extension_dir,
+            commands::browser_extension::get_firefox_xpi_path,
             commands::system::open_folder,
             commands::system::open_url,
             commands::transfer::start_drag_folder,

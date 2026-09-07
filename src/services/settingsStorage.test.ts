@@ -57,7 +57,7 @@ describe("settings storage", () => {
     expect(normalized.maxConnectionsPerDownload).toBe(32);
     expect(normalized.maxParallelDownloads).toBe(1);
     expect(normalized.uiScale).toBe(1.5);
-    expect(normalized.interfaceGradient.stops).toEqual(defaultSettings.interfaceGradient.stops);
+    expect(normalized.interfaceGradient.stops).toEqual([{ color: "#111", position: 20 }]);
     expect(normalized.customCategories).toEqual([{ id: "safe", name: "Safe", extensions: ["mp4"] }]);
   });
 

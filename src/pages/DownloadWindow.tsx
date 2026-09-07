@@ -29,7 +29,6 @@ import type {
   DownloadStatus,
   DownloadTask,
 } from "../domain/download";
-import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
 import { elapsedSeconds, formatElapsed } from "../utils/elapsedTime";
 import { useTranslation } from "../i18n";
 
@@ -386,35 +385,6 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       setBusy(false);
     }
   };
-  const updateSpeedLimit = async () => {
-    if (!task) return;
-    const current =
-      task.speedLimitDownload > 0
-        ? String(task.speedLimitDownload / 1024 / 1024)
-        : "0";
-    const value = window.prompt(t.downloads.speedLimitPrompt, current);
-    if (value === null) return;
-    const mebibytes = parseSpeedLimitMebibytesPerSecond(value);
-    if (mebibytes === null) {
-      setError(t.downloads.speedLimitInvalid);
-      return;
-    }
-    const speedLimit = Math.round(mebibytes * 1024 * 1024);
-    try {
-      await service.updateSpeedLimit(task.id, speedLimit);
-      setTask(
-        (currentTask) =>
-          currentTask && {
-            ...currentTask,
-            speedLimitDownload: speedLimit,
-            speedLimitInherited: false,
-          },
-      );
-    } catch (cause) {
-      setError(String(cause));
-    }
-  };
-
   const copyPath = (text: string) => {
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
@@ -586,29 +556,6 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                       )}
                     </p>
                   )}
-                  <div className="dw-detail-row">
-                    <span className="dw-detail-label">
-                      {t.downloads.speedLimit}
-                    </span>
-                    <span className="dw-detail-val">
-                      {task.speedLimitDownload > 0
-                        ? `${bytes(task.speedLimitDownload)}/s`
-                        : t.settings.downloadsTab.noLimit}
-                      <small className="dw-limit-source">
-                        {task.speedLimitInherited
-                          ? t.downloads.speedLimitDefault
-                          : t.downloads.speedLimitCustom}
-                      </small>
-                      <button
-                        type="button"
-                        className="dw-icon-btn"
-                        title={t.downloads.speedLimit}
-                        onClick={() => void updateSpeedLimit()}
-                      >
-                        <Gauge size={14} />
-                      </button>
-                    </span>
-                  </div>
                 </div>
 
                 <div

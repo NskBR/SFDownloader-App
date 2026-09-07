@@ -5,9 +5,9 @@ Use esta matriz na fase de correção e testes. Execute cada cenário no Chrome/
 | Cenário | Chromium | Firefox | Resultado esperado |
 |---|---:|---:|---|
 | Instalação descompactada/drag-and-drop | Pendente | N/A | O navegador aceita a pasta `dist/chromium` e exibe o ícone. |
-| Instalação do XPI assinado | N/A | Pendente | `integration.xpi` abre o fluxo de instalação sem erro de assinatura. |
+| Instalação do XPI assinado | N/A | Pendente | O XPI 0.3.5 publicado pela AMO abre o fluxo de instalação sem erro de assinatura; o aplicativo não deve distribuir XPI de versão diferente. |
 | Download HTTP público | Pendente | Pendente | A janela de confirmação abre e o download nativo só é cancelado após aceite da ponte. |
-| Download autenticado por cookie | Pendente | Pendente | O arquivo é recebido; credenciais não permanecem após o encerramento da tarefa. |
+| Download autenticado por cookie | Pendente | Pendente | O arquivo é recebido; somente cookies do host do arquivo são encaminhados e as credenciais não permanecem após o encerramento da tarefa. |
 | Link temporário com redirecionamento | Pendente | Pendente | URL final, nome e tamanho chegam corretamente ao aplicativo. |
 | Download iniciado por formulário POST | Pendente | Pendente | O navegador mantém o download; a extensão não o reproduz incorretamente como GET. |
 | URL `blob:` gerada por script | Pendente | Pendente | O navegador mantém o download sem perda nem abertura duplicada. |

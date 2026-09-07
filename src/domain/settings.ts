@@ -71,7 +71,7 @@ export const defaultSettings: AppSettings = {
   rootDownloadFolder: "",
   secondaryDownloadFolder: "",
   secondaryFolderEnabled: false,
-  autoOrganizeEnabled: true,
+  autoOrganizeEnabled: false,
   deleteArchiveAfterExtract: false,
   defaultSpeedValue: 100,
   defaultSpeedUnit: "Mbps",
@@ -96,7 +96,7 @@ export const defaultSettings: AppSettings = {
     ],
   },
   sidebarAnimation: true,
-  showAiAssistant: true,
+  showAiAssistant: false,
   customCategories: [
     { id: "cat-jogos", name: "Jogos", extensions: ["iso", "rom", "pkg"] },
     { id: "cat-series", name: "Séries", extensions: ["mkv", "mp4"] },

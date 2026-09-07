@@ -137,7 +137,7 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
       type: valueFrom(gradient.type, ["linear", "radial"], base.interfaceGradient.type),
       angle: numberFrom(gradient.angle, base.interfaceGradient.angle, 0, 360),
       intensity: numberFrom(gradient.intensity, base.interfaceGradient.intensity, 0, 100),
-      stops: stops.length >= 2 ? stops : base.interfaceGradient.stops,
+      stops: stops.length >= 1 ? stops : base.interfaceGradient.stops,
     },
     sidebarAnimation: booleanFrom(value.sidebarAnimation, base.sidebarAnimation),
     customCategories: categories,
@@ -146,7 +146,7 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     autoRenameDuplicates: booleanFrom(value.autoRenameDuplicates, base.autoRenameDuplicates ?? false),
     downloadPriority: stringFrom(value.downloadPriority, base.downloadPriority ?? "Alta"),
     speedLimitText: stringFrom(value.speedLimitText, base.speedLimitText ?? "Sem limite"),
-    showAiAssistant: booleanFrom(value.showAiAssistant, base.showAiAssistant ?? true),
+    showAiAssistant: booleanFrom(value.showAiAssistant, base.showAiAssistant ?? false),
   };
 }
 

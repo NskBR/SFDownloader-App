@@ -45,18 +45,19 @@ pub async fn prepare_with_headers(
             .and_then(|m| m.name())
             .unwrap_or("Torrent Download");
         let file_name = safe_file_name(raw_name);
-        let folder =
+        let folder = if auto_organize {
             if let Some(category) = selected_category.filter(|value| !value.trim().is_empty()) {
                 let category = category.trim();
                 if !valid_category_name(category) {
                     return Err("A categoria selecionada possui um nome inválido.".into());
                 }
                 download_root.join(category)
-            } else if auto_organize {
-                download_root.join("Torrents")
             } else {
-                download_root.clone()
-            };
+                download_root.join("Torrents")
+            }
+        } else {
+            download_root.clone()
+        };
         tokio::fs::create_dir_all(&folder)
             .await
             .map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
@@ -181,15 +182,16 @@ pub async fn prepare_with_headers(
         .extension()
         .and_then(|value| value.to_str())
         .map(|value| value.to_lowercase());
-    let folder = if let Some(category) = selected_category.filter(|value| !value.trim().is_empty())
-    {
-        let category = category.trim();
-        if !valid_category_name(category) {
-            return Err("A categoria selecionada possui um nome inválido.".into());
+    let folder = if auto_organize {
+        if let Some(category) = selected_category.filter(|value| !value.trim().is_empty()) {
+            let category = category.trim();
+            if !valid_category_name(category) {
+                return Err("A categoria selecionada possui um nome inválido.".into());
+            }
+            download_root.join(category)
+        } else {
+            download_root.join(category_for_extension(extension.as_deref()))
         }
-        download_root.join(category)
-    } else if auto_organize {
-        download_root.join(category_for_extension(extension.as_deref()))
     } else {
         download_root
     };

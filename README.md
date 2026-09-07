@@ -69,7 +69,7 @@ Instalações beta anteriores que consultavam o repositório histórico precisam
 Abra **Configurações → Integração com navegador** no aplicativo.
 
 - Em Chromium, carregue a pasta indicada pelo app em `chrome://extensions` ou `edge://extensions`, com o Modo do desenvolvedor ativado.
-- Em Firefox, use o `.xpi` disponibilizado na tela de integração.
+- No Firefox estável, a aba de integração fornece o XPI 0.3.5 assinado pela Mozilla; o aplicativo o copia localmente e abre o Firefox para a confirmação explícita da instalação.
 - A extensão comunica-se somente com `http://127.0.0.1:17831` e mantém compatibilidade com versões anteriores.
 
 Se ela ficar desconectada, confirme que o app está aberto e recarregue a extensão na página do navegador.

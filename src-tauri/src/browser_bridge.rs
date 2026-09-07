@@ -17,7 +17,7 @@ use std::{
     },
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 pub const BRIDGE_PORT: u16 = 17_831;
@@ -261,10 +261,6 @@ pub fn start(app: AppHandle, bridge: BrowserBridge) {
             .route("/sync", get(sync).options(handle_options))
             .route("/download", post(download).options(handle_options))
             .route("/disconnect", post(disconnect).options(handle_options))
-            .route(
-                "/extension.xpi",
-                get(get_extension_xpi).options(handle_options),
-            )
             .with_state(state);
         let address = format!("127.0.0.1:{BRIDGE_PORT}");
         match tokio::net::TcpListener::bind(&address).await {
@@ -648,50 +644,6 @@ async fn download(
         return (cors_headers, StatusCode::INTERNAL_SERVER_ERROR).into_response();
     }
     (cors_headers, StatusCode::ACCEPTED).into_response()
-}
-
-async fn get_extension_xpi(
-    State(state): State<BridgeState>,
-    request_headers: AxumHeaderMap,
-) -> impl IntoResponse {
-    let mut headers = cors_headers(&request_headers);
-    headers.insert(
-        "content-type",
-        AxumHeaderValue::from_static("application/x-xpinstall"),
-    );
-    headers.insert(
-        "content-disposition",
-        AxumHeaderValue::from_static("attachment; filename=\"sf_downloader_integration.xpi\""),
-    );
-
-    // XPI embutido no binário (sempre disponível na build de release). Para
-    // atualizar, basta substituir browser-extension/release/firefox-extension.xpi
-    // antes de compilar o app. Em desenvolvimento, o disco tem prioridade.
-    let embedded = include_bytes!("../../browser-extension/release/firefox-extension.xpi");
-
-    let data = match state.app.path().app_data_dir() {
-        Ok(app_data) => {
-            let local = app_data
-                .join("extension")
-                .join("firefox")
-                .join("integration.xpi");
-            if let Ok(bytes) = std::fs::read(&local) {
-                bytes
-            } else {
-                let release_dir = app_data
-                    .join("..")
-                    .join("..")
-                    .join("browser-extension")
-                    .join("release");
-                crate::commands::browser_extension::find_latest_xpi(&release_dir)
-                    .and_then(|path| std::fs::read(path).ok())
-                    .unwrap_or_else(|| embedded.to_vec())
-            }
-        }
-        Err(_) => embedded.to_vec(),
-    };
-
-    (headers, data)
 }
 
 #[cfg(test)]

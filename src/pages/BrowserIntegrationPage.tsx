@@ -9,7 +9,6 @@ import {
   Puzzle,
   Flame,
   Package,
-  ExternalLink,
   FolderOpen,
   AlertTriangle,
   CircleCheck,
@@ -24,6 +23,7 @@ export function BrowserIntegrationPage() {
   const [tab, setTab] = useState<Tab>("chromium");
   const [chromiumFolder, setChromiumFolder] = useState("");
   const [firefoxFolder, setFirefoxFolder] = useState("");
+  const [firefoxXpiPath, setFirefoxXpiPath] = useState("");
   const [copied, setCopied] = useState(false);
   const [bridgeStatus, setBridgeStatus] = useState<service.BrowserBridgeDiagnostics | null>(null);
   const appWindow = getCurrentWindow();
@@ -34,6 +34,9 @@ export function BrowserIntegrationPage() {
       .catch(console.error);
     invoke<string>("get_extension_dir", { browser: "firefox" })
       .then(setFirefoxFolder)
+      .catch(console.error);
+    invoke<string>("get_firefox_xpi_path")
+      .then(setFirefoxXpiPath)
       .catch(console.error);
   }, []);
 
@@ -58,9 +61,6 @@ export function BrowserIntegrationPage() {
       window.setTimeout(() => setCopied(false), 2000);
     });
   };
-  const xpiFileName = "integration.xpi";
-  const openXpi = () =>
-    firefoxFolder && void service.openFile(`${firefoxFolder}/${xpiFileName}`).catch(console.error);
   const close = () => void appWindow.close();
 
   return (
@@ -145,32 +145,28 @@ export function BrowserIntegrationPage() {
           </div>
         ) : (
           <div className="integr-install">
-            <div
-              className="integr-xpi"
-              onClick={openXpi}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                firefoxFolder && void invoke("start_drag_folder", { path: `${firefoxFolder}/${xpiFileName}` }).catch(console.error);
-              }}
-              title={t.browserIntegration.dragToFirefoxTooltip}
-            >
+            <div className="integr-xpi" role="note">
               <div className="integr-drop-icon">
                 <Package size={26} />
               </div>
-              <strong>{xpiFileName} {t.browserIntegration.dragOrClick}</strong>
+              <strong>{t.browserIntegration.firefoxSigningTitle}</strong>
               <span>
-                {t.browserIntegration.dragToFirefoxDesc}
+                {t.browserIntegration.firefoxSigningDesc}
               </span>
             </div>
 
             <div className="integr-actions">
-              <button className="primary-button" onClick={openXpi} title={t.browserIntegration.openInFirefox}>
-                <ExternalLink size={15} />
-                {t.browserIntegration.openInFirefox}
+              <button
+                className="primary-button"
+                disabled={!firefoxXpiPath}
+                onClick={() => firefoxXpiPath && void service.openFile(firefoxXpiPath)}
+              >
+                <Flame size={15} />
+                {t.browserIntegration.installFirefoxXpi}
               </button>
               <button
                 className="secondary-button"
-                onClick={() => firefoxFolder && void service.revealInFolder(`${firefoxFolder}/${xpiFileName}`)}
+                onClick={() => firefoxFolder && void service.revealInFolder(firefoxFolder)}
                 title={t.browserIntegration.openFolderInExplorer}
               >
                 <FolderOpen size={15} />
@@ -180,13 +176,10 @@ export function BrowserIntegrationPage() {
 
             <ol className="integr-steps">
               <li>
-                {t.browserIntegration.step1Firefox}
+                {t.browserIntegration.firefoxSigningStep1}
               </li>
               <li>
-                {t.browserIntegration.step2Firefox}
-              </li>
-              <li>
-                {t.browserIntegration.step3Firefox}
+                {t.browserIntegration.firefoxSigningStep2}
               </li>
             </ol>
           </div>

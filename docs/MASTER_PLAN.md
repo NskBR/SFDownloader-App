@@ -2,9 +2,9 @@
 
 > Documento vivo de planejamento técnico e de produto.
 >
-> Versão do aplicativo analisada: **0.3.8**  
-> Versão da extensão analisada: **0.3.4**  
-> Atualizado em: **31/08/2026**
+> Versão do aplicativo analisada: **1.0.0**
+> Versão da extensão analisada: **0.3.5**
+> Atualizado em: **07/09/2026**
 
 ## 1. Objetivo
 
@@ -40,7 +40,7 @@ O plano reúne:
 
 ### Progresso geral
 
-| Fase | Nível | Estado | Progresso inicial |
+| Fase | Nível | Estado | Progresso |
 |---|---:|---|---:|
 | 0. Inventário e linha de base | N0 | Em progresso | 70% |
 | 1. Consistência e higiene do projeto | N1 | Parcial | 75% |
@@ -52,12 +52,12 @@ O plano reúne:
 | 7. Fila, prioridades e agendamento | N3 | Concluída | 100% |
 | 8. Estabilização BitTorrent/P2P | N3/N4 | Em progresso | 70% |
 | 9. Extensão e ponte com navegadores | N3/N4 | Parcial | 85% |
-| 10. Segurança e privacidade | N4 | Parcial | 73% |
-| 11. Métricas, logs e diagnóstico | N4 | Parcial | 75% |
+| 10. Segurança e privacidade | N4 | Parcial | 90% |
+| 11. Métricas, logs e diagnóstico | N4 | Concluída | 100% |
 | 12. UX, acessibilidade e localização | N4 | Parcial | 85% |
-| 13. Release e documentação final | N5 | Parcial | 35% |
+| 13. Release e documentação final | N5 | Parcial | 45% |
 
-> As porcentagens acima representam uma estimativa inicial baseada no estado atual do código. Devem ser atualizadas ao encerrar cada etapa.
+> As porcentagens representam o estado atual do código e das validações. Pendências de teste manual em navegador e Windows continuam contando como trabalho restante.
 
 ## 3. Regras para execução do plano
 
@@ -105,7 +105,7 @@ O plano reúne:
 - [x] Definir `package.json` como fonte da versão do aplicativo e adicionar sincronização automática para release.
 - [-] Sincronizar `package.json`, `package-lock.json`, `Cargo.toml` e `tauri.conf.json` durante o release.
 - [x] Definir o manifest Chromium como fonte da versão da extensão e sincronizar os demais metadados automatizáveis.
-- [-] Sincronizar manifests, badge do popup, README da extensão, notas AMO e nome do XPI.
+- [-] Sincronizar manifests, badge do popup, README da extensão e notas AMO. O XPI deve ser obtido somente após assinatura da Mozilla e sua versão precisa coincidir com o manifest.
 - [x] Atualizar `browser-extension/README.md`, anteriormente defasado.
 - [x] Atualizar `browser-extension/AMO_SUBMISSION.md` para a versão publicada.
 - [x] Corrigir documentação que afirma não existirem testes Rust.
@@ -426,7 +426,7 @@ O plano reúne:
 - [x] Ponte local com token por execução.
 - [x] Repasse temporário de cookies, referer e headers.
 - [x] Deep link como fallback.
-- [x] Pacotes Chromium e Firefox.
+- [x] Pacote Chromium gerado localmente e XPI Firefox 0.3.5 assinado pela Mozilla incorporado ao aplicativo para instalação explícita pela aba de integração.
 - [x] Sincronizar todas as versões e textos da extensão; manifesto Chromium é a fonte da versão da extensão e o script verifica Firefox, popup, README e notas AMO, enquanto a versão do aplicativo sincroniza npm, Cargo, Tauri, lockfile e badge.
 - [x] Documentar permissões e uso de dados para Chrome Web Store e AMO; finalidade única, justificativa individual de permissões, dados temporários, retenção e roteiro de revisão estão consolidados em `browser-extension/STORE_SUBMISSION.md` e complementados pelas notas AMO.
 - [x] Validar token, origem e lifecycle da ponte com testes; regressões cobrem token correto/incorreto, esquemas aceitos, CORS de extensão, token novo por processo e conexão/desconexão.
@@ -436,9 +436,9 @@ O plano reúne:
 - [x] Exibir diagnóstico claro quando app e extensão não conseguem conversar; a janela de integração consulta o estado real da ponte e distingue conectada, aguardando extensão e erro local, incluindo a porta utilizada.
 - [-] Validar downloads disparados por blob, scripts, POST, mídia e páginas autenticadas; testes cobrem rejeição de protocolos não reproduzíveis, assets/scripts, POST, mídia HTTP e encaminhamento de cookies por host. Restam páginas autenticadas e objetos blob reais em navegadores.
 - [x] Definir fallback seguro para downloads que não podem ser reproduzidos por URL; a extensão só cancela o download nativo depois que a ponte confirma a captura, mantém o navegador responsável em falha automática e recusa reproduzir POST como GET.
-- [x] Automatizar build reproduzível dos dois navegadores com `web-ext` fixado no lockfile; `npm run extension:build` gerou novamente os pacotes Chromium e Firefox 0.3.4.
+- [x] Automatizar build reproduzível dos dois navegadores com `web-ext` fixado no lockfile; `npm run extension:build` gera pacotes Chromium e Firefox 0.3.5 e falha ao primeiro erro de empacotamento.
 - [x] Automatizar lint e inspeção do conteúdo final dos pacotes; validação `web-ext` dos dois manifests concluiu sem erros, avisos ou notices, e a suíte da extensão aprovou 9/9 cenários.
-- [-] Revisar instalação drag-and-drop em versões atuais dos navegadores; o instalador deixou de depender de nome de XPI com versão fixa e a matriz `docs/BROWSER_EXTENSION_TEST_MATRIX.md` define os cenários. A aprovação final exige execução manual em versões atuais de Chromium e Firefox.
+- [-] Revisar instalação em versões atuais dos navegadores; Chromium continua com drag-and-drop e Firefox abre o XPI 0.3.5 assinado incorporado ao aplicativo. A matriz `docs/BROWSER_EXTENSION_TEST_MATRIX.md` define os cenários e a aprovação final exige execução manual em versões atuais dos dois navegadores.
 
 **Critério de conclusão:** captura previsível, pacotes coerentes e processo de publicação reproduzível.
 
@@ -459,7 +459,7 @@ O plano reúne:
 - [x] Canonicalizar e validar caminhos antes de operações destrutivas; cancelamento restringe arquivos finais, temporários e chunks à raiz canonicalizada do download e bloqueia symlinks/reparse points no alvo.
 - [x] Remover `cmd /c start` da abertura de URLs no Windows.
 - [x] Definir limites de tamanho para contextos de requisição no navegador e na ponte Rust.
-- [x] Restringir o CORS da ponte local a origens de extensões Chromium e Firefox.
+- [x] Restringir o CORS da ponte local a origens de extensões Chromium e Firefox; a rota de distribuição de XPI foi removida para não servir pacote defasado.
 - [x] Expirar contextos temporários de headers/cookies em memória; ponte e extensão aplicam TTL e limite de entradas.
 - [x] Garantir remoção de credenciais após conclusão, falha, cancelamento, remoção manual e erros de agendamento/runtime.
 - [x] Redigir política de privacidade da extensão; `browser-extension/PRIVACY.md` documenta dados processados, transmissão exclusivamente local, retenção, cofre do sistema, controles do usuário e riscos antes da publicação.
@@ -545,6 +545,7 @@ O plano reúne:
 - [ ] Validar manualmente em máquina limpa e em atualização entre versões, incluindo Windows Defender/SmartScreen e certificado de release.
 
 - [ ] Tornar o build de release reproduzível.
+- [x] Publicar automaticamente uma GitHub Release ao enviar uma tag `v*`; o workflow compila os instaladores Windows, anexa `.exe`, `.msi` e os pacotes da extensão e gera notas de lançamento.
 - [ ] Revisar o script que encerra processos e limpa a pasta `release`.
 - [ ] Separar build, coleta de artefatos e limpeza em etapas seguras.
 - [ ] Gerar hashes dos instaladores.
@@ -641,6 +642,7 @@ Fases 9 a 13 concluídas.
 Adicionar entradas no topo desta seção ao concluir trabalho relevante.
 
 | Data | Fase | Alteração | Resultado | Referência |
+| 07/09/2026 | 9, 10 | Extensão atualizada para 0.3.5; XPI incorporado e rota local removidos; Firefox estável condicionado ao pacote assinado pela AMO | 54 testes do frontend, 13 da extensão, lint, builds dos pacotes e `cargo check` aprovados | `browser_extension.rs`, `browser_bridge.rs`, `BrowserIntegrationPage.tsx` |
 | 31/08/2026 | 8, 5 | Retomada P2P e recuperação SQLite reforçadas | Falhas ao restaurar sessão/handle são explícitas; Bencode residual é rejeitado; 73/73 testes Rust aprovados pelo runner Windows | `task_control.rs`, `torrent_metadata.rs`, `database/mod.rs` |
 | 31/08/2026 | 7 | Agenda persistente por tarefa e janela global concluídas | Início único, janela diária, dias da semana, bypass, recuperação manual e testes compilados; frontend 51/51 e builds Rust aprovados | `download/schedule.rs`, `commands/scheduling.rs`, `QUEUE_POLICY.md` |
 | 30/08/2026 | 4 | Painel Avançado, toolbar de Downloads e cabeçalho HTTP extraídos | Build e 49/49 testes frontend aprovados | `components/settings/SettingsAdvancedTab.tsx`, `components/downloads/DownloadsToolbar.tsx`, `components/http/ConfirmationWindowHeader.tsx` |

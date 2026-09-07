@@ -15,9 +15,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 46px;
+  height: 40px;
   flex-shrink: 0;
-  padding: 0 14px 0 18px;
+  padding: 0 12px 0 16px;
   background: transparent;
 }
 .confirm-header-left {
@@ -50,9 +50,9 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
-  padding: 4px 18px 8px;
+  padding: 0 16px;
   overflow: hidden;
   min-height: 0;
 }
@@ -69,7 +69,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
+  height: 36px;
   padding: 0 12px;
   background: var(--white-04);
   border: 1px solid var(--white-06);
@@ -146,7 +146,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 40px;
+  height: 38px;
   padding: 0 10px 0 12px;
   background: var(--white-04);
   border: 1px solid var(--white-06);
@@ -517,9 +517,9 @@ input::-ms-clear {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 50px;
+  height: 46px;
   flex-shrink: 0;
-  padding: 0 18px;
+  padding: 0 16px;
   background: transparent;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -866,4 +866,3 @@ input::-ms-clear {
   border: 1px solid var(--line); flex: 0 0 auto; padding: 0 12px;
 }
 .btn-ghost:hover { color: var(--text); background: var(--surface); border-color: var(--line); }
-

@@ -1,6 +1,10 @@
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, WebviewWindow};
 
+const FIREFOX_XPI_NAME: &str = "sf_downloader_integration-firefox-0.3.5.xpi";
+const FIREFOX_XPI: &[u8] =
+    include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.3.5.xpi");
+
 pub fn start_drag_folder(window: &WebviewWindow, path: &str) -> Result<(), String> {
     let folder_path = crate::download::paths::canonical_existing_directory(Path::new(path))?;
 
@@ -42,6 +46,10 @@ pub fn start_drag_folder(window: &WebviewWindow, path: &str) -> Result<(), Strin
 
 #[tauri::command]
 pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, String> {
+    let browser = match browser.as_str() {
+        "chromium" | "firefox" => browser,
+        _ => return Err("Navegador de extensão inválido.".into()),
+    };
     let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
     let ext_dir = app_data.join("extension").join(&browser);
 
@@ -127,7 +135,7 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
                 }
             }
         }
-    } else if browser == "firefox" {
+    } else {
         let files = [
             "manifest.json",
             "background.js",
@@ -188,42 +196,23 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
                 }
             }
         }
-
-        // Copia o arquivo XPI para instalação direta ou manual.
-        let release_candidates = [
-            PathBuf::from("browser-extension").join("release"),
-            PathBuf::from("../browser-extension").join("release"),
-            PathBuf::from("../../browser-extension").join("release"),
-            app_data
-                .join("..")
-                .join("..")
-                .join("browser-extension")
-                .join("release"),
-        ];
-        let release_dir = release_candidates
-            .into_iter()
-            .find(|p| p.exists())
-            .unwrap_or_else(|| PathBuf::from(""));
-        let xpi_bytes = find_latest_xpi(&release_dir)
-            .and_then(|path| std::fs::read(&path).ok())
-            .unwrap_or_else(|| {
-                include_bytes!("../../../browser-extension/release/firefox-extension.xpi").to_vec()
-            });
-        let _ = std::fs::write(ext_dir.join("firefox-extension.xpi"), &xpi_bytes);
-        let _ = std::fs::write(ext_dir.join("integration.xpi"), &xpi_bytes);
     }
 
     Ok(ext_dir.to_string_lossy().to_string())
 }
 
-// Retorna o primeiro arquivo .xpi encontrado na pasta. A pasta release/ deve
-// conter apenas o XPI da versão atual, então não há necessidade de comparar
-// versões por nome de arquivo.
-pub(crate) fn find_latest_xpi(dir: &Path) -> Option<PathBuf> {
-    let entries = std::fs::read_dir(dir).ok()?;
-    entries
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("xpi"))
-        .max_by_key(|path| std::fs::metadata(path).and_then(|m| m.modified()).ok())
+#[tauri::command]
+pub fn get_firefox_xpi_path(app: AppHandle) -> Result<String, String> {
+    let xpi_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("extension")
+        .join("firefox");
+    std::fs::create_dir_all(&xpi_dir).map_err(|error| error.to_string())?;
+
+    let xpi_path = xpi_dir.join(FIREFOX_XPI_NAME);
+    std::fs::write(&xpi_path, FIREFOX_XPI)
+        .map_err(|error| format!("Não foi possível preparar o XPI assinado: {error}"))?;
+    Ok(xpi_path.to_string_lossy().into_owned())
 }

@@ -2,6 +2,8 @@
 
 > Registro histórico de uma sessão anterior. Os caminhos e nomes de componentes podem estar defasados; consulte `AGENTS.md` e `MASTER_PLAN.md` para o estado atual.
 
+> As referências abaixo a `redesign.css` são históricas: esse CSS foi removido durante a consolidação e não deve ser restaurado.
+
 Abaixo estão todas as tarefas executadas nesta sessão:
 
 - `[x]` **Alternador de Temas (TitleBar)**
@@ -108,8 +110,7 @@ Abaixo estão todas as tarefas executadas nesta sessão:
 - `[x]` **Janela de Integração de Navegadores estilo XDM 0.2.8**
   - `[x]` Criar janela separada e borderless `browser-integration` acionada a partir de "Configurações"
   - `[x]` Implementar painel com guias interativas para Chrome, Edge, Firefox, Opera, Brave e Vivaldi
-  - `[x]` Copiar assets da extensão (incluindo o `.xpi` assinado do Firefox) para a pasta AppData do usuário
+  - `[x]` Copiar os assets gerados da extensão para a pasta AppData do usuário
   - `[x]` Adicionar botões nativos para abrir a pasta local e copiar caminhos/links
-  - `[x]` Configurar rota Axum `/extension.xpi` com MIME `application/x-xpinstall` para instalação direta no Firefox
+  - `[-]` Firefox estável: disponibilizar somente o XPI 0.3.5 assinado e publicado pela Mozilla AMO; a instalação local direta foi removida
   - `[x]` Implementar suporte a arrastar-e-soltar nativo do ícone de quebra-cabeça para instalar nos navegadores Chromium (usando a crate `drag`)
-

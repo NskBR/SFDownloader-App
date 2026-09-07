@@ -10,7 +10,7 @@ export interface SettingsThemePreset {
 }
 
 export const settingsThemePresets: SettingsThemePreset[] = [
-  { id: "custom", name: "Personalizado", bg: "linear-gradient(135deg, #1d2028, #111319)", accent: "#06b6d4", isGradient: true, stops: null },
+  { id: "slate", name: "Padrão", bg: "linear-gradient(135deg, #12151b, #181c24)", accent: "#06b6d4", isGradient: false, stops: null },
   { id: "midnight-sapphire", name: "Azul neon", bg: "linear-gradient(135deg, #0b1638, #040714)", accent: "#3b82f6", isGradient: true, stops: ["#0b1638", "#040714"] },
   { id: "cyberpunk-violet", name: "Roxo gradiente", bg: "linear-gradient(135deg, #320938, #050a1e)", accent: "#8b5cf6", isGradient: true, stops: ["#320938", "#050a1e"] },
   { id: "high-contrast", name: "Alto contraste", bg: "linear-gradient(135deg, #0a0c10, #040507)", accent: "#eab308", isGradient: true, stops: ["#0a0c10", "#040507"] },

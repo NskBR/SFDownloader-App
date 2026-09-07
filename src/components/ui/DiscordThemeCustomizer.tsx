@@ -1,5 +1,6 @@
 import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { AppColor, GradientConfig } from "../../domain/settings";
 import { useTranslation } from "../../i18n";
 
@@ -41,6 +42,52 @@ const randomColors = [
   "#381408", "#220b38", "#071a38", "#380b20", "#09262b",
   "#2e1f06", "#072a38", "#25092a", "#0e2612", "#331b08",
 ];
+
+const hexToRgb = (hex: string): [number, number, number] => {
+  const value = hex.replace("#", "").padEnd(6, "0").slice(0, 6);
+  return [parseInt(value.slice(0, 2), 16) || 0, parseInt(value.slice(2, 4), 16) || 0, parseInt(value.slice(4, 6), 16) || 0];
+};
+
+const rgbToHex = (red: number, green: number, blue: number) =>
+  `#${[red, green, blue].map((value) => Math.max(0, Math.min(255, value)).toString(16).padStart(2, "0")).join("")}`;
+
+const rgbToHsv = (red: number, green: number, blue: number): [number, number, number] => {
+  const r = red / 255, g = green / 255, b = blue / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+  const hue = delta === 0 ? 0 : ((max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4) * 60 + 360) % 360;
+  return [hue, max === 0 ? 0 : delta / max, max];
+};
+
+const hsvToHex = (hue: number, saturation: number, value: number) => {
+  const chroma = value * saturation;
+  const x = chroma * (1 - Math.abs((hue / 60) % 2 - 1));
+  const match = value - chroma;
+  const [r, g, b] = hue < 60 ? [chroma, x, 0] : hue < 120 ? [x, chroma, 0] : hue < 180 ? [0, chroma, x] : hue < 240 ? [0, x, chroma] : hue < 300 ? [x, 0, chroma] : [chroma, 0, x];
+  return rgbToHex(Math.round((r + match) * 255), Math.round((g + match) * 255), Math.round((b + match) * 255));
+};
+
+function ColorPicker({ color, onChange, onClose, position }: { color: string; onChange: (color: string) => void; onClose: () => void; position?: { left: number; top: number } }) {
+  const [red, green, blue] = hexToRgb(color);
+  const [hue, saturation, value] = rgbToHsv(red, green, blue);
+  const updateSpectrum = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const nextSaturation = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const nextValue = Math.max(0, Math.min(1, 1 - (event.clientY - rect.top) / rect.height));
+    onChange(hsvToHex(hue, nextSaturation, nextValue));
+  };
+  const updateRgb = (channel: number, raw: string) => {
+    const rgb = [red, green, blue]; rgb[channel] = Number.parseInt(raw, 10) || 0;
+    onChange(rgbToHex(rgb[0], rgb[1], rgb[2]));
+  };
+  return <div className="theme-color-picker" style={position} onPointerDown={(event) => event.stopPropagation()}>
+    <div className="theme-picker-head"><strong>Cor personalizada</strong><button type="button" onClick={onClose} aria-label="Fechar seletor"><X size={14} /></button></div>
+    <div className="theme-picker-spectrum" style={{ backgroundColor: `hsl(${hue}, 100%, 50%)` }} onPointerDown={updateSpectrum} onPointerMove={(event) => { if (event.buttons) updateSpectrum(event); }}>
+      <i style={{ left: `${saturation * 100}%`, top: `${(1 - value) * 100}%` }} />
+    </div>
+    <input className="theme-picker-hue" type="range" min="0" max="360" value={Math.round(hue)} onChange={(event) => onChange(hsvToHex(Number(event.target.value), saturation, value))} />
+    <div className="theme-picker-rgb">{[["R", red], ["G", green], ["B", blue]].map(([label, channel], index) => <label key={String(label)}><span>{label}</span><input type="number" min="0" max="255" value={channel} onChange={(event) => updateRgb(index, event.target.value)} /></label>)}</div>
+  </div>;
+}
 
 interface Props {
   config: GradientConfig;
@@ -91,6 +138,7 @@ export function DiscordThemeCustomizer({
   };
 
   const addStop = () => {
+    if (config.stops.length >= 4) return;
     const darkColors = ["#090204", "#0a0308", "#050a1e", "#040714", "#040d08", "#0e0503"];
     const newColor = darkColors[Math.floor(Math.random() * darkColors.length)];
     const stops = [...config.stops];
@@ -240,6 +288,23 @@ export function ThemeCustomizerModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const [pickerStop, setPickerStop] = useState<number | null>(null);
+  const [pickerPosition, setPickerPosition] = useState<{ left: number; top: number }>();
+  const openPicker = (index: number) => {
+    if (pickerStop === index) {
+      setPickerStop(null);
+      return;
+    }
+    const modal = document.querySelector<HTMLElement>(".discord-floating-drawer:has(.theme-customizer-modal-body)");
+    const rect = modal?.getBoundingClientRect();
+    const pickerWidth = 264;
+    const pickerHeight = 320;
+    setPickerPosition({
+      left: Math.max(8, (rect?.left ?? 282) - pickerWidth - 10),
+      top: Math.max(pickerHeight / 2 + 8, Math.min(window.innerHeight - pickerHeight / 2 - 8, (rect?.top ?? window.innerHeight / 2) + (rect?.height ?? 0) / 2)),
+    });
+    setPickerStop(index);
+  };
   const updateColor = (index: number, color: string) => {
     const stops = [...config.stops];
     if (stops[index]) {
@@ -255,6 +320,7 @@ export function ThemeCustomizerModal({
   };
 
   const addStop = () => {
+    if (config.stops.length >= 4) return;
     const darkColors = ["#090204", "#0a0308", "#050a1e", "#040714", "#040d08", "#0e0503"];
     const newColor = darkColors[Math.floor(Math.random() * darkColors.length)];
     const stops = [...config.stops];
@@ -339,20 +405,18 @@ export function ThemeCustomizerModal({
     <div className="discord-drawer-wrapper" onClick={onClose}>
       <div className="discord-floating-drawer" onClick={(e) => e.stopPropagation()}>
         <header className="discord-modal-header">
-          <span className="discord-title-with-icon">
+          <div className="discord-title-with-icon">
             <Palette size={17} className="discord-header-icon" />
             <span>Personalizar tema</span>
-          </span>
+          </div>
           <button type="button" onClick={onClose} title={t.common.close} aria-label={t.common.close}>
             <X size={18} />
           </button>
         </header>
 
-        <div className="discord-modal-body">
-          {/* Seção Cores */}
+        <div className="discord-modal-body theme-customizer-modal-body">
+          <div className="theme-customizer-controls">
           <div className="discord-custom-section">
-            <label className="discord-section-title">CORES</label>
-
             {/* Seletores dinâmicos de cor */}
             {config.stops.map((stop, index) => (
               <div className={`discord-color-row${index > 0 ? " margin-top" : ""}`} key={index}>
@@ -360,11 +424,7 @@ export function ThemeCustomizerModal({
                   className="discord-color-box"
                   style={{ background: stop.color }}
                 >
-                  <input
-                    type="color"
-                    value={stop.color}
-                    onChange={(e) => updateColor(index, e.target.value)}
-                  />
+                  <button type="button" onClick={() => openPicker(index)} aria-label={`Selecionar ${stop.color}`} />
                 </div>
                 <input
                   type="text"
@@ -392,6 +452,10 @@ export function ThemeCustomizerModal({
                     <Trash2 size={14} />
                   </button>
                 )}
+                {pickerStop === index && createPortal(
+                  <ColorPicker color={stop.color} onChange={(color) => updateColor(index, color)} onClose={() => setPickerStop(null)} position={pickerPosition} />,
+                  document.body,
+                )}
               </div>
             ))}
 
@@ -400,10 +464,12 @@ export function ThemeCustomizerModal({
               type="button"
               className="discord-add-color-btn"
               onClick={addStop}
+              disabled={config.stops.length >= 4}
             >
               <Plus size={16} />
               <span>Adicionar cor</span>
             </button>
+
           </div>
 
           {/* Seção Controles (Intensidade) */}
@@ -433,6 +499,8 @@ export function ThemeCustomizerModal({
               <span>Redefinir</span>
             </button>
           </div>
+          </div>
+
         </div>
       </div>
     </div>

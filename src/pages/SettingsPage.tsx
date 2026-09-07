@@ -34,7 +34,6 @@ import { normalizedCategoryExtensions, validCustomCategoryName } from "../domain
 import { exportSettingsBackup, importSettingsBackup } from "../services/settingsStorage";
 import {
   chooseDownloadFolder,
-  createCategoryFolders,
 } from "../services/folderService";
 import { getGlobalDownloadSchedule, isLaunchOnStartup, setLaunchOnStartup, updateGlobalDownloadSchedule } from "../services/downloadService";
 import { Toggle } from "../components/ui/Toggle";
@@ -130,11 +129,6 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const save = async (next: AppSettings) => {
     setError(null);
     try {
-      if (next.autoOrganizeEnabled)
-        await createCategoryFolders(
-          next.rootDownloadFolder,
-          next.customCategories.map((category) => category.name),
-        );
       onSave(next);
     } catch (cause) {
       setError(
@@ -540,6 +534,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                   <h3 className="cfg-card-title">{t.settings.personalization.appThemeTitle}</h3>
                   <p className="cfg-card-subtitle">{t.settings.personalization.appThemeSubtitle}</p>
                 </div>
+                <button type="button" className="cfg-theme-customize-button" onClick={() => setCustomizerModalOpen(true)}>
+                  <Palette size={15} /> Personalizar
+                </button>
               </div>
 
               <div className="cfg-card-content">
@@ -553,8 +550,13 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         type="button"
                         className={`cfg-theme-tile ${isSelected ? "is-selected" : ""}`}
                         onClick={() => {
-                          if (theme.id === "custom") {
-                            setCustomizerModalOpen(true);
+                          if (theme.id === "slate") {
+                            const next = {
+                              ...draft,
+                              interfaceGradient: { ...draft.interfaceGradient, enabled: false },
+                            };
+                            setDraft(next);
+                            onSave(next);
                           } else if (theme.isGradient && theme.stops) {
                             const next = {
                               ...draft,
@@ -585,20 +587,10 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           className="cfg-theme-preview"
                           style={{
                             background:
-                              theme.id === "custom" && draft.interfaceGradient.enabled
-                                ? `linear-gradient(135deg, ${draft.interfaceGradient.stops[0]?.color || "#160b38"}, ${draft.interfaceGradient.stops[1]?.color || "#05020d"})`
-                                : theme.bg,
+                              theme.bg,
                           }}
                         >
-                          {theme.id === "custom" ? (
-                            <div className="cfg-mini-custom-overlay">
-                              <div className="cfg-custom-icon-wrapper">
-                                <Palette size={20} className="cfg-custom-mini-icon" />
-                                <Sparkles size={11} className="cfg-custom-mini-sparkle" />
-                              </div>
-                            </div>
-                          ) : (
-                            <>
+                          <>
                               <div className="cfg-mini-sidebar">
                                 <div className="cfg-mini-logo" style={{ color: theme.accent }} />
                                 <div className="cfg-mini-icon" />
@@ -617,8 +609,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                                 </div>
                               </div>
                               <div className="cfg-mini-bottom-glow" style={{ background: theme.accent }} />
-                            </>
-                          )}
+                          </>
                         </div>
 
                         <div className="cfg-theme-info">
@@ -970,7 +961,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           <SettingsAdvancedTab
             t={t}
             launchOnStartup={draft.launchOnStartup}
-            showAiAssistant={draft.showAiAssistant ?? true}
+            showAiAssistant={draft.showAiAssistant ?? false}
             onLaunchOnStartupChange={(value) => {
               update("launchOnStartup", value);
               void setLaunchOnStartup(value).catch(console.error);

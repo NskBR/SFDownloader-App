@@ -1,6 +1,6 @@
 # Walkthrough: Otimização de Colunas, Redução de Espaço Vazio, Centralização de Status e Correções de UI
 
-> Documento histórico de mudanças. Alguns nomes de arquivos, caminhos e telas podem se referir a versões anteriores; para a arquitetura vigente, consulte `AGENTS.md` e `MASTER_PLAN.md`.
+> Documento histórico de mudanças. Alguns nomes de arquivos, caminhos e telas podem se referir a versões anteriores; para a arquitetura vigente, consulte `AGENTS.md` e `MASTER_PLAN.md`. Referências a `redesign.css` são históricas: o arquivo foi removido durante a consolidação.
 
 Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor a largura do aplicativo, centralizamos as informações da coluna de Status, reduzimos os espaços ociosos na tela de conclusão de download e corrigimos as coordenadas do menu de contexto para evitar cortes.
 
@@ -96,7 +96,6 @@ Ajustamos o comportamento de redimensionamento da tabela para aproveitar melhor 
 ### 15. Janela de Integração de Navegadores estilo XDM
 - Criada uma janela dedicada e estilizada (`browser-integration`) acionável a partir da tela de Configurações do app.
 - A janela apresenta instruções e atalhos individuais para Google Chrome, Firefox, Edge, Opera, Brave e Vivaldi.
-- O backend copia os builds da extensão e o arquivo `.xpi` assinado do Firefox de forma transparente para a pasta AppData local do usuário, expondo botões nativos para abrir a pasta no Windows Explorer ou copiar os caminhos de destino.
-- Servimos a extensão Firefox localmente em `http://127.0.0.1:17831/extension.xpi` com o MIME type `application/x-xpinstall`, permitindo que o Firefox abra o instalador nativo diretamente por clique.
+- O backend copia os builds gerados da extensão para a pasta AppData local do usuário e expõe um botão nativo para abrir a pasta no Windows Explorer.
+- A rota local `/extension.xpi` e a cópia do XPI incorporado foram removidas. O Firefox estável deve receber somente o XPI 0.3.5 assinado e publicado pela Mozilla AMO.
 - **Arrastar e Soltar Nativo**: Implementamos o suporte nativo a arrastar o ícone de quebra-cabeça diretamente para a página de extensões nos navegadores Chromium (usando a crate Rust `drag`), o que ativa a importação automática da extensão descompactada para dentro do navegador de forma idêntica ao XDM!
-

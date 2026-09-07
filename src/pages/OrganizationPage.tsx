@@ -1,25 +1,8 @@
-import { CheckCircle2, Folder, FolderOpen, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { Folder, FolderOpen } from "lucide-react";
 import { downloadCategories } from "../domain/categories";
 import type { AppSettings } from "../domain/settings";
-import { createCategoryFolders } from "../services/folderService";
 
 export function OrganizationPage({ settings }: { settings: AppSettings }) {
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">(
-    "idle",
-  );
-  const syncFolders = async () => {
-    setState("busy");
-    try {
-      await createCategoryFolders(
-        settings.rootDownloadFolder,
-        settings.customCategories.map((category) => category.name),
-      );
-      setState("done");
-    } catch {
-      setState("error");
-    }
-  };
   const categories = [
     ...downloadCategories,
     ...settings.customCategories.map((category) => ({
@@ -35,16 +18,8 @@ export function OrganizationPage({ settings }: { settings: AppSettings }) {
         <div>
           <span className="eyebrow">Biblioteca</span>
           <h1>Organização</h1>
-          <p>Visualize as categorias criadas dentro da pasta principal.</p>
+          <p>As pastas são criadas apenas quando um download daquela categoria é iniciado.</p>
         </div>
-        <button
-          className="secondary-button"
-          disabled={state === "busy" || !settings.rootDownloadFolder}
-          onClick={syncFolders}
-        >
-          <RefreshCw size={17} className={state === "busy" ? "spin" : ""} />
-          Criar estrutura
-        </button>
       </header>
       {!settings.rootDownloadFolder && (
         <div className="notice">
@@ -55,16 +30,6 @@ export function OrganizationPage({ settings }: { settings: AppSettings }) {
               Configure o destino em Configurações antes de criar a estrutura.
             </span>
           </div>
-        </div>
-      )}
-      {state === "done" && (
-        <div className="success-banner">
-          <CheckCircle2 size={18} /> Estrutura de pastas verificada com sucesso.
-        </div>
-      )}
-      {state === "error" && (
-        <div className="error-banner">
-          Não foi possível criar as pastas. Verifique o caminho e as permissões.
         </div>
       )}
       <div className="category-grid">

@@ -11,12 +11,12 @@ release/
 Release/
 
 # Build artifacts da extensão (gerados pelo web-ext / build.mjs).
-# O firefox-extension.xpi é mantido de propósito: é embutido no binário do app
-# via include_bytes! e precisa existir no repo para o build compilar.
 browser-extension/dist-chromium/
 browser-extension/dist-firefox/
 browser-extension/release/*.xpi
-!browser-extension/release/firefox-extension.xpi
+!browser-extension/
+!browser-extension/release/
+!browser-extension/release/7c2944a3066543438b23-0.3.5.xpi
 
 # Backups e zips locais
 *.zip

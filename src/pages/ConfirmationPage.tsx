@@ -19,7 +19,6 @@ import {
   Wifi,
   CheckCircle2,
   Lock,
-  Clock,
   Copy,
   CopyCheck,
   Code,
@@ -112,9 +111,6 @@ export function ConfirmationPage({ token }: { token: string }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Outros");
-  const [priority, setPriority] = useState(() =>
-    service.downloadPriorityValue(settings.downloadPriority),
-  );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const locationPickerRef = useRef<HTMLDivElement>(null);
@@ -261,9 +257,10 @@ export function ConfirmationPage({ token }: { token: string }) {
         true,
         autoExtract,
         isArchive && password.trim() ? password : undefined,
-        isCustomFolder ? undefined : selectedCategory,
+        !isCustomFolder && settings.autoOrganizeEnabled
+          ? selectedCategory
+          : undefined,
         force,
-        priority,
       );
       localStorage.removeItem(storageKey);
       setDuplicateOpen(false);
@@ -441,26 +438,6 @@ export function ConfirmationPage({ token }: { token: string }) {
                     onChange={(val) => setSelectedCategory(val)}
                     disabled={isCustomFolder}
                     icon={<Archive size={16} />}
-                    direction="down"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="confirm-grid-row">
-              <div className="confirm-field-col">
-                <span className="confirm-label">{t.confirmation.priority}</span>
-                <div className="confirm-control-box box-custom-select">
-                  <CustomSelect
-                    value={String(priority)}
-                    options={[
-                      { value: "0", label: t.downloads.priorityLow },
-                      { value: "1", label: t.downloads.priorityNormal },
-                      { value: "2", label: t.downloads.priorityHigh },
-                      { value: "3", label: t.downloads.priorityUrgent },
-                    ]}
-                    onChange={(value) => setPriority(Number(value))}
-                    icon={<Clock size={16} />}
                     direction="down"
                   />
                 </div>

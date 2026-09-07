@@ -1,10 +1,10 @@
-# SF Downloader Integration 0.3.4 — notas para revisão AMO
+# SF Downloader Integration 0.3.5 — notas para revisão AMO
 
-## Alterações da versão 0.3.4
+## Alterações da versão 0.3.5
 
-- Corrige a detecção incorreta de recursos que não são downloads: a interceptação em `onHeadersReceived` agora só atua em navegações do usuário (`main_frame`/`sub_frame`) ou em respostas com `Content-Disposition: attachment`. Isso evita que prefetches passivos — como as miniaturas de vídeo do YouTube exibidas ao passar o mouse — sejam erroneamente tratados como downloads.
-- Mantém a captura antecipada: o download é transferido ao aplicativo desktop antes de o navegador nativo detectá-lo, sem registro no histórico e sem a janela de download nativa piscando.
-- Inclui filtros por extensão, content script de clique e ícones `sf-small.png`/`sf-large.png`.
+- Corrige a separação de credenciais: a extensão consulta e encaminha apenas cookies pertencentes à URL final do download. Cookies da página de origem não são combinados nem enviados ao host do arquivo.
+- Mantém a captura antecipada com confirmação da ponte antes de cancelar o download nativo.
+- Limita o rastreamento temporário de requests/headers e rejeita URLs locais, protocolos não reproduzíveis e requisições POST.
 
 ## Finalidade
 
@@ -16,7 +16,7 @@ A extensão intercepta somente downloads iniciados pelo usuário e os encaminha 
 - Para executar o download, ela encaminha a URL final, nome, tamanho, MIME, referer e os headers/cookies necessários para acessar o arquivo solicitado.
 - Esses dados não são enviados para servidores do desenvolvedor, serviços de analytics ou terceiros.
 - A ponte local exige um token aleatório criado a cada execução do aplicativo.
-- Cookies e headers ficam somente na memória do núcleo Rust e não são persistidos no SQLite ou no `localStorage`.
+- Cookies e headers não são persistidos no SQLite ou no `localStorage`. Quando uma retomada autenticada exige retenção, ficam no cofre de credenciais do sistema operacional e são removidos ao encerrar a tarefa.
 - A extensão não contém telemetria, anúncios, tracking ou código remoto.
 
 As declarações `browsingActivity`, `websiteContent` e `websiteActivity` existem porque URLs, headers/cookies e a ação de download saem do contexto do navegador para o aplicativo local, conforme a taxonomia atual da Mozilla.

@@ -33,26 +33,19 @@ for (const target of ["chromium", "firefox"]) {
   
   const webExt = join(project, "node_modules", "web-ext", "bin", "web-ext.js");
   
-  try {
-    execFileSync(
-      process.execPath,
-      [webExt, "build", "--source-dir", out, "--artifacts-dir", release, "--overwrite-dest"],
-      {
-        stdio: "inherit",
-        env: { ...process.env, NO_UPDATE_NOTIFIER: "1" },
-      },
-    );
-    
-    const originalZip = join(release, `sf_downloader_integration-${version}.zip`);
-    const targetZip = join(release, `sf_downloader_integration-${target}-${version}.zip`);
-    
-    await rm(targetZip, { force: true });
-    await rename(originalZip, targetZip);
-    // O arquivo `firefox-extension.xpi` rastreado no repositório é assinado
-    // pela Mozilla e embutido no aplicativo. O pacote gerado pelo web-ext é
-    // um ZIP não assinado; portanto, ele nunca deve sobrescrever esse XPI.
-    console.log(`Sucesso: ${targetZip}`);
-  } catch (err) {
-    console.error(`Erro ao empacotar ${target}:`, err);
-  }
+  execFileSync(
+    process.execPath,
+    [webExt, "build", "--source-dir", out, "--artifacts-dir", release, "--overwrite-dest"],
+    {
+      stdio: "inherit",
+      env: { ...process.env, NO_UPDATE_NOTIFIER: "1" },
+    },
+  );
+
+  const originalZip = join(release, `sf_downloader_integration-${version}.zip`);
+  const targetZip = join(release, `sf_downloader_integration-${target}-${version}.zip`);
+
+  await rm(targetZip, { force: true });
+  await rename(originalZip, targetZip);
+  console.log(`Sucesso: ${targetZip}`);
 }

@@ -167,6 +167,8 @@ export function DownloadsPage({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
+  const [speedLimitDialog, setSpeedLimitDialog] = useState<DownloadTask | null>(null);
+  const [speedLimitValue, setSpeedLimitValue] = useState("0");
   const {
     contextMenu: ctxMenu,
     setContextMenu: setCtxMenu,
@@ -192,6 +194,17 @@ export function DownloadsPage({
     prioritize,
   } = useDownloads(settings);
 
+  const saveSpeedLimit = async () => {
+    if (!speedLimitDialog) return;
+    const mebibytes = parseSpeedLimitMebibytesPerSecond(speedLimitValue);
+    if (mebibytes === null) {
+      setError(t.downloads.speedLimitInvalid);
+      return;
+    }
+    await setSpeedLimit(speedLimitDialog.id, Math.round(mebibytes * 1024 * 1024));
+    setSpeedLimitDialog(null);
+  };
+
   const handleMenuAction = useCallback(
     async (action: string, downloadId: string) => {
       const dl = downloads.find((d) => d.id === downloadId);
@@ -204,19 +217,10 @@ export function DownloadsPage({
           break;
         case "limit": {
           const current = dl?.speedLimitDownload ?? 0;
-          const initialValue =
-            current > 0 ? String(current / 1024 / 1024) : "0";
-          const value = window.prompt(
-            t.downloads.speedLimitPrompt,
-            initialValue,
-          );
-          if (value === null) break;
-          const mebibytes = parseSpeedLimitMebibytesPerSecond(value);
-          if (mebibytes === null) {
-            setError(t.downloads.speedLimitInvalid);
-            break;
+          if (dl) {
+            setSpeedLimitValue(current > 0 ? String(current / 1024 / 1024) : "0");
+            setSpeedLimitDialog(dl);
           }
-          await setSpeedLimit(downloadId, Math.round(mebibytes * 1024 * 1024));
           break;
         }
         case "schedule": {
@@ -315,14 +319,11 @@ export function DownloadsPage({
       cancel,
       remove,
       setError,
-      setSpeedLimit,
       setPriority,
       moveQueueItem,
       prioritize,
       t.downloads.priorityInvalid,
       t.downloads.priorityPrompt,
-      t.downloads.speedLimitInvalid,
-      t.downloads.speedLimitPrompt,
     ],
   );
 
@@ -1039,6 +1040,38 @@ export function DownloadsPage({
           />
         </div>
       </footer>
+
+      {speedLimitDialog && (
+        <div className="speed-limit-dialog-backdrop" onMouseDown={() => setSpeedLimitDialog(null)}>
+          <section
+            className="speed-limit-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="speed-limit-dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <span className="speed-limit-dialog-icon"><Gauge size={18} /></span>
+              <div>
+                <h2 id="speed-limit-dialog-title">{t.downloads.speedLimit}</h2>
+                <p title={speedLimitDialog.fileName}>{speedLimitDialog.fileName}</p>
+              </div>
+              <button type="button" onClick={() => setSpeedLimitDialog(null)} aria-label={t.common.close}><X size={17} /></button>
+            </header>
+            <label className="speed-limit-dialog-field">
+              <span>{t.downloads.speedLimitPrompt}</span>
+              <div><input autoFocus inputMode="decimal" value={speedLimitValue} onChange={(event) => setSpeedLimitValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveSpeedLimit(); }} /><b>MB/s</b></div>
+            </label>
+            <div className="speed-limit-dialog-presets">
+              {[0, 1, 5, 10, 25].map((value) => <button key={value} type="button" className={Number(speedLimitValue) === value ? "active" : ""} onClick={() => setSpeedLimitValue(String(value))}>{value === 0 ? t.settings.downloadsTab.noLimit : `${value} MB/s`}</button>)}
+            </div>
+            <footer>
+              <button type="button" className="speed-limit-dialog-cancel" onClick={() => setSpeedLimitDialog(null)}>{t.common.cancel}</button>
+              <button type="button" className="speed-limit-dialog-save" onClick={() => void saveSpeedLimit()}>{t.common.save}</button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {ctxMenu && (
         <div

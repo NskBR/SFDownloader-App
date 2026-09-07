@@ -22,11 +22,11 @@ A extensão detecta downloads iniciados pelo usuário e os encaminha ao SF Downl
 
 A URL, o nome do arquivo, MIME, tamanho, referer e headers/cookies estritamente necessários podem sair do navegador para `127.0.0.1`, apenas quando o usuário inicia um download. Esses dados não deixam o computador, não são vendidos nem utilizados para publicidade ou perfil comportamental.
 
-Credenciais de requisição ficam somente em memória, possuem expiração e são removidas após conclusão, falha ou cancelamento. Preferências da extensão permanecem no armazenamento local do navegador. Nenhum cookie ou header de autenticação é armazenado em SQLite ou `localStorage` pelo aplicativo.
+Contextos de requisição ficam em memória e expiram. Quando uma retomada autenticada exige retenção além da requisição inicial, os headers ficam no cofre de credenciais do sistema operacional e são removidos após conclusão, falha, cancelamento ou exclusão. Preferências da extensão permanecem no armazenamento local do navegador. Nenhum cookie ou header de autenticação é armazenado em SQLite ou `localStorage` pelo aplicativo.
 
 ## Verificação para revisão
 
-1. Inicie o SF Downloader e carregue `browser-extension/dist/chromium` ou `browser-extension/dist/firefox`.
+1. Inicie o SF Downloader e carregue `browser-extension/dist/chromium`. Para Firefox estável, instale somente o XPI da mesma versão assinado/publicado pela Mozilla AMO.
 2. Abra o popup e confira o estado conectado.
 3. Inicie um download HTTP/HTTPS e confirme a abertura da janela do aplicativo.
 4. Desative a captura ou exclua uma extensão de arquivo e confirme que o navegador volta a cuidar do download.

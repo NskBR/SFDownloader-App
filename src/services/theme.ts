@@ -60,6 +60,9 @@ export function buildGradient(config: GradientConfig): string {
   if (!config || !config.stops || config.stops.length === 0) {
     return "var(--bg)";
   }
+  if (config.stops.length === 1) {
+    return config.stops[0].color || "#12151b";
+  }
   const stopsStr = config.stops
     .map((stop) => `${stop.color || "#12151b"} ${Math.round(stop.position ?? 0)}%`)
     .join(", ");

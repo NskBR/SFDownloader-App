@@ -24,7 +24,7 @@ import type { DownloadTask } from "../../domain/download";
 import * as downloadService from "../../services/downloadService";
 import { TitleBar } from "./TitleBar";
 import { invoke } from "@tauri-apps/api/core";
-import logo from "../../assets/sf-logo.png";
+import logo from "../../assets/sf-logo.svg";
 import { version } from "../../../package.json";
 import { useTranslation } from "../../i18n";
 
@@ -43,7 +43,8 @@ const groups = {
   applications: ["exe", "msi", "apk", "bat", "appimage", "dmg", "pkg"],
 };
 
-const DEFAULT_WIDTH = 240;
+const MAX_EXPANDED_WIDTH = 240;
+const DEFAULT_WIDTH = MAX_EXPANDED_WIDTH;
 const COMPACT_WIDTH = 68;
 
 export function AppShell({
@@ -81,7 +82,7 @@ export function AppShell({
         const parsed = parseInt(saved, 10);
         if (!isNaN(parsed)) {
           if (parsed <= 90) return COMPACT_WIDTH;
-          return Math.min(Math.max(parsed, 140), DEFAULT_WIDTH);
+          return Math.min(Math.max(parsed, 140), MAX_EXPANDED_WIDTH);
         }
       }
     } catch {}
@@ -108,7 +109,7 @@ export function AppShell({
       if (rawWidth < 115) {
         finalWidth = COMPACT_WIDTH;
       } else {
-        finalWidth = Math.min(Math.max(rawWidth, 140), DEFAULT_WIDTH);
+        finalWidth = Math.min(Math.max(rawWidth, 140), MAX_EXPANDED_WIDTH);
       }
 
       setSidebarWidth(finalWidth);
@@ -263,7 +264,13 @@ export function AppShell({
             aria-hidden="true"
           />
           <div className="brand">
-            <img className="brand__logo" src={logo} alt="SF Downloader" />
+            {isCompact ? (
+              <img className="brand__logo" src={logo} alt="SF Downloader" />
+            ) : (
+              <div className="brand__identity">
+                <img className="brand__logo" src={logo} alt="SF Downloader" />
+              </div>
+            )}
           </div>
           <nav className="navigation sidebar-nav" aria-label="Navegação principal">
             <button
@@ -272,42 +279,44 @@ export function AppShell({
               title={isCompact ? `${t.sidebar.all} (${allCount})` : undefined}
             >
               <div>
-                <Download />
+                <span className="navigation__icon"><Download /></span>
                 <span>{t.sidebar.all}</span>
               </div>
               <span className="counter-badge">{allCount}</span>
             </button>
 
-            {!isCompact && (
+            <div className="navigation__types">
               <button
-                className="navigation__group"
+                className={`navigation__group ${isCompact ? "navigation__group--compact" : ""}`}
                 onClick={() => setTypesOpen((value) => !value)}
                 aria-expanded={typesOpen}
+                aria-hidden={isCompact}
+                tabIndex={isCompact ? -1 : undefined}
               >
                 <span className="navigation__group-label">
                   {typesOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                   {t.sidebar.fileTypes}
                 </span>
               </button>
-            )}
 
-            {(typesOpen || isCompact) && typeItems.map((item) => {
-              const isActive = activePage === item.id;
-              return (
-                <button
-                  key={item.id}
-                  className={`navigation__item ${!isCompact ? "navigation__item--child" : ""} ${isActive ? "navigation__item--active" : ""}`}
-                  onClick={() => navigate(item.id)}
-                  title={isCompact ? `${item.label} (${item.count})` : undefined}
-                >
-                  <div>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </div>
-                  <span className="counter-badge">{item.count}</span>
-                </button>
-              );
-            })}
+              {(typesOpen || isCompact) && typeItems.map((item) => {
+                const isActive = activePage === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    className={`navigation__item navigation__item--child ${isActive ? "navigation__item--active" : ""}`}
+                    onClick={() => navigate(item.id)}
+                    title={isCompact ? `${item.label} (${item.count})` : undefined}
+                  >
+                    <div>
+                      <span className="navigation__icon"><item.icon /></span>
+                      <span>{item.label}</span>
+                    </div>
+                    <span className="counter-badge">{item.count}</span>
+                  </button>
+                );
+              })}
+            </div>
           </nav>
 
           {!isCompact && (

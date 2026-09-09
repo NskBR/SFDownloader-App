@@ -44,10 +44,10 @@ const bytes = (value: number | null) => {
 const eta = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
   if (seconds < 60) return `${Math.ceil(seconds)}s`;
-  if (seconds < 3600) return `${Math.ceil(seconds / 60)}min`;
+  if (seconds < 3600) return `${Math.ceil(seconds / 60)}m`;
   const hours = Math.floor(seconds / 3600),
     minutes = Math.ceil((seconds % 3600) / 60);
-  return `${hours}h ${minutes}min`;
+  return `${hours}h${minutes}m`;
 };
 
 const smoothedDownloadSpeed = (previous: number, next: number, status: DownloadStatus) => {
@@ -56,21 +56,8 @@ const smoothedDownloadSpeed = (previous: number, next: number, status: DownloadS
   return previous <= 0 ? next : previous * 0.7 + next * 0.3;
 };
 function Donut({ value, status }: { value: number; status: DownloadStatus }) {
-  const { t } = useTranslation();
-  const statusLabels: Record<DownloadStatus, string> = {
-    pending: t.downloadWindow.pending,
-    connecting: t.downloadWindow.pending,
-    checking_files: t.downloadWindow.checkingFiles,
-    downloading: t.downloadWindow.downloading,
-    paused: t.downloadWindow.paused,
-    assembling: t.downloadWindow.assembling,
-    extracting: t.downloadWindow.extracting,
-    completed: t.downloadWindow.completed,
-    failed: t.downloadWindow.failed,
-    cancelled: t.downloadWindow.cancelled,
-  };
-  const size = 84,
-    stroke = 6,
+  const size = 74,
+    stroke = 5,
     radius = (size - stroke) / 2,
     circumference = 2 * Math.PI * radius,
     clamped = Math.max(0, Math.min(100, value)),
@@ -89,8 +76,8 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <defs>
           <linearGradient id="dw-donut-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
-            <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
+            <stop offset="0%" stopColor="var(--ember-stop-1, var(--ember-solid))" />
+            <stop offset="100%" stopColor="var(--ember-stop-2, var(--ember-solid))" />
           </linearGradient>
         </defs>
         <circle
@@ -116,8 +103,8 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
         />
       </svg>
       <div className="dw-donut-center">
-        <strong>{Math.round(clamped)}%</strong>
-        <span>{statusLabels[status] || "Torrent"}</span>
+        <strong>{status === "completed" ? <Check aria-label="100%" /> : Math.round(clamped) + "%"}</strong>
+        
       </div>
     </div>
   );
@@ -161,18 +148,14 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
       style={{ transition: "stroke 0.25s ease", flexShrink: 0 }}
     >
       <defs>
-        <linearGradient id="dw-torrent-title-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)">
-            <animate attributeName="stop-color" values="#00f2fe;#7928ca;#ff007a;#00f2fe" dur="6s" repeatCount="indefinite" />
-          </stop>
-          <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)">
-            <animate attributeName="stop-color" values="#ff007a;#00f2fe;#7928ca;#ff007a" dur="6s" repeatCount="indefinite" />
-          </stop>
+        <linearGradient id="dw-torrent-title-gradient" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--ember-stop-1, var(--ember-solid))" />
+          <stop offset="100%" stopColor="var(--ember-stop-2, var(--ember-solid))" />
         </linearGradient>
       </defs>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
+      <g className="dw-title-arrow"><polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" /></g>
     </svg>
   );
 }
@@ -214,20 +197,22 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   }, []);
 
   useEffect(() => {
-    let fitted = false;
     const fit = async () => {
-      if (!detailsOpen && !cancelOpen && fitted) return;
       await document.fonts?.ready.catch(() => {});
-      fitted = true;
       const targetHeight = cancelOpen
-        ? 290
+        ? 276
         : detailsOpen
           ? 370
           : status === "failed" || status === "cancelled" || error
-            ? 235
-            : 205;
-      const targetWidth = 470;
-      void appWindow.setSize(new LogicalSize(targetWidth, targetHeight)).catch(() => {});
+            ? 228
+            : 232;
+      const [innerSize, scaleFactor] = await Promise.all([
+        appWindow.innerSize(),
+        appWindow.scaleFactor(),
+      ]);
+      void appWindow
+        .setSize(new LogicalSize(innerSize.width / scaleFactor, targetHeight))
+        .catch(() => {});
     };
     void fit();
   }, [detailsOpen, cancelOpen, status, error]);
@@ -404,6 +389,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     progress = isChecking ? verifyProgress : (isCompleted ? 100 : downloadProgress),
     remaining = isActive && speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, ""),
+    fileType = task.extension?.trim().toUpperCase() || "TORRENT",
     isDiskSpaceError = Boolean(
       error && /os error 112|espaço insuficiente|not enough space/i.test(error),
     ),
@@ -419,8 +405,13 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text" data-tauri-drag-region>
           <TitleDownloadIcon status={status} />
-          <span className="dw-title-name" title={task.fileName} data-tauri-drag-region>
-            {task.fileName}
+          <span className="dw-title-copy">
+            <span className="dw-title-name" title={task.fileName} data-tauri-drag-region>
+              {task.fileName}
+            </span>
+            <span className="dw-title-subtitle">
+              {t.downloadWindow.fileType} {fileType}
+            </span>
           </span>
         </span>
         <div className="dw-controls">
@@ -441,16 +432,15 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
             <div className="dw-right">
               <div className="dw-right-top">
                 <div className="dw-right-info">
-                  <p className="dw-origin">
-                    {statusLabels[status]} <span className="dw-origin-domain">• P2P BitTorrent</span>
-                  </p>
+                  {!error && (
+                    <p className="dw-origin">
+                      <Globe size={14} aria-hidden="true" /> <span className="dw-origin-domain">P2P BitTorrent</span>
+                    </p>
+                  )}
 
-                  <div className="dw-size-row">
-                    {!isCompleted && !isFailed && (
-                      <button className="dw-icon-btn" title={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} aria-label={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} onClick={() => void pauseResume()}>
-                        {isRunning ? <Pause /> : <Play />}
-                      </button>
-                    )}
+                  {isCompleted && <p className="dw-meta dw-inline-status">{statusLabels[status]}</p>}
+<div className="dw-size-row">
+                    
                     {isCompleted && (
                       <button className="dw-icon-btn" title={copied ? t.downloadWindow.copiedPath : t.downloadWindow.copyDestination} aria-label={copied ? t.downloadWindow.copiedPath : t.downloadWindow.copyDestination} onClick={() => copyPath(task.finalPath)}>
                         {copied ? <Check /> : <Copy />}
@@ -476,12 +466,17 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                           </span>
                           <span className="dw-meta-item" title={t.torrentWindow.peers}>
                             <Users aria-hidden="true" />
-                            {peers} {t.torrentWindow.peers.toLowerCase()}
+                            {peers}
                           </span>
                           <span className="dw-meta-item" title={t.downloadWindow.remainingTime}>
                             <Clock3 aria-hidden="true" />
                             {eta(remaining)}
                           </span>
+                          {!isActive && (
+                            <span className="dw-meta-item dw-inline-status">
+                              {statusLabels[status]}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -500,7 +495,12 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                   )}
                 </div>
 
-                {!isFailed && (
+                {!isCompleted && !isFailed && (
+                      <button className="dw-btn-ghost dw-transport" title={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} aria-label={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} onClick={() => void pauseResume()}>
+                        {isRunning ? <Pause /> : <Play />}
+                      </button>
+                    )}
+{!isFailed && (
                   <div className="dw-file-badge" title={`Arquivo: ${task.fileName}`}>
                     <FileIcon extension={task.extension || "torrent"} width={64} height={74} />
                   </div>
@@ -523,7 +523,8 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               {t.downloadWindow.moreDetails}
             </button>
 
-            {isCompleted ? (
+            
+{isCompleted ? (
               <div className="dw-footer-actions">
                 <button
                   className="dw-btn-primary"
@@ -601,3 +602,9 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     </main>
   );
 }
+
+
+
+
+
+

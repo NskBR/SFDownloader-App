@@ -55,7 +55,18 @@ if (isMainWindow) {
   document.body.classList.add("window-type-debug");
 }
 
-const initialSettings = loadSettings();
+const confirmationToken = torrentConfirmMatch?.[1] ?? confirmationMatch?.[1];
+const confirmationSettings = (() => {
+  if (!confirmationToken) return null;
+  try {
+    const raw = localStorage.getItem(`sf-downloader.confirmation-${confirmationToken}`);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed?.themeSettings as AppSettings | undefined;
+  } catch {
+    return null;
+  }
+})();
+const initialSettings = confirmationSettings ?? loadSettings();
 applyThemeSettings(initialSettings);
 applyWindowZoom(initialSettings.uiScale);
 
@@ -66,6 +77,15 @@ void listen<AppSettings>("settings-changed", (event) => {
     applyWindowZoom(settings.uiScale);
   }
 });
+
+void invoke<unknown>("current_theme_settings")
+  .then((cached) => {
+    if (!cached) return;
+    const settings = applyExternalSettings(cached);
+    applyThemeSettings(settings);
+    applyWindowZoom(settings.uiScale);
+  })
+  .catch(() => {});
 
 window.addEventListener("storage", (event) => {
   if (event.key === SETTINGS_STORAGE_KEY && event.newValue) {

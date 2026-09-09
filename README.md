@@ -8,7 +8,7 @@
 [![Tauri](https://img.shields.io/badge/Tauri-2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 
-[Baixar](https://github.com/NskBR/SFDownloader-App/releases) · [Reportar problema](https://github.com/NskBR/SFDownloader-App/issues) · [Planejamento](docs/MASTER_PLAN.md)
+[Baixar](https://github.com/NskBR/SFDownloader-App/releases) · [Reportar problema](https://github.com/NskBR/SFDownloader-App/issues) · [Planejamento](docs/MASTER_PLAN.md) · [Changelog](CHANGELOG.md)
 
 </div>
 

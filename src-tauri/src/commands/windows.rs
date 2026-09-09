@@ -9,8 +9,12 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 static CREATING_WINDOWS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
 
-const HTTP_DOWNLOAD_WINDOW_WIDTH: f64 = 430.0;
-const HTTP_DOWNLOAD_WINDOW_HEIGHT: f64 = 165.0;
+// Janelas de progresso são compactas por definição. A largura é controlada
+// somente aqui; o frontend preserva essa largura e altera apenas a altura
+// para detalhes, cancelamento e estados que precisam de mais espaço vertical.
+const LIVE_DOWNLOAD_WINDOW_WIDTH: f64 = 440.0;
+const HTTP_DOWNLOAD_WINDOW_HEIGHT: f64 = 220.0;
+const TORRENT_DOWNLOAD_WINDOW_HEIGHT: f64 = 232.0;
 
 // Dedupe por URL para impedir janelas de confirmação duplicadas da MESMA URL
 // disparadas em sequência por caminhos diferentes (paste, Enter, deep link,
@@ -100,9 +104,9 @@ pub async fn open_download_confirmation(
         .center();
 
     let build_result = if is_torrent {
-        builder.inner_size(740.0, 520.0).resizable(false).build()
+        builder.inner_size(800.0, 510.0).resizable(false).build()
     } else {
-        builder.inner_size(520.0, 242.0).resizable(false).build()
+        builder.inner_size(520.0, 266.0).resizable(false).build()
     };
 
     {
@@ -173,10 +177,13 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
         .center();
 
     let build_result = if is_torrent {
-        builder.inner_size(470.0, 205.0).resizable(false).build()
+        builder
+            .inner_size(LIVE_DOWNLOAD_WINDOW_WIDTH, TORRENT_DOWNLOAD_WINDOW_HEIGHT)
+            .resizable(false)
+            .build()
     } else {
         builder
-            .inner_size(HTTP_DOWNLOAD_WINDOW_WIDTH, HTTP_DOWNLOAD_WINDOW_HEIGHT)
+            .inner_size(LIVE_DOWNLOAD_WINDOW_WIDTH, HTTP_DOWNLOAD_WINDOW_HEIGHT)
             .resizable(false)
             .build()
     };
@@ -245,7 +252,7 @@ pub async fn open_torrent_progress_window(
 
     let build_result = WebviewWindowBuilder::new(&app, &label, window_url)
         .title("SF Downloader - Torrent")
-        .inner_size(470.0, 205.0)
+        .inner_size(LIVE_DOWNLOAD_WINDOW_WIDTH, TORRENT_DOWNLOAD_WINDOW_HEIGHT)
         .resizable(false)
         .decorations(false)
         .shadow(false)
@@ -298,7 +305,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
 
     let build_result = WebviewWindowBuilder::new(&app, &label, url)
         .title("SF Downloader - Download")
-        .inner_size(HTTP_DOWNLOAD_WINDOW_WIDTH, HTTP_DOWNLOAD_WINDOW_HEIGHT)
+        .inner_size(LIVE_DOWNLOAD_WINDOW_WIDTH, HTTP_DOWNLOAD_WINDOW_HEIGHT)
         .resizable(false)
         .decorations(false)
         .shadow(false)
@@ -366,3 +373,4 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
     build_result.map_err(|error| format!("Falha ao abrir integração: {error}"))?;
     Ok(())
 }
+

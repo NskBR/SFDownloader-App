@@ -22,18 +22,6 @@ function formatSpeed(bytesPerSecond: number): string {
   return `${kbps.toFixed(0)} KB/s`;
 }
 
-function formatDuration(ms: number): string {
-  if (ms <= 0) return "—";
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  if (minutes < 60) return `${minutes}min${rest ? ` ${rest}s` : ""}`;
-  const hours = Math.floor(minutes / 60);
-  const rem = minutes % 60;
-  return `${hours}h${rem ? ` ${rem}min` : ""}`;
-}
-
 interface Segment {
   label: string;
   value: number;
@@ -154,7 +142,6 @@ export function MetricsPage() {
   const totalDurationMs = metrics?.totalDurationMs ?? 0;
   const averageSpeed =
     totalDurationMs > 0 ? completedBytes / (totalDurationMs / 1000) : 0;
-  const averageTime = completedCount > 0 ? totalDurationMs / completedCount : 0;
   const statusTotal = completedBytes + cancelledBytes + failedBytes;
 
   const segments: Segment[] = [
@@ -170,7 +157,6 @@ export function MetricsPage() {
     { label: t.metrics.extracted, value: formatBytes(metrics?.extractedBytes ?? 0), accent: "ember" },
     { label: t.metrics.ssdWritten, value: formatBytes(metrics?.ssdWrittenBytes ?? 0), accent: "slate" },
     { label: t.metrics.averageSpeed, value: formatSpeed(averageSpeed), accent: "ember" },
-    { label: t.metrics.averageTime, value: formatDuration(averageTime), accent: "slate" },
   ];
 
   return (

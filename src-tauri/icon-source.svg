@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1316 1316" fill="none">
+<title>Logo SF — vetor com degradê e fundo transparente</title>
+<defs><linearGradient id="brand-gradient" gradientUnits="userSpaceOnUse" x1="450" y1="250" x2="558.4739" y2="1024.8137"><stop offset="0.00000" stop-color="#02adfd"/><stop offset="0.10127" stop-color="#03aefd"/><stop offset="0.20253" stop-color="#0f9afc"/><stop offset="0.30380" stop-color="#2483fb"/><stop offset="0.40506" stop-color="#3b6cfb"/><stop offset="0.50633" stop-color="#5551fb"/><stop offset="0.60759" stop-color="#693efc"/><stop offset="0.70886" stop-color="#7d33fd"/><stop offset="0.81013" stop-color="#8d27fd"/><stop offset="0.91139" stop-color="#9720fd"/><stop offset="1.00000" stop-color="#9a1efc"/></linearGradient></defs>
+<g fill="url(#brand-gradient)">
+<path id="upper-mark" d="M 476 245 C 379 245 299 320 299 415 C 299 510 378 586 476 586 L 516 586 L 567 477 L 488 477 C 447 477 414 450 414 413 C 414 377 441 348 477 348 L 735 348 L 788 246 Z"/>
+<path id="lightning-mark" d="M 639 400 L 1017 401 L 962 504 L 735 504 L 684 608 L 907 608 L 685 872 L 770 872 L 618 1018 L 493 872 L 585 872 L 655 714 L 493 714 Z"/>
+</g></svg>

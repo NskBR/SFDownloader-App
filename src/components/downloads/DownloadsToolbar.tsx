@@ -1,4 +1,4 @@
-import { ArrowDown, LayoutGrid, List, Search } from "lucide-react";
+import { ArrowDown, LayoutGrid, List, Magnet, Search } from "lucide-react";
 import type { KeyboardEvent, ClipboardEvent } from "react";
 import type { DownloadSort, DownloadSortKey, DownloadView } from "../../hooks/useDownloadViewPreferences";
 import { CustomSelect } from "../ui/CustomSelect";
@@ -7,6 +7,7 @@ interface DownloadsToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onInspect: (value: string) => void;
+  onPickTorrent: () => void;
   placeholder: string;
   sort: DownloadSort;
   sortOptions: { key: DownloadSortKey; label: string }[];
@@ -22,6 +23,7 @@ export function DownloadsToolbar({
   search,
   onSearchChange,
   onInspect,
+  onPickTorrent,
   placeholder,
   sort,
   sortOptions,
@@ -60,6 +62,15 @@ export function DownloadsToolbar({
       </div>
 
       <div className="header-right-group" data-tauri-drag-region>
+        <button
+          type="button"
+          className="btn-layout-switcher torrent-file-picker"
+          title="Abrir arquivo .torrent"
+          aria-label="Abrir arquivo .torrent"
+          onClick={onPickTorrent}
+        >
+          <Magnet size={18} />
+        </button>
         <div className="sort-dropdown">
           <CustomSelect
             value={sort.key}

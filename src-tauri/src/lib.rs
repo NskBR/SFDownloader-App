@@ -67,10 +67,73 @@ fn is_autostart_boot() -> bool {
     std::env::args().any(|arg| arg == "--autostart" || arg == "--minimized" || arg == "--tray")
 }
 
+fn pending_torrent_files() -> &'static std::sync::Mutex<Vec<String>> {
+    static FILES: std::sync::OnceLock<std::sync::Mutex<Vec<String>>> = std::sync::OnceLock::new();
+    FILES.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+fn torrent_paths_from_args(arguments: impl IntoIterator<Item = String>) -> Vec<String> {
+    arguments
+        .into_iter()
+        .filter_map(|argument| {
+            let path = argument.trim_matches('"');
+            std::path::Path::new(path)
+                .extension()
+                .filter(|extension| extension.eq_ignore_ascii_case("torrent"))
+                .map(|_| path.to_string())
+        })
+        .collect()
+}
+
+fn queue_torrent_files(paths: impl IntoIterator<Item = String>) {
+    let mut pending = pending_torrent_files()
+        .lock()
+        .expect("fila de arquivos torrent indisponível");
+    for path in paths {
+        if !pending.iter().any(|queued| queued == &path) {
+            pending.push(path);
+        }
+    }
+}
+
+#[tauri::command]
+fn take_pending_torrent_files() -> Vec<String> {
+    let mut pending = pending_torrent_files()
+        .lock()
+        .expect("fila de arquivos torrent indisponível");
+    std::mem::take(&mut *pending)
+}
+
+#[derive(Default)]
+struct WindowThemeSettings(std::sync::Mutex<Option<serde_json::Value>>);
+
+#[tauri::command]
+fn cache_theme_settings(
+    theme_settings: serde_json::Value,
+    state: tauri::State<'_, WindowThemeSettings>,
+) {
+    if let Ok(mut cached) = state.0.lock() {
+        *cached = Some(theme_settings);
+    }
+}
+
+#[tauri::command]
+fn current_theme_settings(
+    state: tauri::State<'_, WindowThemeSettings>,
+) -> Option<serde_json::Value> {
+    state.0.lock().ok().and_then(|cached| cached.clone())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    queue_torrent_files(torrent_paths_from_args(std::env::args()));
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            let torrents = torrent_paths_from_args(argv);
+            queue_torrent_files(torrents.iter().cloned());
+            for torrent in torrents {
+                let _ = app.emit("torrent-file-open", torrent);
+            }
             show_main_window(app);
         }))
         .plugin(tauri_plugin_deep_link::init())
@@ -80,6 +143,7 @@ pub fn run() {
             Some(vec!["--autostart"]),
         ))
         .setup(|app| {
+            app.manage(WindowThemeSettings::default());
             let open_item =
                 MenuItem::with_id(app, "tray-open", "Abrir SFDownloader", true, None::<&str>)?;
             let hide_item = MenuItem::with_id(
@@ -298,6 +362,9 @@ pub fn run() {
             set_autostart,
             is_autostart_enabled,
             is_autostart_boot,
+            take_pending_torrent_files,
+            cache_theme_settings,
+            current_theme_settings,
             download::extraction::extraction_status,
             commands::updater::check_for_updates,
             commands::updater::update_download_status,

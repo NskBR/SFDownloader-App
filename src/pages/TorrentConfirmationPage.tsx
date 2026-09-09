@@ -1,7 +1,8 @@
 import {
   Download,
+  Info,
   FolderOpen,
-  X,
+  Minus,
   Plus,
   Layers,
   FileText,
@@ -41,7 +42,11 @@ interface TorrentFileNode {
 }
 
 type PageStatus =
-  "idle" | "fetchingMetadata" | "ready" | "failed" | "cancelled";
+  "idle" | "fetchingMetadata" | "ready" | "failed" | "cancelled" | "duplicate";
+
+function isDuplicateTorrent(message: string): boolean {
+  return message.includes("Este torrent já está sendo preparado ou já existe na lista.");
+}
 
 const METADATA_FETCH_TIMEOUT_MS = 45_000;
 
@@ -63,51 +68,24 @@ export const formatFileSize = (value: number | null | undefined): string => {
 function getFileItemIcon(filename: string) {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   if (["iso", "img", "nrg", "vcd"].includes(ext)) {
-    return (
-      <Disc size={14} className="tc-file-icon" style={{ color: "#a855f7" }} />
-    );
+    return <Disc size={16} className="tc-file-icon" />;
   }
   if (["mkv", "mp4", "avi", "mov", "wmv", "flv", "webm"].includes(ext)) {
-    return (
-      <FileVideo
-        size={14}
-        className="tc-file-icon"
-        style={{ color: "#3b82f6" }}
-      />
-    );
+    return <FileVideo size={16} className="tc-file-icon" />;
   }
   if (["mp3", "flac", "wav", "aac", "ogg", "m4a"].includes(ext)) {
-    return (
-      <FileAudio
-        size={14}
-        className="tc-file-icon"
-        style={{ color: "#ec4899" }}
-      />
-    );
+    return <FileAudio size={16} className="tc-file-icon" />;
   }
   if (["zip", "rar", "7z", "tar", "gz", "bz2", "xz"].includes(ext)) {
-    return (
-      <FileArchive
-        size={14}
-        className="tc-file-icon"
-        style={{ color: "#f59e0b" }}
-      />
-    );
+    return <FileArchive size={16} className="tc-file-icon" />;
   }
   if (["txt", "nfo", "md", "doc", "docx", "pdf", "sfv", "info"].includes(ext)) {
-    return (
-      <FileText
-        size={14}
-        className="tc-file-icon"
-        style={{ color: "#10b981" }}
-      />
-    );
+    return <FileText size={16} className="tc-file-icon" />;
   }
   return (
     <File
-      size={14}
+      size={16}
       className="tc-file-icon"
-      style={{ color: "var(--text-2)" }}
     />
   );
 }
@@ -160,6 +138,12 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   }, [status]);
 
   const handleMetadataResponse = (res: TorrentMetadataResponse) => {
+    if ("message" in res && res.message && isDuplicateTorrent(res.message)) {
+      setInfoHash("");
+      setError(null);
+      setStatus("duplicate");
+      return;
+    }
     if (res.status === "fetchingMetadata") {
       setStatus("fetchingMetadata");
       setError(null);
@@ -226,6 +210,13 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     const failMetadata = (message: string) => {
       if (!active || settled) return;
       settled = true;
+      if (isDuplicateTorrent(message)) {
+        setInfoHash("");
+        setError(null);
+        setStatus("duplicate");
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        return;
+      }
       setError(message);
       setStatus("failed");
       setFileList([]);
@@ -278,7 +269,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
   }, [payload, token, metadataAttempt]);
 
   const close = () => {
-    if (infoHash) {
+    if (infoHash && status !== "duplicate") {
       console.log(
         "[MAGNET_CANCELLED] Cancelando busca/torrent pelo infoHash:",
         infoHash,
@@ -368,6 +359,31 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
     }
   };
 
+  if (status === "duplicate") {
+    return (
+      <div className="torrent-confirm-window">
+        <header className="tc-header" data-tauri-drag-region>
+          <div className="tc-header-title" data-tauri-drag-region>
+            <div className="tc-header-icon-box"><Info size={20} /></div>
+            <h1 data-tauri-drag-region>Torrent já adicionado</h1>
+          </div>
+          <TorrentWindowCloseButton title={t.common.close} className="tc-close-btn" onClose={close} size={22} />
+        </header>
+        <main className="tc-state-panel" role="status" style={{ flex: 1 }}>
+          <Info size={36} style={{ color: "var(--ember-solid)" }} />
+          <div className="tc-state-copy">
+            <strong>Este torrent já está na sua lista de downloads.</strong>
+            <span>Se estiver baixando, acompanhe o progresso na lista. Se estiver pausado, use Retomar para continuar de onde parou.</span>
+            <span>Se ele ainda estiver sendo preparado, continue na janela de confirmação já aberta.</span>
+          </div>
+        </main>
+        <footer className="tc-footer" style={{ justifyContent: "flex-end" }}>
+          <button className="tc-btn-cyan-solid" onClick={close}>Entendi</button>
+        </footer>
+      </div>
+    );
+  }
+
   return (
     <div className="torrent-confirm-window">
       {/* Header com drag region */}
@@ -380,7 +396,6 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             <h1
               data-tauri-drag-region
               className="text-truncate"
-              style={{ maxWidth: 500 }}
               title={torrentName}
             >
               {torrentName}
@@ -390,7 +405,18 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             </p>
           </div>
         </div>
-        <TorrentWindowCloseButton title={t.common.close} className="tc-close-btn" onClose={close} size={18} />
+        <div className="tc-window-controls">
+          <button
+            type="button"
+            className="tc-minimize-btn"
+            title={t.common.minimize}
+            aria-label={t.common.minimize}
+            onClick={() => void appWindow.minimize()}
+          >
+            <Minus size={20} />
+          </button>
+          <TorrentWindowCloseButton title={t.common.close} className="tc-close-btn" onClose={close} size={22} />
+        </div>
       </header>
 
       {status === "failed" && error && (
@@ -403,7 +429,7 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
         <div className="tc-left-col">
           {/* 1. Nome do Torrent */}
           <div className="tc-card">
-            <label className="tc-card-label">Nome do torrent</label>
+            <label className="tc-card-label"><FileText size={19} />Nome do torrent</label>
             <input
               type="text"
               className="tc-input-name"
@@ -414,8 +440,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
           </div>
 
           {/* 2. Pasta de destino + Alterar */}
-          <div className="tc-card">
-            <label className="tc-card-label">Salvar em</label>
+          <div className="tc-card tc-destination-card">
+            <label className="tc-card-label"><FolderOpen size={19} />Salvar em</label>
             <div className="tc-path-row">
               <div className="tc-path-box" title={destination}>
                 {destination}
@@ -429,23 +455,15 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
               </button>
             </div>
             {/* 3. Criar subpasta */}
-            <div className="tc-toggle-inline" style={{ marginTop: 6 }}>
+            <div className="tc-toggle-inline tc-option-divider">
               <Toggle checked={createSubfolder} onChange={setCreateSubfolder} />
               <span>Criar subpasta</span>
             </div>
-          </div>
-
-          {/* 7. Iniciar download automaticamente */}
-          <div className="tc-card" style={{ marginTop: "auto" }}>
-            <div className="tc-toggle-inline">
+            <div className="tc-toggle-inline tc-option-divider">
               <Toggle checked={autoStart} onChange={setAutoStart} />
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <strong style={{ color: "#ffffff", fontSize: 11.5 }}>
-                  Iniciar automaticamente
-                </strong>
-                <span style={{ fontSize: 10, color: "var(--text-2)" }}>
-                  Inicia o download assim que for adicionado.
-                </span>
+              <div className="tc-toggle-copy">
+                <strong>Iniciar automaticamente</strong>
+                <span>Inicia o download assim que for adicionado.</span>
               </div>
             </div>
           </div>
@@ -460,64 +478,27 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             </div>
 
             {status === "fetchingMetadata" && (
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                  padding: 24,
-                  textAlign: "center",
-                  background: "rgba(0, 0, 0, 0.25)",
-                  borderRadius: 10,
-                  border: "1px solid var(--line, rgba(255, 255, 255, 0.08))",
-                }}
-              >
+              <div className="tc-state-panel">
                 <Loader2
                   size={36}
                   className="tc-metadata-spinner"
                   style={{ color: "var(--ember-solid)" }}
                 />
-                <div>
-                  <strong
-                    style={{ fontSize: 13, color: "#ffffff", display: "block" }}
-                  >
-                    Obtendo metadados do torrent…
-                  </strong>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "var(--text-2)",
-                      marginTop: 4,
-                      display: "block",
-                    }}
-                  >
+                <div className="tc-state-copy">
+                  <strong>Obtendo metadados do torrent…</strong>
+                  <span>
                     Conectando aos pares da rede P2P BitTorrent para ler a
                     estrutura de arquivos.
                   </span>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    width: "100%",
-                    marginTop: 8,
-                  }}
-                >
+                <div className="tc-state-meta">
                   {infoHash && (
-                    <div
-                      className="tc-stat-pair"
-                      style={{ justifyContent: "center", gap: 6 }}
-                    >
-                      <Key size={12} style={{ color: "var(--text-2)" }} />
+                    <div className="tc-stat-pair tc-state-meta-row">
+                      <Key size={12} />
                       <span className="tc-stat-label">Info Hash:</span>
                       <strong
                         className="tc-stat-val text-truncate"
-                        style={{ maxWidth: 220 }}
                         title={infoHash}
                       >
                         {infoHash}
@@ -525,11 +506,8 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
                     </div>
                   )}
 
-                  <div
-                    className="tc-stat-pair"
-                    style={{ justifyContent: "center", gap: 6 }}
-                  >
-                    <Clock size={12} style={{ color: "var(--text-2)" }} />
+                  <div className="tc-stat-pair tc-state-meta-row">
+                    <Clock size={12} />
                     <span className="tc-stat-label">Tempo decorrido:</span>
                     <strong className="tc-stat-val">
                       {formatTime(elapsedSeconds)}
@@ -663,25 +641,14 @@ export function TorrentConfirmationPage({ token }: { token: string }) {
             )}
 
             {status === "failed" && (
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 24,
-                  textAlign: "center",
-                }}
-              >
-                <span style={{ fontSize: 13, color: "var(--text-2)" }}>
+              <div className="tc-state-panel tc-failed-panel">
+                <span>
                   {error || "Não foi possível ler os metadados deste torrent."}
                 </span>
                 <button
                   type="button"
                   className="tc-btn-outline"
                   onClick={() => void retryMetadata()}
-                  style={{ marginTop: 14 }}
                 >
                   Tentar novamente
                 </button>

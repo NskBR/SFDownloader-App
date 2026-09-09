@@ -2,7 +2,7 @@
 
 > Documento vivo de planejamento técnico e de produto.
 >
-> Versão do aplicativo analisada: **1.0.0**
+> Versão do aplicativo analisada: **1.0.1**
 > Versão da extensão analisada: **0.3.5**
 > Atualizado em: **07/09/2026**
 
@@ -50,12 +50,12 @@ O plano reúne:
 | 5. Configurações e persistência | N2 | Concluída | 100% |
 | 6. Motor HTTP e controle de velocidade | N3/N4 | Concluída | 100% |
 | 7. Fila, prioridades e agendamento | N3 | Concluída | 100% |
-| 8. Estabilização BitTorrent/P2P | N3/N4 | Em progresso | 70% |
-| 9. Extensão e ponte com navegadores | N3/N4 | Parcial | 85% |
+| 8. Estabilização BitTorrent/P2P | N3/N4 | Em progresso | 90% |
+| 9. Extensão e ponte com navegadores | N3/N4 | Concluída | 100% |
 | 10. Segurança e privacidade | N4 | Parcial | 90% |
 | 11. Métricas, logs e diagnóstico | N4 | Concluída | 100% |
 | 12. UX, acessibilidade e localização | N4 | Parcial | 85% |
-| 13. Release e documentação final | N5 | Parcial | 45% |
+| 13. Release e documentação final | N5 | Parcial | 65% |
 
 > As porcentagens representam o estado atual do código e das validações. Pendências de teste manual em navegador e Windows continuam contando como trabalho restante.
 
@@ -369,6 +369,8 @@ O plano reúne:
 
 ### Metadados e adição
 
+> **Validação manual — 07/09/2026:** magnet links, arquivos torrent, transferência, pausa, retomada e fluxos principais foram testados em uso real. O recurso está aproximadamente 90% funcional; a matriz de estresse e casos de borda abaixo continua pendente.
+
 - [x] Aceitar magnet links.
 - [x] Aceitar arquivos `.torrent`.
 - [x] Parsear torrents single-file e multi-file.
@@ -439,6 +441,8 @@ O plano reúne:
 - [x] Automatizar build reproduzível dos dois navegadores com `web-ext` fixado no lockfile; `npm run extension:build` gera pacotes Chromium e Firefox 0.3.5 e falha ao primeiro erro de empacotamento.
 - [x] Automatizar lint e inspeção do conteúdo final dos pacotes; validação `web-ext` dos dois manifests concluiu sem erros, avisos ou notices, e a suíte da extensão aprovou 9/9 cenários.
 - [-] Revisar instalação em versões atuais dos navegadores; Chromium continua com drag-and-drop e Firefox abre o XPI 0.3.5 assinado incorporado ao aplicativo. A matriz `docs/BROWSER_EXTENSION_TEST_MATRIX.md` define os cenários e a aprovação final exige execução manual em versões atuais dos dois navegadores.
+
+> **Validação manual — 07/09/2026:** integração Chromium e Firefox, captura de links e entrega ao aplicativo foram aprovadas em navegadores reais.
 
 **Critério de conclusão:** captura previsível, pacotes coerentes e processo de publicação reproduzível.
 
@@ -525,6 +529,8 @@ O plano reúne:
 
 ### Sistema de atualização manual e segura
 
+> **Validação manual — 07/09/2026:** atualização 1.0.0 → 1.0.1, instalação limpa, fluxos Windows e extensões foram aprovados.
+
 > Princípio do produto: o aplicativo pode verificar se existe uma versão nova, mas nunca deve baixar, executar ou instalar uma atualização sem uma ação explícita do usuário. Isso reduz comportamento suspeito e preserva a transparência exigida para uma Beta privada.
 
 - [x] Exibir aviso de nova versão com base no release publicado.
@@ -542,7 +548,7 @@ O plano reúne:
 - [ ] Preservar banco SQLite, downloads parciais e preferências na atualização; criar backup antes de migrações incompatíveis.
 - [ ] Definir rollback/recuperação quando a instalação for cancelada ou falhar, mantendo a versão anterior funcional.
 - [ ] Cobrir em testes: recusa de download automático, cancelamento, hash inválido, assinatura inválida, versão já atual, falta de espaço e falha de rede.
-- [ ] Validar manualmente em máquina limpa e em atualização entre versões, incluindo Windows Defender/SmartScreen e certificado de release.
+- [x] Validar manualmente em máquina limpa e em atualização entre versões; o fluxo `1.0.0 → 1.0.1` foi aprovado. Alertas de Defender/SmartScreen permanecem esperados enquanto não houver assinatura Authenticode com reputação.
 
 - [ ] Tornar o build de release reproduzível.
 - [x] Publicar automaticamente uma GitHub Release ao enviar uma tag `v*`; o workflow compila os instaladores Windows, anexa `.exe`, `.msi` e os pacotes da extensão e gera notas de lançamento.
@@ -550,13 +556,13 @@ O plano reúne:
 - [ ] Separar build, coleta de artefatos e limpeza em etapas seguras.
 - [ ] Gerar hashes dos instaladores.
 - [ ] Assinar executável, instalador e pacotes quando houver certificado.
-- [ ] Criar changelog por versão.
+- [x] Criar changelog por versão; `CHANGELOG.md` registra as versões 1.0.0 e 1.0.1.
 - [ ] Gerar release notes a partir do plano e commits.
-- [ ] Validar instalação limpa, atualização e desinstalação.
-- [ ] Validar preservação do banco e configurações durante atualização.
+- [x] Validar instalação limpa e atualização; ambas foram aprovadas em 07/09/2026. A validação de desinstalação permanece pendente.
+- [x] Validar preservação do banco e configurações durante atualização; aprovada no fluxo `1.0.0 → 1.0.1`.
 - [ ] Validar associação do protocolo `sfdownloader://`.
 - [ ] Validar startup, tray, single instance e deep links.
-- [ ] Validar pacote Chromium e envio AMO.
+- [x] Validar pacote Chromium e instalação Firefox assinada; aprovados manualmente. O envio público às lojas permanece uma decisão de distribuição.
 - [ ] Atualizar screenshots e README.
 - [ ] Publicar matriz de recursos estáveis, experimentais e planejados.
 - [ ] Remover avisos Beta apenas quando os critérios correspondentes forem aprovados.
@@ -644,7 +650,25 @@ Adicionar entradas no topo desta seção ao concluir trabalho relevante.
 | Data | Fase | Alteração | Resultado | Referência |
 | 07/09/2026 | 9, 10 | Extensão atualizada para 0.3.5; XPI incorporado e rota local removidos; Firefox estável condicionado ao pacote assinado pela AMO | 54 testes do frontend, 13 da extensão, lint, builds dos pacotes e `cargo check` aprovados | `browser_extension.rs`, `browser_bridge.rs`, `BrowserIntegrationPage.tsx` |
 | 31/08/2026 | 8, 5 | Retomada P2P e recuperação SQLite reforçadas | Falhas ao restaurar sessão/handle são explícitas; Bencode residual é rejeitado; 73/73 testes Rust aprovados pelo runner Windows | `task_control.rs`, `torrent_metadata.rs`, `database/mod.rs` |
-| 31/08/2026 | 7 | Agenda persistente por tarefa e janela global concluídas | Início único, janela diária, dias da semana, bypass, recuperação manual e testes compilados; frontend 51/51 e builds Rust aprovados | `download/schedule.rs`, `commands/scheduling.rs`, `QUEUE_POLICY.md` |
+| 31/08/2026 | 7 | Agenda persistente por tarefa e janela global concluídas | Início único, janela diária, dias da semana, bypass, recuperação manual e testes compilados; frontend 51/51 e builds Rust aprovados | `download/schedule.rs`, `commands/scheduling.rs`, `QUEUE_POLICY.md` |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 | 30/08/2026 | 4 | Painel Avançado, toolbar de Downloads e cabeçalho HTTP extraídos | Build e 49/49 testes frontend aprovados | `components/settings/SettingsAdvancedTab.tsx`, `components/downloads/DownloadsToolbar.tsx`, `components/http/ConfirmationWindowHeader.tsx` |
 | 30/08/2026 | 4 | Tokens visuais com contrato e CSS histórico removido | 11 folhas sem consumidores removidas; 724→336 cores hardcoded | `styles/tokens.css`, `styles/tokens.contract.test.ts`, `docs/CSS_INVENTORY.md` |
 | 30/08/2026 | 5 | Fonte de verdade de configurações migrada e versionada | Migração v1→v2, sincronização sem loop, backup JSON e 51/51 testes frontend aprovados | `settingsStorage.ts`, `SETTINGS_PERSISTENCE.md` |

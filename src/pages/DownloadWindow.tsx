@@ -72,21 +72,8 @@ const formatDateTime = (value: string | null) => {
 };
 
 function Donut({ value, status }: { value: number; status: DownloadStatus }) {
-  const { t } = useTranslation();
-  const statusLabels: Record<DownloadStatus, string> = {
-    pending: t.downloadWindow.pending,
-    connecting: t.downloadWindow.pending,
-    checking_files: t.downloadWindow.checkingFiles,
-    downloading: t.downloadWindow.downloading,
-    paused: t.downloadWindow.paused,
-    assembling: t.downloadWindow.assembling,
-    extracting: t.downloadWindow.extracting,
-    completed: t.downloadWindow.completed,
-    failed: t.downloadWindow.failed,
-    cancelled: t.downloadWindow.cancelled,
-  };
-  const size = 84,
-    stroke = 6,
+  const size = 74,
+    stroke = 5,
     radius = (size - stroke) / 2,
     circumference = 2 * Math.PI * radius,
     clamped = Math.max(0, Math.min(100, value)),
@@ -111,8 +98,8 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
             x2="100%"
             y2="100%"
           >
-            <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
-            <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
+            <stop offset="0%" stopColor="var(--ember-stop-1, var(--ember-solid))" />
+            <stop offset="100%" stopColor="var(--ember-stop-2, var(--ember-solid))" />
           </linearGradient>
         </defs>
         <circle
@@ -140,8 +127,8 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
         />
       </svg>
       <div className="dw-donut-center">
-        <strong>{Math.round(clamped)}%</strong>
-        <span>{statusLabels[status]}</span>
+        <strong>{status === "completed" ? <Check aria-label="100%" /> : Math.round(clamped) + "%"}</strong>
+        
       </div>
     </div>
   );
@@ -172,19 +159,19 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
     >
       <defs>
         <linearGradient
-          id="dw-title-gradient"
+          id="dw-title-gradient" gradientUnits="userSpaceOnUse"
           x1="0%"
           y1="0%"
           x2="100%"
           y2="100%"
         >
-          <stop offset="0%" stopColor="var(--ember-stop-1, #06b6d4)" />
-          <stop offset="100%" stopColor="var(--ember-stop-2, #22d3ee)" />
+          <stop offset="0%" stopColor="var(--ember-stop-1, var(--ember-solid))" />
+          <stop offset="100%" stopColor="var(--ember-stop-2, var(--ember-solid))" />
         </linearGradient>
       </defs>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
+      <g className="dw-title-arrow"><polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" /></g>
     </svg>
   );
 }
@@ -225,19 +212,25 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   }, []);
 
   useEffect(() => {
-    let fitted = false;
     const fit = async () => {
-      if (!detailsOpen && !cancelOpen && fitted) return;
       await document.fonts?.ready.catch(() => {});
-      fitted = true;
-      const targetHeight = cancelOpen ? 290 : detailsOpen ? 370 : 205;
-      const targetWidth = 460;
+      const targetHeight = cancelOpen
+        ? 276
+        : detailsOpen
+          ? 370
+          : status === "failed" || status === "cancelled" || error
+            ? 222
+            : 220;
+      const [innerSize, scaleFactor] = await Promise.all([
+        appWindow.innerSize(),
+        appWindow.scaleFactor(),
+      ]);
       void appWindow
-        .setSize(new LogicalSize(targetWidth, targetHeight))
+        .setSize(new LogicalSize(innerSize.width / scaleFactor, targetHeight))
         .catch(() => {});
     };
     void fit();
-  }, [detailsOpen, cancelOpen]);
+  }, [detailsOpen, cancelOpen, status, error]);
 
   useEffect(() => {
     let active = true;
@@ -446,7 +439,8 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     remaining =
       speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     domain = sourceDomain(task.originalUrl),
-    destination = task.finalPath.replace(/[\\/][^\\/]*$/, "");
+    destination = task.finalPath.replace(/[\\/][^\\/]*$/, ""),
+    fileType = task.extension?.trim().toUpperCase() || "—";
 
   return (
     <main
@@ -456,12 +450,17 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text" data-tauri-drag-region>
           <TitleDownloadIcon status={status} />
-          <span
-            className="dw-title-name"
-            title={task.fileName}
-            data-tauri-drag-region
-          >
-            {task.fileName}
+          <span className="dw-title-copy">
+            <span
+              className="dw-title-name"
+              title={task.fileName}
+              data-tauri-drag-region
+            >
+              {task.fileName}
+            </span>
+            <span className="dw-title-subtitle">
+              {t.downloadWindow.fileType} {fileType}
+            </span>
           </span>
         </span>
         <div className="dw-controls">
@@ -493,24 +492,17 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               <div className="dw-right-top">
                 <div className="dw-right-info">
                   <p className="dw-origin">
-                    {statusLabels[status]}{" "}
-                    <span className="dw-origin-domain">• {domain}</span>
+                    <Link2 size={14} aria-hidden="true" />
+                    <span className="dw-origin-domain" title={domain}>{domain}</span>
                   </p>
 
-                  <div className="dw-size-row">
-                    {!isCompleted && !isFailed && (
-                      <button
-                        className="dw-icon-btn"
-                        title={
-                          isActive
-                            ? t.downloads.pauseDownload
-                            : t.downloads.resumeDownload
-                        }
-                        onClick={() => void pauseResume()}
-                      >
-                        {isActive ? <Pause /> : <Play />}
-                      </button>
-                    )}
+                  {isCompleted && (
+                    <p className="dw-meta dw-inline-status">
+                      {t.downloadWindow.completedIn} {formatElapsed(elapsedSeconds(task.createdAt, task.completedAt))}
+                    </p>
+                  )}
+<div className="dw-size-row">
+                    
                     {isCompleted && (
                       <button
                         className="dw-icon-btn"
@@ -546,19 +538,32 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                       ) : isAssembling ? (
                         <span>{t.downloadWindow.assemblingParts}</span>
                       ) : isChecking ? (
-                        <span>{t.downloadWindow.checkingIntegrity}</span>
+                        <span className="dw-meta-checking">{t.downloadWindow.checkingIntegrity}</span>
                       ) : (
                         <>
                           {isActive ? `${bytes(speed)}/s` : "0 B/s"}
                           <span className="dw-dot">•</span>
-                          {eta(remaining)}
+                          {eta(remaining)}<span className="dw-dot">•</span><span className="dw-inline-status">{statusLabels[status]}</span>
                         </>
                       )}
                     </p>
                   )}
                 </div>
 
-                <div
+                {!isCompleted && !isFailed && (
+                      <button
+                        className="dw-btn-ghost dw-transport"
+                        title={
+                          isActive
+                            ? t.downloads.pauseDownload
+                            : t.downloads.resumeDownload
+                        }
+                        onClick={() => void pauseResume()}
+                      >
+                        {isActive ? <Pause /> : <Play />}
+                      </button>
+                    )}
+<div
                   className="dw-file-badge"
                   title={`Arquivo: ${task.fileName}`}
                 >
@@ -589,7 +594,8 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
               {t.downloadWindow.moreDetails}
             </button>
 
-            {isCompleted ? (
+            
+{isCompleted ? (
               <div className="dw-footer-actions">
                 <button
                   className="dw-btn-primary"
@@ -733,3 +739,9 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     </main>
   );
 }
+
+
+
+
+
+

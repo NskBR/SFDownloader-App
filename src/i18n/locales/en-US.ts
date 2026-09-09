@@ -141,10 +141,12 @@ export const enUS: Translations = {
     assembling: "Assembling file",
     extracting: "Extracting",
     completed: "Completed",
+    completedIn: "Completed in",
     paused: "Paused",
     failed: "Failed",
     cancelled: "Cancelled",
     pending: "Queued",
+    fileType: "File",
     moreDetails: "More details",
     detailsTitle: "Download Details",
     currentSpeed: "Current Speed",
@@ -156,7 +158,7 @@ export const enUS: Translations = {
     destinationFolder: "Destination Folder",
     extractingFiles: "Extracting files...",
     assemblingParts: "Assembling file parts...",
-    checkingIntegrity: "Verifying file integrity...",
+    checkingIntegrity: "Verifying files",
     confirmCancelTitle: "Do you want to cancel this download?",
     confirmCancelDelete: "Delete files",
     confirmCancelKeep: "Keep files",
@@ -415,3 +417,4 @@ export const enUS: Translations = {
     githubRepo: "GitHub Repository",
   },
 };
+

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="SFDownloader — seus downloads, no seu ritmo." />
+  <title>SFDownloader — downloads no seu ritmo</title>
+  <style>
+    :root {
+      --ink: #edf4ff;
+      --muted: #92a0b5;
+      --dim: #5d6b7f;
+      --void: #080b11;
+      --panel: #10151e;
+      --panel-raised: #151b26;
+      --rule: rgba(196, 214, 238, .13);
+      --cyan: #09c7e7;
+      --cyan-pale: #b3f5ff;
+      --violet: #7456ff;
+      --good: #16ca92;
+      --display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+      --body: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      font-family: var(--body);
+      background: var(--void);
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    .shell { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+    .topline { height: 3px; background: linear-gradient(90deg, var(--cyan), var(--violet) 62%, transparent); }
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 720; letter-spacing: -.035em; }
+    .brand img { width: 29px; height: 29px; object-fit: contain; }
+    .nav-links { display: flex; gap: 28px; color: var(--muted); font-size: 14px; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-release { border: 1px solid var(--rule); padding: 9px 13px; border-radius: 9px; color: var(--cyan-pale); font-size: 13px; font-weight: 650; }
+
+    .hero { position: relative; display: grid; grid-template-columns: 1fr .9fr; gap: clamp(48px, 8vw, 112px); align-items: center; min-height: 620px; padding: 76px 0 70px; }
+    .hero::before { content: ""; position: absolute; z-index: -1; width: 470px; height: 470px; right: -120px; top: 40px; background: radial-gradient(circle, rgba(9,199,231,.12), transparent 67%); filter: blur(8px); }
+    .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--cyan-pale); font-size: 13px; font-weight: 650; }
+    .eyebrow i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 5px rgba(22,202,146,.1); }
+    h1 { max-width: 690px; margin: 18px 0 22px; font-family: var(--display); font-size: clamp(45px, 6vw, 78px); line-height: .96; letter-spacing: -.072em; font-weight: 760; }
+    h1 em { font-style: normal; color: var(--cyan); }
+    .hero-copy { max-width: 530px; color: var(--muted); font-size: 18px; line-height: 1.6; }
+    .actions { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 33px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 47px; padding: 0 18px; border-radius: 10px; font-size: 14px; font-weight: 720; transition: transform .18s ease, background .18s ease; }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: #021015; background: var(--cyan); box-shadow: 0 10px 28px rgba(9,199,231,.18); }
+    .button-secondary { border: 1px solid var(--rule); color: var(--ink); background: rgba(255,255,255,.02); }
+    .compat { display: flex; align-items: center; gap: 13px; margin-top: 27px; color: var(--dim); font-size: 12px; }
+    .compat span { display: inline-flex; gap: 6px; align-items: center; }
+    .compat b { color: var(--muted); font-weight: 600; }
+
+    .queue-window { position: relative; width: 100%; max-width: 455px; margin-left: auto; border: 1px solid rgba(164, 204, 238, .19); border-radius: 18px; background: linear-gradient(145deg, rgba(23,31,44,.97), rgba(11,15,22,.98)); box-shadow: 0 26px 90px rgba(0,0,0,.42); overflow: hidden; }
+    .queue-top { display: flex; justify-content: space-between; align-items: center; padding: 16px 17px; border-bottom: 1px solid var(--rule); }
+    .queue-top strong { font-size: 13px; letter-spacing: -.01em; }
+    .window-dots { display: flex; gap: 5px; }
+    .window-dots i { width: 7px; height: 7px; border-radius: 50%; background: #566176; }
+    .window-dots i:last-child { background: var(--cyan); }
+    .queue-list { padding: 10px; }
+    .download { display: grid; grid-template-columns: 37px 1fr auto; gap: 12px; align-items: center; padding: 13px 11px; border-radius: 11px; }
+    .download + .download { margin-top: 3px; }
+    .download.active { background: linear-gradient(90deg, rgba(9,199,231,.11), rgba(9,199,231,.025)); box-shadow: inset 2px 0 var(--cyan); }
+    .file-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: var(--cyan); background: rgba(9,199,231,.1); font-size: 15px; }
+    .file-icon.violet { color: #b9a9ff; background: rgba(116,86,255,.13); }
+    .file-icon.green { color: #73efc9; background: rgba(22,202,146,.12); }
+    .download-name { overflow: hidden; font-size: 12px; font-weight: 670; white-space: nowrap; text-overflow: ellipsis; }
+    .download-meta { display: flex; gap: 7px; margin-top: 5px; color: var(--dim); font-size: 10px; }
+    .meter { height: 4px; margin-top: 9px; overflow: hidden; border-radius: 4px; background: rgba(151,171,202,.15); }
+    .meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), #52dded); }
+    .download-status { color: var(--cyan-pale); font-size: 10px; font-weight: 700; }
+    .download-status.done { color: var(--good); }
+    .queue-footer { display: flex; justify-content: space-between; margin: 5px 10px 10px; padding: 13px 10px 3px; border-top: 1px solid var(--rule); color: var(--dim); font-size: 10px; }
+    .speed { color: var(--cyan-pale); font-weight: 650; }
+    .orbit { position: absolute; right: -43px; bottom: -35px; width: 175px; height: 175px; border: 1px solid rgba(9,199,231,.24); border-radius: 50%; z-index: -1; }
+    .orbit::after { content: ""; position: absolute; inset: 22px; border: 1px solid rgba(116,86,255,.25); border-radius: inherit; }
+
+    .signal { padding: 22px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+    .signal-grid { display: grid; grid-template-columns: 1.3fr repeat(3, 1fr); gap: 18px; align-items: center; }
+    .signal-grid p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .signal-grid strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 13px; }
+    .signal-item { padding-left: 18px; border-left: 1px solid var(--rule); }
+
+    .feature-section { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; padding: 120px 0; }
+    .section-title { margin: 0; font-family: var(--display); font-size: clamp(32px, 4vw, 49px); line-height: 1.02; letter-spacing: -.06em; }
+    .section-lead { color: var(--muted); line-height: 1.6; font-size: 16px; }
+    .feature-list { border-top: 1px solid var(--rule); }
+    .feature { display: grid; grid-template-columns: 45px 1fr; gap: 15px; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+    .feature-index { color: var(--cyan); font-size: 12px; font-weight: 720; padding-top: 3px; }
+    .feature h3 { margin: 0 0 6px; font-size: 15px; letter-spacing: -.02em; }
+    .feature p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+    .privacy { position: relative; display: grid; grid-template-columns: 1.1fr .9fr; gap: 50px; align-items: center; padding: 45px; border: 1px solid var(--rule); border-radius: 17px; background: linear-gradient(135deg, rgba(9,199,231,.08), rgba(116,86,255,.06) 58%, transparent); }
+    .privacy::before { content: "127.0.0.1"; position: absolute; top: 18px; right: 22px; color: rgba(179,245,255,.42); font-size: 11px; font-weight: 700; }
+    .privacy h2 { max-width: 550px; margin: 0; font-family: var(--display); font-size: clamp(30px, 4vw, 47px); letter-spacing: -.06em; line-height: 1.02; }
+    .privacy p { margin: 18px 0 0; color: var(--muted); line-height: 1.6; }
+    .privacy-notes { display: grid; gap: 10px; }
+    .privacy-note { padding: 14px 15px; border: 1px solid var(--rule); border-radius: 10px; background: rgba(5,8,14,.36); color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .privacy-note b { color: var(--cyan-pale); }
+
+    .closing { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; padding: 100px 0 32px; }
+    .closing h2 { max-width: 600px; margin: 0; font-family: var(--display); font-size: clamp(37px, 5vw, 64px); line-height: .98; letter-spacing: -.07em; }
+    footer { display: flex; justify-content: space-between; padding: 20px 0 32px; border-top: 1px solid var(--rule); color: var(--dim); font-size: 12px; }
+    footer a:hover { color: var(--cyan-pale); }
+
+    @media (max-width: 790px) {
+      .shell { width: min(100% - 32px, 610px); }
+      .nav-links { display: none; }
+      .nav-release { font-size: 12px; }
+      .hero, .feature-section, .privacy { grid-template-columns: 1fr; }
+      .hero { gap: 52px; min-height: auto; padding: 65px 0; }
+      .queue-window { margin: 0 auto; }
+      .signal-grid { grid-template-columns: 1fr 1fr; }
+      .signal-grid > p { grid-column: 1 / -1; }
+      .signal-item { padding-left: 12px; }
+      .feature-section { gap: 36px; padding: 80px 0; }
+      .privacy { gap: 28px; padding: 29px; }
+      .closing { display: block; padding-top: 76px; }
+      .closing .button { margin-top: 25px; }
+    }
+    @media (max-width: 430px) {
+      .signal-grid { grid-template-columns: 1fr; }
+      .signal-item { padding: 0; border: 0; }
+      .actions .button { width: 100%; }
+      .download { grid-template-columns: 32px 1fr; }
+      .download-status { display: none; }
+      footer { gap: 12px; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="topline"></div>
+  <header class="shell nav">
+    <a class="brand" href="#inicio"><img src="sf-logo.png" alt="" /> SFDownloader</a>
+    <nav class="nav-links" aria-label="Navegação principal">
+      <a href="#recursos">Recursos</a>
+      <a href="#privacidade">Privacidade</a>
+      <a href="https://github.com/NskBR/SFDownloader-App" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+    <a class="nav-release" href="https://github.com/NskBR/SFDownloader-App/releases" target="_blank" rel="noreferrer">Baixar para Windows</a>
+  </header>
+
+  <main>
+    <section class="shell hero" id="inicio">
+      <div>
+        <div class="eyebrow"><i></i> Disponível para Windows 10 e 11</div>
+        <h1>Downloads sob <em>controle.</em><br />Sem barulho.</h1>
+        <p class="hero-copy">Um gerenciador de downloads nativo para quem quer acompanhar, organizar e retomar arquivos sem transformar isso em trabalho.</p>
+        <div class="actions">
+          <a class="button button-primary" href="https://github.com/NskBR/SFDownloader-App/releases" target="_blank" rel="noreferrer">Baixar SFDownloader</a>
+          <a class="button button-secondary" href="#recursos">Conhecer os recursos</a>
+        </div>
+        <div class="compat"><span>Feito com <b>Rust + Tauri</b></span><span>•</span><span>Extensão para <b>Firefox e Chromium</b></span></div>
+      </div>
+
+      <div class="queue-window" aria-label="Prévia de uma fila de downloads">
+        <div class="queue-top"><strong>Fila de downloads</strong><span class="window-dots"><i></i><i></i><i></i></span></div>
+        <div class="queue-list">
+          <div class="download active">
+            <div class="file-icon">↓</div>
+            <div><div class="download-name">Forza.Horizon.5.Ultimate.zip</div><div class="download-meta"><span>8.4 GB de 19.2 GB</span><span>•</span><span>23 min</span></div><div class="meter"><i style="width:44%"></i></div></div>
+            <span class="download-status">42.8 MB/s</span>
+          </div>
+          <div class="download">
+            <div class="file-icon violet">▱</div>
+            <div><div class="download-name">design-assets_2026.7z</div><div class="download-meta"><span>1.8 GB</span><span>•</span><span>em espera</span></div></div>
+            <span class="download-status">02</span>
+          </div>
+          <div class="download">
+            <div class="file-icon green">✓</div>
+            <div><div class="download-name">sfdownloader-setup.exe</div><div class="download-meta"><span>102.8 MB</span><span>•</span><span>concluído agora</span></div></div>
+            <span class="download-status done">Pronto</span>
+          </div>
+        </div>
+        <div class="queue-footer"><span>3 transferências</span><span class="speed">↓ 42.8 MB/s</span></div>
+        <div class="orbit"></div>
+      </div>
+    </section>
+
+    <section class="signal"><div class="shell signal-grid">
+      <p>Para links diretos, arquivos grandes, torrents e a rotina inteira entre abrir o navegador e ter o arquivo no lugar certo.</p>
+      <div class="signal-item"><strong>Pausa e retomada</strong><p>Continue quando for melhor para você.</p></div>
+      <div class="signal-item"><strong>Fila inteligente</strong><p>Defina prioridade e limite de velocidade.</p></div>
+      <div class="signal-item"><strong>Arquivos organizados</strong><p>Use pastas por categoria se quiser.</p></div>
+    </div></section>
+
+    <section class="shell feature-section" id="recursos">
+      <div><h2 class="section-title">Feito para a parte chata desaparecer.</h2><p class="section-lead">A interface mostra o que importa no momento certo. O resto continua trabalhando em segundo plano.</p></div>
+      <div class="feature-list">
+        <article class="feature"><span class="feature-index">01</span><div><h3>Downloads que sobrevivem ao caminho</h3><p>Pausa, retomada e validação de arquivo para continuar transferências sem depender de sorte.</p></div></article>
+        <article class="feature"><span class="feature-index">02</span><div><h3>Do navegador para a fila</h3><p>A extensão envia o link para o aplicativo localmente, mantendo você no controle antes do download começar.</p></div></article>
+        <article class="feature"><span class="feature-index">03</span><div><h3>Arquivos no lugar esperado</h3><p>Defina um destino único ou organize por categoria. As pastas são criadas somente quando um download precisa delas.</p></div></article>
+        <article class="feature"><span class="feature-index">04</span><div><h3>Compactados e torrents</h3><p>Baixe, acompanhe e extraia ZIP, RAR, 7Z e outros formatos, com suporte a magnet links e BitTorrent.</p></div></article>
+      </div>
+    </section>
+
+    <section class="shell privacy" id="privacidade">
+      <div><h2>O navegador conversa com o app. Só entre eles.</h2><p>A integração usa a ponte local em <strong>127.0.0.1</strong>. Nada fica exposto na rede e o app não instala atualizações sem a sua ação.</p></div>
+      <div class="privacy-notes"><div class="privacy-note"><b>Integração local.</b> A extensão fala apenas com o aplicativo em execução no seu computador.</div><div class="privacy-note"><b>Atualização manual.</b> Você escolhe baixar e abrir o instalador de cada nova versão.</div><div class="privacy-note"><b>Logs sanitizados.</b> URLs, cookies e cabeçalhos sensíveis são removidos antes de qualquer exportação.</div></div>
+    </section>
+
+    <section class="shell closing"><h2>Deixe o arquivo baixar.<br />O resto fica por nossa conta.</h2><a class="button button-primary" href="https://github.com/NskBR/SFDownloader-App/releases" target="_blank" rel="noreferrer">Ver a versão mais recente</a></section>
+  </main>
+  <footer class="shell"><span>SFDownloader para Windows</span><span><a href="https://github.com/NskBR/SFDownloader-App" target="_blank" rel="noreferrer">Código no GitHub</a> &nbsp;·&nbsp; Feito por NskBR</span></footer>
+</body>
+</html>

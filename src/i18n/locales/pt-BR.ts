@@ -165,10 +165,12 @@ export const ptBR = {
     assembling: "Montando arquivo",
     extracting: "Descompactando",
     completed: "Concluído",
+    completedIn: "Concluído em",
     paused: "Pausado",
     failed: "Falhou",
     cancelled: "Cancelado",
     pending: "Na fila",
+    fileType: "Arquivo",
     moreDetails: "Mais detalhes",
     detailsTitle: "Detalhes do Download",
     currentSpeed: "Velocidade Atual",
@@ -180,7 +182,7 @@ export const ptBR = {
     destinationFolder: "Pasta de Destino",
     extractingFiles: "Descompactando arquivos...",
     assemblingParts: "Montando partes do arquivo...",
-    checkingIntegrity: "Verificando integridade dos arquivos...",
+    checkingIntegrity: "Verificando arquivos",
     confirmCancelTitle: "Deseja cancelar este download?",
     confirmCancelDelete: "Excluir arquivos",
     confirmCancelKeep: "Manter arquivos",
@@ -415,3 +417,4 @@ export const ptBR = {
 };
 
 export type Translations = typeof ptBR;
+

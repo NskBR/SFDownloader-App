@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import {
   AlertTriangle,
   FolderOpen,
@@ -29,6 +30,7 @@ import {
   useDownloadViewPreferences,
 } from "../hooks/useDownloadViewPreferences";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useContextMenu } from "../hooks/useContextMenu";
 import { useDownloadSelection } from "../hooks/useDownloadSelection";
 import { listen } from "@tauri-apps/api/event";
@@ -405,13 +407,32 @@ export function DownloadsPage({
       const token = crypto.randomUUID();
       localStorage.setItem(
         `sf-downloader.confirmation-${token}`,
-        JSON.stringify({ url, destination: settings.rootDownloadFolder }),
+        JSON.stringify({
+          url,
+          destination: settings.rootDownloadFolder,
+          themeSettings: settings,
+        }),
       );
       await service.openDownloadConfirmation(token, url);
     } catch (cause) {
       setError(ipcErrorMessage(cause, "Não foi possível abrir a confirmação do download."));
     } finally {
       setStarting(false);
+    }
+  };
+
+  const pickTorrentFile = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "Torrent", extensions: ["torrent"] }],
+      });
+      if (typeof selected === "string") {
+        await inspect(selected);
+      }
+    } catch (cause) {
+      setError(ipcErrorMessage(cause, "Não foi possível abrir o arquivo torrent."));
     }
   };
 
@@ -610,6 +631,7 @@ export function DownloadsPage({
         search={search}
         onSearchChange={setSearch}
         onInspect={(value) => void inspect(value)}
+        onPickTorrent={() => void pickTorrentFile()}
         placeholder={t.common.searchPlaceholder}
         sort={sort}
         sortOptions={sortOptions}
@@ -1073,7 +1095,7 @@ export function DownloadsPage({
         </div>
       )}
 
-      {ctxMenu && (
+      {ctxMenu && createPortal(
         <div
           ref={ctxMenuRef}
           className="ctx-menu"
@@ -1192,7 +1214,8 @@ export function DownloadsPage({
           >
             <Trash2 size={15} /> {t.downloads.deleteDownload}
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

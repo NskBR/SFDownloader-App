@@ -203,6 +203,12 @@ export interface TorrentFileItem {
   size: number;
 }
 
+export interface TorrentFileSelection {
+  files: TorrentFileItem[];
+  selectedFileIndexes: number[];
+  lockedFileIndexes: number[];
+}
+
 export type TorrentMetadataResponse =
   | {
       status: "ready";
@@ -242,8 +248,23 @@ export const confirmTorrent = (input: {
 export const cancelTorrent = (infoHash: string, deleteFiles: boolean = false) =>
   invoke<void>("cancel_torrent", { infoHash, deleteFiles });
 
+export const getTorrentFileSelection = (infoHash: string) =>
+  invoke<TorrentFileSelection>("torrent_file_selection", { infoHash });
+
+export const updateTorrentFileSelection = (
+  infoHash: string,
+  selectedFileIndexes: number[],
+) =>
+  invoke<TorrentFileSelection>("update_torrent_file_selection", {
+    infoHash,
+    selectedFileIndexes,
+  });
+
 export const openTorrentProgressWindow = (infoHash: string, taskId: string) =>
   invoke<void>("open_torrent_progress_window", { infoHash, taskId });
+
+export const openTorrentFileSelectionWindow = (taskId: string) =>
+  invoke<void>("open_torrent_file_selection_window", { taskId });
 
 export interface UpdateCheckResult {
   available: boolean;

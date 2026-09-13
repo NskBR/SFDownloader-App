@@ -431,3 +431,23 @@ pub async fn cancel_torrent(
         .cancel_torrent(&app, &database, &info_hash, delete_files.unwrap_or(false))
         .await
 }
+
+#[tauri::command]
+pub async fn torrent_file_selection(
+    info_hash: String,
+) -> Result<crate::download::torrent::TorrentFileSelection, String> {
+    crate::download::torrent::get_torrent_manager()
+        .file_selection(&info_hash)
+        .await
+}
+
+#[tauri::command]
+pub async fn update_torrent_file_selection(
+    database: tauri::State<'_, crate::database::Database>,
+    info_hash: String,
+    selected_file_indexes: Vec<usize>,
+) -> Result<crate::download::torrent::TorrentFileSelection, String> {
+    crate::download::torrent::get_torrent_manager()
+        .update_file_selection(&database, &info_hash, &selected_file_indexes)
+        .await
+}

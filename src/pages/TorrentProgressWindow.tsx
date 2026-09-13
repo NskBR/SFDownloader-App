@@ -333,8 +333,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   const cancel = async (deleteFiles: boolean) => {
     setBusy(true);
     try {
-      // downloadId é o infoHash — cancelTorrent usa info_hash
-      await service.cancelTorrent(task?.infoHash ?? downloadId, deleteFiles);
+      await service.cancelDownload(task?.id ?? downloadId, deleteFiles);
       setStatus("cancelled");
       setSpeed(0);
       setCancelOpen(false);
@@ -523,7 +522,12 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               {t.downloadWindow.moreDetails}
             </button>
 
-            
+            {!isCompleted && !isFailed && (
+              <button className="dw-btn-ghost dw-edit-files" onClick={() => void service.openTorrentFileSelectionWindow(task.id)}>
+                <FileText size={16} />
+                Editar arquivos
+              </button>
+            )}
 {isCompleted ? (
               <div className="dw-footer-actions">
                 <button
@@ -554,7 +558,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 </button>
               </div>
             ) : (
-              <button className="dw-btn-cancel" onClick={() => void cancel(true)} disabled={busy}>
+              <button className="dw-btn-cancel" onClick={() => setCancelOpen(true)} disabled={busy}>
                 <Ban size={15} />
                 {t.common.cancel}
               </button>
@@ -598,6 +602,28 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
             </div>
           </div>
         </div>
+      )}
+
+      {cancelOpen && (
+        <section className="dw-cancel-sheet" role="dialog" aria-modal="true" aria-labelledby="torrent-cancel-title">
+          <div className="dw-cancel-sheet-header">
+            <span className="dw-cancel-sheet-icon"><Ban aria-hidden="true" /></span>
+            <div className="dw-cancel-sheet-text">
+              <h2 id="torrent-cancel-title" className="dw-cancel-sheet-title">Cancelar torrent?</h2>
+              <p className="dw-cancel-sheet-desc">Escolha se os arquivos locais devem permanecer no diretório.</p>
+            </div>
+          </div>
+          <div className="dw-cancel-sheet-sep" />
+          <div className="dw-cancel-sheet-actions">
+            <button className="dw-cancel-btn-keep" onClick={() => setCancelOpen(false)} disabled={busy}>Voltar</button>
+            <button className="dw-cancel-btn-keep" onClick={() => void cancel(false)} disabled={busy}>
+              Manter arquivos
+            </button>
+            <button className="dw-cancel-btn-delete" onClick={() => void cancel(true)} disabled={busy}>
+              Excluir arquivos
+            </button>
+          </div>
+        </section>
       )}
     </main>
   );

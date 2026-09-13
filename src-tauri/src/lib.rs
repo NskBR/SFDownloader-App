@@ -1,3 +1,5 @@
+#![allow(linker_messages)]
+
 use crate::download::paths::valid_category_name;
 
 const CATEGORY_FOLDERS: [&str; 9] = [
@@ -354,7 +356,10 @@ pub fn run() {
             commands::transfer::parse_torrent_info,
             commands::transfer::confirm_torrent,
             commands::transfer::cancel_torrent,
+            commands::transfer::torrent_file_selection,
+            commands::transfer::update_torrent_file_selection,
             commands::windows::open_torrent_progress_window,
+            commands::windows::open_torrent_file_selection_window,
             commands::metrics::metrics_snapshot,
             commands::metrics::reset_metrics,
             commands::metrics::export_metrics,

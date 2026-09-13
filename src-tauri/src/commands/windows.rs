@@ -275,6 +275,57 @@ pub async fn open_torrent_progress_window(
 }
 
 #[tauri::command]
+pub async fn open_torrent_file_selection_window(
+    app: AppHandle,
+    task_id: String,
+) -> Result<(), String> {
+    let label = format!("torrent-file-selection-{}", task_id);
+    if let Some(window) = app.get_webview_window(&label) {
+        window.unminimize().map_err(|error| error.to_string())?;
+        window.set_focus().map_err(|error| error.to_string())?;
+        return Ok(());
+    }
+
+    {
+        let mut creating = CREATING_WINDOWS.lock().map_err(|error| error.to_string())?;
+        if creating.contains(&label) {
+            return Ok(());
+        }
+        creating.insert(label.clone());
+    }
+
+    #[cfg(debug_assertions)]
+    let window_url = app
+        .config()
+        .build
+        .dev_url
+        .clone()
+        .map(WebviewUrl::External)
+        .unwrap_or_else(|| WebviewUrl::App("index.html".into()));
+    #[cfg(not(debug_assertions))]
+    let window_url = WebviewUrl::App("index.html".into());
+
+    let build_result = WebviewWindowBuilder::new(&app, &label, window_url)
+        .title("Editar arquivos do torrent")
+        .inner_size(640.0, 500.0)
+        .resizable(false)
+        .decorations(false)
+        .shadow(false)
+        .visible(false)
+        .transparent(true)
+        .center()
+        .build();
+
+    if let Ok(mut creating) = CREATING_WINDOWS.lock() {
+        creating.remove(&label);
+    }
+
+    build_result
+        .map_err(|error| format!("Falha ao abrir editor de arquivos do torrent: {error}"))?;
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), String> {
     let label = format!("download-{}", id);
     if let Some(window) = app.get_webview_window(&label) {
@@ -373,4 +424,3 @@ pub async fn open_browser_integration_window(app: AppHandle) -> Result<(), Strin
     build_result.map_err(|error| format!("Falha ao abrir integração: {error}"))?;
     Ok(())
 }
-

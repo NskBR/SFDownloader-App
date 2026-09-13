@@ -210,6 +210,21 @@ pub fn update_torrent_selection(
     )?;
     Ok(())
 }
+
+pub fn update_torrent_selection_and_size(
+    connection: &Connection,
+    id: &str,
+    selected_file_indexes: &[usize],
+    file_size: i64,
+) -> Result<()> {
+    let value =
+        serde_json::to_string(selected_file_indexes).map_err(|_| rusqlite::Error::InvalidQuery)?;
+    connection.execute(
+        "UPDATE download_tasks SET file_size=?2,torrent_selected_file_indexes=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1",
+        params![id, file_size, value],
+    )?;
+    Ok(())
+}
 pub fn update_speed_limit(connection: &Connection, id: &str, speed_limit: i64) -> Result<()> {
     connection.execute(
         "UPDATE download_tasks SET speed_limit_download=?2, speed_limit_inherited=0, updated_at=CURRENT_TIMESTAMP WHERE id=?1",
@@ -619,8 +634,9 @@ mod tests {
         torrent.download_type = "torrent".into();
         torrent.info_hash = Some("selection-test".into());
         let created = create(&connection, torrent).unwrap();
-        update_torrent_selection(&connection, &created.id, &[0, 2, 5]).unwrap();
+        update_torrent_selection_and_size(&connection, &created.id, &[0, 2, 5], 4096).unwrap();
         let restored = find(&connection, &created.id).unwrap().unwrap();
         assert_eq!(restored.torrent_selected_file_indexes, vec![0, 2, 5]);
+        assert_eq!(restored.file_size, Some(4096));
     }
 }

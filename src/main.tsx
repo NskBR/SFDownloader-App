@@ -9,6 +9,7 @@ import { ConfirmationPage } from "./pages/ConfirmationPage";
 import { DownloadWindow } from "./pages/DownloadWindow";
 import { TorrentConfirmationPage } from "./pages/TorrentConfirmationPage";
 import { TorrentProgressWindow } from "./pages/TorrentProgressWindow";
+import { TorrentFileSelectionWindow } from "./pages/TorrentFileSelectionWindow";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { DebugLogsWindow } from "./pages/DebugLogsWindow";
 import { applyExternalSettings, loadSettings, SETTINGS_STORAGE_KEY } from "./services/settingsStorage";
@@ -20,9 +21,11 @@ const label = getCurrentWindow().label;
 const torrentConfirmMatch = label.match(/^download-torrent-confirm-(.*)$/);
 const confirmationMatch = label.match(/^download-confirm-(.*)$/);
 const torrentProgressMatch = label.match(/^(?:torrent-progress-|download-torrent-live-)(.*)$/);
+const torrentFileSelectionMatch = label.match(/^torrent-file-selection-(.*)$/);
 const isTorrentConfirmation = Boolean(torrentConfirmMatch);
 const isConfirmationWindow = Boolean(confirmationMatch);
 const isTorrentLiveWindow = Boolean(torrentProgressMatch);
+const isTorrentFileSelectionWindow = Boolean(torrentFileSelectionMatch);
 const isLiveWindow = label.startsWith("download-") && !isConfirmationWindow && !isTorrentConfirmation && !isTorrentLiveWindow;
 const isBrowserIntegrationWindow = label === "browser-integration";
 const isDebugWindow = label === "debug-logs";
@@ -45,6 +48,9 @@ if (isMainWindow) {
   document.documentElement.classList.add("window-type-confirmation");
   document.body.classList.add("window-type-confirmation");
 } else if (isLiveWindow || isTorrentLiveWindow) {
+  document.documentElement.classList.add("window-type-live");
+  document.body.classList.add("window-type-live");
+} else if (isTorrentFileSelectionWindow) {
   document.documentElement.classList.add("window-type-live");
   document.body.classList.add("window-type-live");
 } else if (isBrowserIntegrationWindow) {
@@ -105,6 +111,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <ConfirmationPage token={confirmationMatch![1]} />
     ) : isTorrentLiveWindow ? (
       <TorrentProgressWindow downloadId={torrentProgressMatch![1]} />
+    ) : isTorrentFileSelectionWindow ? (
+      <TorrentFileSelectionWindow taskId={torrentFileSelectionMatch![1]} />
     ) : isLiveWindow ? (
       <DownloadWindow downloadId={label.substring("download-".length)} />
     ) : isBrowserIntegrationWindow ? (

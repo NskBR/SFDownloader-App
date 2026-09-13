@@ -7,7 +7,8 @@ pub use crate::download::torrent_metadata::{
     TorrentFileItem, TorrentMetadataResponse,
 };
 use librqbit::{ManagedTorrent, Session};
-use std::collections::BTreeMap;
+use serde::Serialize;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
 use tokio::sync::{Mutex, RwLock};
@@ -37,6 +38,14 @@ static TORRENT_MANAGER: LazyLock<TorrentManager> = LazyLock::new(TorrentManager:
 const DUPLICATE_TORRENT_MESSAGE: &str =
     "Este torrent já está sendo preparado ou já existe na lista.";
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TorrentFileSelection {
+    pub files: Vec<TorrentFileItem>,
+    pub selected_file_indexes: Vec<usize>,
+    pub locked_file_indexes: Vec<usize>,
+}
+
 pub fn get_torrent_manager() -> &'static TorrentManager {
     &TORRENT_MANAGER
 }
@@ -56,6 +65,126 @@ impl TorrentManager {
 
     pub fn session(&self) -> &Arc<RwLock<Option<Arc<Session>>>> {
         &self.session
+    }
+
+    pub async fn file_selection(&self, info_hash: &str) -> Result<TorrentFileSelection, String> {
+        let guard = self.entries.read().await;
+        let entry = guard
+            .get(info_hash)
+            .ok_or_else(|| "Torrent não está disponível para edição.".to_string())?;
+
+        if !entry.metadata_ready || !entry.confirmed {
+            return Err("O torrent ainda não está pronto para editar os arquivos.".into());
+        }
+
+        let selected_file_indexes = if entry.selected_file_indexes.is_empty() {
+            entry.files.iter().map(|file| file.index).collect()
+        } else {
+            entry.selected_file_indexes.clone()
+        };
+
+        let stats = entry.handle.stats();
+        let locked_file_indexes = selected_file_indexes
+            .iter()
+            .copied()
+            .filter(|index| stats.file_progress.get(*index).copied().unwrap_or(0) > 0)
+            .collect();
+
+        Ok(TorrentFileSelection {
+            files: entry.files.clone(),
+            selected_file_indexes,
+            locked_file_indexes,
+        })
+    }
+
+    pub async fn update_file_selection(
+        &self,
+        database: &crate::database::Database,
+        info_hash: &str,
+        requested_file_indexes: &[usize],
+    ) -> Result<TorrentFileSelection, String> {
+        let mut guard = self.entries.write().await;
+        let entry = guard
+            .get_mut(info_hash)
+            .ok_or_else(|| "Torrent não está disponível para edição.".to_string())?;
+
+        if !entry.metadata_ready || !entry.confirmed {
+            return Err("O torrent ainda não está pronto para editar os arquivos.".into());
+        }
+
+        let existing_selection = if entry.selected_file_indexes.is_empty() {
+            entry
+                .files
+                .iter()
+                .map(|file| file.index)
+                .collect::<Vec<_>>()
+        } else {
+            entry.selected_file_indexes.clone()
+        };
+        let stats = entry.handle.stats();
+        let locked_file_indexes = existing_selection
+            .iter()
+            .copied()
+            .filter(|index| stats.file_progress.get(*index).copied().unwrap_or(0) > 0)
+            .collect::<Vec<_>>();
+        let mut updated_selection =
+            normalize_selected_file_indexes(&entry.files, requested_file_indexes);
+        updated_selection.extend(locked_file_indexes.iter().copied());
+        updated_selection.sort_unstable();
+        updated_selection.dedup();
+
+        if updated_selection.is_empty() {
+            return Err("Selecione ao menos um arquivo para manter o torrent ativo.".into());
+        }
+
+        if updated_selection == existing_selection {
+            return Ok(TorrentFileSelection {
+                files: entry.files.clone(),
+                selected_file_indexes: existing_selection,
+                locked_file_indexes,
+            });
+        }
+
+        let selected_set = updated_selection.iter().copied().collect::<HashSet<_>>();
+        let session = self
+            .session
+            .read()
+            .await
+            .clone()
+            .ok_or_else(|| "Sessão Torrent não disponível.".to_string())?;
+        session
+            .update_only_files(&entry.handle, &selected_set)
+            .await
+            .map_err(|error| {
+                format!("Não foi possível atualizar os arquivos selecionados: {error}")
+            })?;
+
+        entry.selected_file_indexes = updated_selection.clone();
+        let selected_total_size = selected_size(&entry.files, &updated_selection);
+        let files = entry.files.clone();
+        let save_path = entry.save_path.clone();
+        drop(guard);
+
+        remove_initialized_unselected_files(Path::new(&save_path), &files, &updated_selection);
+
+        let connection = database.connect().map_err(|error| error.to_string())?;
+        let task =
+            crate::database::repositories::downloads::find_by_info_hash(&connection, info_hash)
+                .map_err(|error| format!("Erro ao localizar torrent: {error}"))?
+                .ok_or_else(|| "Torrent não foi encontrado na lista de downloads.".to_string())?;
+        crate::database::repositories::downloads::update_torrent_selection_and_size(
+            &connection,
+            &task.id,
+            &updated_selection,
+            selected_total_size as i64,
+        )
+        .map_err(|error| format!("Erro ao salvar a seleção de arquivos: {error}"))?;
+
+        Ok(TorrentFileSelection {
+            files,
+            selected_file_indexes: updated_selection,
+            locked_file_indexes,
+        })
     }
     pub async fn get_session(&self, default_output_dir: &Path) -> Result<Arc<Session>, String> {
         crate::download::torrent_session::get_or_create(&self.session, default_output_dir).await
@@ -503,10 +632,15 @@ impl TorrentManager {
                 crate::database::repositories::downloads::find_by_info_hash(&conn, info_hash)
                     .map_err(|e| format!("Erro ao consultar torrents existentes: {e}"))?
             {
-                return Err(format!(
-                    "{} ({})",
-                    DUPLICATE_TORRENT_MESSAGE, existing.file_name
-                ));
+                if existing.status == crate::database::models::DownloadStatus::Cancelled {
+                    crate::database::repositories::downloads::remove(&conn, &existing.id)
+                        .map_err(|e| format!("Erro ao preparar torrent cancelado: {e}"))?;
+                } else {
+                    return Err(format!(
+                        "{} ({})",
+                        DUPLICATE_TORRENT_MESSAGE, existing.file_name
+                    ));
+                }
             }
         }
 
@@ -741,7 +875,9 @@ impl TorrentManager {
             }
         }
 
-        // Apagar os arquivos de cache/persistência (.bitv e .torrent) da pasta torrent-session
+        // Ao manter os arquivos, o metainfo fica disponível para que uma nova
+        // adição do mesmo torrent valide o diretório e retome pelas peças válidas.
+        // Quando o usuário escolhe apagar os arquivos, removemos também o cache.
         let persistence_root = crate::download::torrent_session::persistence_root();
 
         for h in [&actual_info_hash, info_hash] {
@@ -750,7 +886,7 @@ impl TorrentManager {
             if bitv.exists() {
                 let _ = std::fs::remove_file(&bitv);
             }
-            if torrent_file.exists() {
+            if delete_files && torrent_file.exists() {
                 let _ = std::fs::remove_file(&torrent_file);
             }
         }

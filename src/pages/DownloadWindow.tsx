@@ -48,9 +48,16 @@ const eta = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return "—";
   if (seconds < 60) return `${Math.ceil(seconds)}s`;
   if (seconds < 3600) return `${Math.ceil(seconds / 60)}min`;
-  const hours = Math.floor(seconds / 3600),
-    minutes = Math.ceil((seconds % 3600) / 60);
-  return `${hours}h ${minutes}min`;
+  const totalHours = Math.ceil(seconds / 3600);
+  if (totalHours < 24) return `${totalHours}h`;
+
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days < 365) return `${days}d${hours ? ` ${hours}h` : ""}`;
+
+  const years = Math.floor(days / 365);
+  const remainingDays = days % 365;
+  return `${years}a${remainingDays ? ` ${remainingDays}d` : ""}`;
 };
 
 const sourceDomain = (value: string) => {
@@ -525,7 +532,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                   </div>
 
                   {!isCompleted && (
-                    <p className="dw-meta">
+                    <p className="dw-meta dw-meta-progress">
                       {error ? (
                         <span className="dw-meta-error">
                           <AlertTriangle size={13} style={{ flexShrink: 0 }} />

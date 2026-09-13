@@ -265,10 +265,10 @@ export function AppShell({
           />
           <div className="brand">
             {isCompact ? (
-              <img className="brand__logo" src={logo} alt="SF Downloader" />
+              <img className="brand__logo" src={logo} alt="SF Downloader" draggable={false} />
             ) : (
               <div className="brand__identity">
-                <img className="brand__logo" src={logo} alt="SF Downloader" />
+                <img className="brand__logo" src={logo} alt="SF Downloader" draggable={false} />
               </div>
             )}
           </div>

@@ -2,6 +2,19 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.3 — 12/09/2026
+
+### Interface e janelas
+
+- Corrigida a permissão de minimizar nas janelas de download e progresso.
+- A logo da sidebar deixou de aceitar arraste ou interação.
+- Cartões de configuração receberam tipografia e espaçamento mais compactos em áreas estreitas.
+
+### Distribuição
+
+- Release gerada localmente e preparada para publicação manual no GitHub Releases.
+- Workflow de build no GitHub removido; builds e instaladores são produzidos somente no ambiente local.
+
 ## 1.0.1 — 07/09/2026
 
 ### Atualização e distribuição

@@ -7,6 +7,9 @@ import type { UpdateCheckResult, UpdateDownloadProgress } from "../../services/d
 import * as downloadService from "../../services/downloadService";
 import type { PageId } from "../../app/navigation";
 import { useTranslation } from "../../i18n";
+import logo from "../../assets/sf-logo.svg";
+import { createPortal } from "react-dom";
+import "../../styles/update.css";
 
 const appWindow = getCurrentWindow();
 
@@ -67,6 +70,7 @@ export function TitleBar({
       void downloadService.openUrl(updateInfo?.release_url ?? "https://github.com/NskBR/SFDownloader-App/releases");
       return;
     }
+    setUpdateProgress({ ...idleUpdateProgress, status: "downloading" });
     void downloadService.downloadUpdate(updateInfo.installer_url, updateInfo.installer_name).catch((error) => {
       setUpdateProgress({ ...idleUpdateProgress, status: "failed", message: String(error) });
     });
@@ -82,8 +86,26 @@ export function TitleBar({
       data-tauri-drag-region
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
+      {(["downloading", "preparing", "installing", "cancelling", "failed"].includes(updateProgress.status)) && createPortal(
+        <div className="update-overlay">
+          <section className="update-dialog" role="dialog" aria-modal="true" aria-label="Atualização do aplicativo">
+            <div className="update-logo">
+              <svg viewBox="0 0 100 100" aria-hidden="true" className={percentage === null || updateProgress.status !== "downloading" ? "update-ring--busy" : ""}>
+                <circle cx="50" cy="50" r="46" className="update-ring-track" />
+                <circle cx="50" cy="50" r="46" pathLength="100" className="update-ring-progress" strokeDasharray={`${updateProgress.status === "downloading" && percentage !== null ? percentage : 24} 100`} />
+              </svg>
+              <img src={logo} alt="" draggable={false} />
+            </div>
+            <h2>{updateProgress.status === "failed" ? "Não foi possível atualizar" : updateProgress.status === "downloading" ? "Baixando atualização…" : updateProgress.status === "cancelling" ? "Cancelando…" : "Preparando atualização…"}</h2>
+            <p role="status">{updateProgress.status === "failed" ? updateProgress.message : updateProgress.status === "downloading" ? "A instalação começará automaticamente." : "Verificando o instalador e salvando seus downloads."}</p>
+            <progress max={100} value={updateProgress.status === "downloading" ? percentage ?? undefined : undefined} aria-label="Progresso da atualização" />
+            {updateProgress.status === "downloading" && <small>{percentage === null ? formatBytes(updateProgress.downloaded_bytes) : `${percentage}% · ${formatBytes(updateProgress.downloaded_bytes)}`}</small>}
+            {updateProgress.status === "downloading" && <button onClick={() => void downloadService.cancelUpdateDownload()}>Cancelar</button>}
+            {updateProgress.status === "failed" && <button autoFocus onClick={() => setUpdateProgress(idleUpdateProgress)}>Fechar</button>}
+          </section>
+        </div>, document.body)}
       <div className="titlebar-side" data-tauri-drag-region>
-        {updateInfo?.available && updateProgress.status !== "downloading" && updateProgress.status !== "cancelling" && updateProgress.status !== "ready" && (
+        {updateInfo?.available && (updateProgress.status === "idle" || updateProgress.status === "failed") && (
           <button className="nodrag titlebar-update-badge" onClick={startUpdateDownload} title={updateInfo.installer_url ? t.titlebar.downloadUpdate : t.titlebar.locateUpdateInstaller}>
             <Sparkles size={12} className="icon-pulse" />
             <span>{updateProgress.status === "failed" ? t.titlebar.retryUpdateDownload : t.titlebar.downloadUpdate}</span>

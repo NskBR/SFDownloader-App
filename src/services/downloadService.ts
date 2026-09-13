@@ -282,7 +282,7 @@ export const checkForUpdates = (repoOverride?: string) =>
   invoke<UpdateCheckResult>("check_for_updates", { repoOverride });
 
 export interface UpdateDownloadProgress {
-  status: "idle" | "downloading" | "cancelling" | "ready" | "failed";
+  status: "idle" | "downloading" | "cancelling" | "ready" | "preparing" | "installing" | "failed";
   downloaded_bytes: number;
   total_bytes?: number | null;
   bytes_per_second: number;
@@ -292,8 +292,18 @@ export interface UpdateDownloadProgress {
 
 export const updateDownloadStatus = () =>
   invoke<UpdateDownloadProgress>("update_download_status");
-export const downloadUpdate = (installerUrl: string, installerName: string) =>
-  invoke<void>("download_update", { installerUrl, installerName });
+export const downloadUpdate = (installerUrl: string, installerName: string) => {
+  const style = getComputedStyle(document.documentElement);
+  const normalize = (token: string, fallback: string) => {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return fallback;
+    context.fillStyle = fallback;
+    context.fillStyle = style.getPropertyValue(token).trim() || fallback;
+    return /^#[0-9a-f]{6}$/i.test(context.fillStyle) ? context.fillStyle : fallback;
+  };
+  return invoke<void>("download_update", { installerUrl, installerName, theme: [normalize("--panel", "#12151b"), normalize("--text", "#f4f6fa"), normalize("--ember-solid", "#06b6d4")] });
+};
 export const cancelUpdateDownload = () =>
   invoke<void>("cancel_update_download");
 export const installDownloadedUpdate = () =>

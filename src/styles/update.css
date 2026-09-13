@@ -1,0 +1,22 @@
+.update-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: #0008; }
+.update-dialog { width: min(400px, calc(100vw - 40px)); box-sizing: border-box; padding: 28px 32px; border: 1px solid var(--line, #34404b); border-radius: 16px; background: var(--panel, #12151b); color: var(--text); box-shadow: 0 20px 70px #0006; text-align: center; font-family: "Segoe UI", sans-serif; }
+.update-logo { width: 112px; height: 112px; position: relative; margin: 4px auto 24px; }
+.update-logo::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 1px solid #9a1efc20; background: radial-gradient(circle, #02adfd18, #9a1efc08 65%, transparent); box-shadow: 0 0 30px #02adfd0c; }
+.update-logo img { position: absolute; width: 48px; height: 56px; inset: 28px 32px; pointer-events: none; filter: drop-shadow(0 4px 10px #693efc30); }
+.update-logo svg { width: 100%; height: 100%; transform: rotate(-90deg); fill: none; stroke-width: 3; }
+.update-ring-track { stroke: #9a1efc40; stroke-width: 1; stroke-dasharray: 42 180; transform: scale(.9); transform-origin: center; }
+.update-ring-progress { stroke: #02adfd; stroke-width: 2; stroke-linecap: round; transition: stroke-dasharray .2s ease; filter: drop-shadow(0 0 3px #02adfd40); }
+.update-ring--busy { animation: update-spin 4s linear infinite; }
+.update-ring--busy .update-ring-progress { stroke-dasharray: 32 12 5 51; }
+.update-dialog h2 { font-size: 20px; margin: 0 0 10px; }
+.update-dialog p { font-size: 13px; color: var(--text-2); line-height: 1.5; margin: 0 0 18px; }
+.update-dialog progress { display: block; width: 100%; height: 5px; border: 0; border-radius: 8px; overflow: hidden; appearance: none; accent-color: var(--ember-solid); background: var(--surface-2); }
+.update-dialog progress::-webkit-progress-bar { background: var(--surface-2); border-radius: 8px; }
+.update-dialog progress::-webkit-progress-value { background: var(--ember-solid); border-radius: 8px; }
+.update-dialog:has(button[autofocus]) progress { display: none; }
+.update-dialog small { display: block; margin-top: 10px; color: var(--text-2); }
+.update-dialog button { margin-top: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); padding: 9px 24px; font: 600 12px "Segoe UI", sans-serif; cursor: pointer; transition: background .15s ease; }
+.update-dialog button:hover { background: var(--surface-2); }
+.update-dialog button:focus-visible { outline: 2px solid var(--ember-solid); outline-offset: 3px; }
+@keyframes update-spin { to { transform: rotate(270deg); } }
+@media (prefers-reduced-motion: reduce) { .update-ring--busy { animation: none; } }

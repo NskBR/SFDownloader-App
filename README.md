@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.0.3.** O SFDownloader está em beta privada para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.0.4.** O SFDownloader está em beta privada para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 

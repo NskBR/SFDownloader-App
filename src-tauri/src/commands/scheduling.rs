@@ -113,6 +113,7 @@ pub fn start_scheduler(
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
         loop {
             interval.tick().await;
+            if crate::commands::updater::is_preparing_install() { continue; }
             run_due_schedules(&app, &database, &runtime, &browser_bridge).await;
         }
     });

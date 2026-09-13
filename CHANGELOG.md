@@ -2,6 +2,15 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.4 — 13/09/2026
+
+### Atualização do aplicativo
+
+- O botão de atualização agora baixa, verifica o SHA-256, pausa downloads com segurança e inicia a instalação silenciosa automaticamente.
+- Nova janela de atualização com progresso real de download, logo animada e reabertura do aplicativo ao concluir.
+- A instalação preserva configurações, histórico e arquivos parciais; operações de montagem e extração impedem a atualização até terminarem.
+- Reforçada a validação para aceitar somente instaladores do release oficial do SFDownloader.
+
 ## 1.0.3 — 12/09/2026
 
 ### Interface e janelas

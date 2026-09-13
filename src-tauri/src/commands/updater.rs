@@ -53,6 +53,8 @@ struct UpdateRuntime {
     ready_installer: Option<PathBuf>,
     cancellation: Option<CancellationToken>,
     approved_installer: Option<(String, String)>,
+    approved_digest: Option<String>,
+    theme: Vec<String>,
 }
 
 impl Default for UpdateRuntime {
@@ -62,6 +64,8 @@ impl Default for UpdateRuntime {
             ready_installer: None,
             cancellation: None,
             approved_installer: None,
+            approved_digest: None,
+            theme: vec!["#10141A".into(), "#F4F6FA".into(), "#06B6D4".into()],
         }
     }
 }
@@ -70,6 +74,10 @@ static UPDATE_RUNTIME: OnceLock<Mutex<UpdateRuntime>> = OnceLock::new();
 
 fn runtime() -> &'static Mutex<UpdateRuntime> {
     UPDATE_RUNTIME.get_or_init(|| Mutex::new(UpdateRuntime::default()))
+}
+
+pub fn is_preparing_install() -> bool {
+    runtime().lock().map(|state| matches!(state.progress.status.as_str(), "preparing" | "installing")).unwrap_or(false)
 }
 
 fn set_progress(app: &AppHandle, progress: UpdateDownloadProgress) {
@@ -140,7 +148,7 @@ fn is_official_release_asset_url(value: &str) -> bool {
     };
     url.scheme() == "https"
         && url.host_str() == Some("github.com")
-        && url.path().contains("/releases/download/")
+        && url.path().starts_with("/NskBR/SFDownloader-App/releases/download/")
         && url.path().to_ascii_lowercase().ends_with(".exe")
 }
 
@@ -185,9 +193,10 @@ pub async fn check_for_updates(
     app: AppHandle,
     repo_override: Option<String>,
 ) -> Result<UpdateCheckResult, String> {
-    let repo = repo_override
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "NskBR/SFDownloader-App".to_string());
+    let repo = "NskBR/SFDownloader-App".to_string();
+    if repo_override.as_deref().is_some_and(|value| !value.is_empty() && value != repo) {
+        return Err("Use o repositório oficial para atualizações.".into());
+    }
     let current_version = env!("CARGO_PKG_VERSION").to_string();
     let url = format!("https://api.github.com/repos/{repo}/releases/latest");
     let client = reqwest::Client::builder()
@@ -247,6 +256,10 @@ pub async fn check_for_updates(
     let available = is_version_newer(&tag_name, &current_version);
     let installer = if available { installer } else { None };
     if let Ok(mut state) = runtime().lock() {
+        state.approved_digest = installer.as_ref().and_then(|(_, name, _)| {
+            json["assets"].as_array()?.iter().find(|asset| asset["name"].as_str() == Some(name))?["digest"]
+                .as_str()?.strip_prefix("sha256:").filter(|hash| hash.len() == 64 && hash.chars().all(|c| c.is_ascii_hexdigit())).map(str::to_owned)
+        });
         state.approved_installer = installer
             .as_ref()
             .map(|(url, name, _)| (url.clone(), name.clone()));
@@ -287,6 +300,7 @@ pub async fn download_update(
     app: AppHandle,
     installer_url: String,
     installer_name: String,
+    theme: Option<Vec<String>>,
 ) -> Result<(), String> {
     if !is_official_release_asset_url(&installer_url) {
         return Err("A atualização precisa ser baixada de um release oficial do GitHub.".into());
@@ -300,7 +314,7 @@ pub async fn download_update(
         let mut state = runtime()
             .lock()
             .map_err(|_| "O estado do atualizador está indisponível.".to_string())?;
-        if state.progress.status == "downloading" {
+        if matches!(state.progress.status.as_str(), "downloading" | "preparing" | "installing") {
             return Err("Já existe uma atualização sendo baixada.".into());
         }
         if state.approved_installer.as_ref()
@@ -312,6 +326,9 @@ pub async fn download_update(
             );
         }
         state.ready_installer = None;
+        if state.approved_digest.is_none() { return Err("O release não fornece SHA-256 para verificar o instalador.".into()); }
+        if let Some(theme) = theme.filter(|colors| colors.len() == 3 && colors.iter().all(|c| c.len() == 7 && c.starts_with('#') && c[1..].chars().all(|v| v.is_ascii_hexdigit()))) { state.theme = theme; }
+        state.progress.status = "downloading".into();
         state.cancellation = Some(cancellation.clone());
     }
     let app_for_task = app.clone();
@@ -363,16 +380,22 @@ pub async fn download_update(
                 set_progress(
                     &app_for_task,
                     UpdateDownloadProgress {
-                        status: "ready".into(),
+                        status: "preparing".into(),
                         downloaded_bytes,
                         total_bytes,
                         bytes_per_second: 0,
                         installer_name: Some(installer_name),
                         message: Some(
-                            "Instalador pronto. Clique para iniciar a instalação manual.".into(),
+                            "Verificando e preparando atualização…".into(),
                         ),
                     },
                 );
+                if let Err(error) = install_downloaded_update(app_for_task.clone()).await {
+                    let mut progress = update_download_status();
+                    progress.status = "failed".into();
+                    progress.message = Some(error);
+                    set_progress(&app_for_task, progress);
+                }
             }
             Err(error) => {
                 if let Ok(mut state) = runtime().lock() {
@@ -427,7 +450,7 @@ pub fn cancel_update_download(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
+pub async fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
     let installer = runtime()
         .lock()
         .map_err(|_| "O estado do atualizador está indisponível.".to_string())?
@@ -442,9 +465,46 @@ pub fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
     {
         return Err("O instalador baixado não está disponível.".into());
     }
-    std::process::Command::new(&installer)
-        .spawn()
-        .map_err(|e| format!("Não foi possível abrir o instalador: {e}"))?;
+    let executable = std::env::current_exe().map_err(|e| e.to_string())?;
+    if cfg!(debug_assertions) { return Err("Instalação disponível apenas no aplicativo instalado; o modo de desenvolvimento não será substituído.".into()); }
+    let folder = installer.parent().ok_or("Pasta de atualização inválida")?.join(uuid::Uuid::new_v4().to_string());
+    std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+    let script = folder.join("install.ps1");
+    let logo = folder.join("logo.svg");
+    let ready = folder.join("ready");
+    let go = folder.join("go");
+    let error_file = folder.join("error");
+    let config = folder.join("config.json");
+    let (digest, theme) = { let state = runtime().lock().map_err(|e| e.to_string())?; (state.approved_digest.clone().ok_or("SHA-256 indisponível")?, state.theme.clone()) };
+    // Windows PowerShell 5.1 requires a BOM to decode UTF-8 script literals.
+    std::fs::write(&script, format!("\u{feff}{}", include_str!("update-helper.ps1"))).map_err(|e| e.to_string())?;
+    std::fs::write(&logo, include_str!("../../../src/assets/sf-logo.svg")).map_err(|e| e.to_string())?;
+    let payload = serde_json::json!({"installer": installer, "executable": executable, "destination": executable.parent(), "parent": std::process::id(), "sha256": digest, "logo": logo, "ready": ready, "go": go, "error": error_file, "background": theme[0], "foreground": theme[1], "accent": theme[2]});
+    std::fs::write(&config, serde_json::to_vec(&payload).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    let mut command = std::process::Command::new("powershell.exe");
+    command.args(["-NoProfile", "-STA", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File"]).arg(script).arg("-ConfigPath").arg(config);
+    #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
+    let mut helper = command.spawn().map_err(|e| format!("Não foi possível abrir a janela de atualização: {e}"))?;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while !ready.exists() {
+        if error_file.exists() { return Err(std::fs::read_to_string(&error_file).unwrap_or_else(|_| "Falha ao verificar atualização".into())); }
+        if Instant::now() > deadline || helper.try_wait().map_err(|e| e.to_string())?.is_some() { let _ = helper.kill(); return Err("A janela de atualização não ficou pronta. O aplicativo permanece aberto.".into()); }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    let database = app.state::<crate::database::Database>();
+    let tasks = { let connection = database.connect().map_err(|e| e.to_string())?; crate::database::repositories::downloads::list(&connection).map_err(|e| e.to_string())? };
+    use crate::database::models::DownloadStatus;
+    if tasks.iter().any(|task| matches!(task.status, DownloadStatus::Assembling | DownloadStatus::Extracting)) { let _ = helper.kill(); return Err("Aguarde a montagem ou extração dos arquivos e tente atualizar novamente.".into()); }
+    for task in tasks.iter().filter(|task| matches!(task.status, DownloadStatus::Downloading | DownloadStatus::CheckingFiles | DownloadStatus::Pending)) {
+        crate::commands::task_control::pause_download(app.clone(), app.state(), app.state(), task.id.clone()).await?;
+    }
+    let download_runtime = app.state::<crate::download::runtime::DownloadRuntime>();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    while download_runtime.diagnostics().active_tasks != 0 {
+        if Instant::now() > deadline { let _ = helper.kill(); return Err("Os downloads ainda estão sendo salvos. Tente atualizar novamente.".into()); }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    std::fs::write(go, "install").map_err(|e| e.to_string())?;
     app.exit(0);
     Ok(())
 }
@@ -454,6 +514,7 @@ mod tests {
     use super::{is_official_release_asset_url, select_windows_installer};
     #[test]
     fn only_accepts_a_github_release_exe() {
+        assert!(!is_official_release_asset_url("https://github.com/other/project/releases/download/v1/setup.exe"));
         assert!(is_official_release_asset_url("https://github.com/NskBR/SFDownloader-App/releases/download/v1.0.0/SFDownloader-setup.exe"));
         assert!(!is_official_release_asset_url(
             "https://example.test/installer.exe"

@@ -277,21 +277,6 @@ pub fn run() {
                         api.prevent_close();
                         let _ = window.hide();
                     }
-                    tauri::WindowEvent::Resized(_) => {
-                        const MIN_WIDTH: f64 = 1104.0;
-                        const MIN_HEIGHT: f64 = 611.0;
-                        if let (Ok(size), Ok(scale)) = (window.inner_size(), window.scale_factor())
-                        {
-                            let logical: tauri::LogicalSize<f64> = size.to_logical(scale);
-                            if logical.width < MIN_WIDTH || logical.height < MIN_HEIGHT {
-                                let _ =
-                                    window.set_size(tauri::Size::Logical(tauri::LogicalSize::new(
-                                        logical.width.max(MIN_WIDTH),
-                                        logical.height.max(MIN_HEIGHT),
-                                    )));
-                            }
-                        }
-                    }
                     _ => {}
                 }
             }

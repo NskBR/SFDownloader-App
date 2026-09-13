@@ -194,6 +194,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedError, setCopiedError] = useState(false);
   const [extraction, setExtraction] = useState<string | null>(null);
   const appWindow = getCurrentWindow();
@@ -396,6 +397,13 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
     void navigator.clipboard.writeText(text).then(() => {
       setCopiedError(true);
       window.setTimeout(() => setCopiedError(false), 1600);
+    });
+  };
+
+  const copyUrl = (text: string) => {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedUrl(true);
+      window.setTimeout(() => setCopiedUrl(false), 1600);
     });
   };
 
@@ -703,12 +711,23 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                 <span className="dw-detail-label">
                   {t.downloadWindow.originalUrl}
                 </span>
-                <span
-                  className="dw-detail-val dw-detail-url"
-                  title={task.originalUrl}
-                >
-                  {task.originalUrl}
-                </span>
+                <div className="dw-detail-value-actions">
+                  <span
+                    className="dw-detail-val dw-detail-url"
+                    title={task.originalUrl}
+                  >
+                    {task.originalUrl}
+                  </span>
+                  <button
+                    type="button"
+                    className={`dw-copy-url-btn ${copiedUrl ? "is-copied" : ""}`}
+                    title={copiedUrl ? t.common.copied : t.downloads.copyUrl}
+                    aria-label={copiedUrl ? t.common.copied : t.downloads.copyUrl}
+                    onClick={() => copyUrl(task.originalUrl)}
+                  >
+                    {copiedUrl ? <Check size={13} /> : <Copy size={13} />}
+                  </button>
+                </div>
               </div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">

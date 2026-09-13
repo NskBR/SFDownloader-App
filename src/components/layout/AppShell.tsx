@@ -215,8 +215,8 @@ export function AppShell({
   }).length;
 
   const typeItems = [
-    { id: "torrents" as PageId, label: t.sidebar.torrents, icon: Magnet, count: torrentsCount },
     { id: "archives" as PageId, label: t.sidebar.archives, icon: Archive, count: archivesCount },
+    { id: "torrents" as PageId, label: t.sidebar.torrents, icon: Magnet, count: torrentsCount },
     { id: "documents" as PageId, label: t.sidebar.documents, icon: FileText, count: documentsCount },
     { id: "videos" as PageId, label: t.sidebar.videos, icon: Video, count: videosCount },
     { id: "music" as PageId, label: t.sidebar.music, icon: Music2, count: musicCount },

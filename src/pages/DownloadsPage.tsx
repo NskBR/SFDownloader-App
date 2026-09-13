@@ -23,6 +23,8 @@ import {
   ArrowDown,
   CheckSquare,
   Square,
+  Check,
+  Copy,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -169,6 +171,7 @@ export function DownloadsPage({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
+  const [copiedSourceId, setCopiedSourceId] = useState<string | null>(null);
   const [speedLimitDialog, setSpeedLimitDialog] = useState<DownloadTask | null>(null);
   const [speedLimitValue, setSpeedLimitValue] = useState("0");
   const {
@@ -821,11 +824,14 @@ export function DownloadsPage({
                         title={t.downloads.copySourceLink}
                         onClick={(event) => {
                           event.stopPropagation();
-                          void navigator.clipboard.writeText(item.originalUrl);
+                          void navigator.clipboard.writeText(item.originalUrl).then(() => {
+                            setCopiedSourceId(item.id);
+                            window.setTimeout(() => setCopiedSourceId(null), 1600);
+                          });
                         }}
                       >
-                        <Link2 size={12} />
-                        <span>{sourceDomain(item.originalUrl)}</span>
+                        {copiedSourceId === item.id ? <Check size={12} /> : <Link2 size={12} />}
+                        <span>{copiedSourceId === item.id ? t.common.copied : sourceDomain(item.originalUrl)}</span>
                       </button>
                     )}
 

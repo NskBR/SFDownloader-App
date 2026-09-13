@@ -298,8 +298,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   };
 
   const tabs: TabItem[] = [
-    { id: "personalizacao", label: t.settings.tabs.personalization, icon: <Palette size={16} /> },
     { id: "downloads", label: t.settings.tabs.downloads, icon: <Download size={16} /> },
+    { id: "personalizacao", label: t.settings.tabs.personalization, icon: <Palette size={16} /> },
     { id: "arquivos", label: t.settings.tabs.files, icon: <Folder size={16} /> },
     { id: "idioma", label: t.settings.tabs.language, icon: <Globe size={16} /> },
     { id: "avancado", label: t.settings.tabs.advanced, icon: <Settings2 size={16} /> },

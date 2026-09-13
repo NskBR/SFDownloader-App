@@ -966,16 +966,20 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
 
 /* 2. Indicador deslizante da Sidebar */
 [data-accent="gradient_flow"] .sidebar-indicator {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(121, 40, 202, 0.28), rgba(255, 0, 122, 0.22), rgba(0, 242, 254, 0.22)) !important;
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(121, 40, 202, 0.28), rgba(255, 0, 122, 0.22), rgba(0, 242, 254, 0.22)) padding-box,
+    linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) border-box !important;
   background-size: 300% 300% !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
   animation: sf-cosmic-gradient-shift 4s ease infinite !important;
   box-shadow: 0 4px 18px rgba(121, 40, 202, 0.4) !important;
 }
 
 [data-accent="gradient_flow"] .sidebar-indicator::before {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
+  background: transparent !important;
+  animation: none !important;
 }
 
 /* 3. Chaves de alternância (Toggles/Seletores) */
@@ -988,15 +992,27 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   box-shadow: 0 0 14px rgba(121, 40, 202, 0.5) !important;
 }
 
-/* 4. Botões do rodapé da Sidebar e Titlebar */
-[data-accent="gradient_flow"] .sidebar-footer-btn.active,
+/* 4. Botão de tema da Titlebar */
 [data-accent="gradient_flow"] .titlebar-theme-btn.active {
   color: var(--white) !important;
-  border-color: transparent !important;
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(121, 40, 202, 0.3), rgba(255, 0, 122, 0.25), rgba(0, 242, 254, 0.25)) !important;
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(121, 40, 202, 0.3), rgba(255, 0, 122, 0.25), rgba(0, 242, 254, 0.25)) padding-box,
+    linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) border-box !important;
   background-size: 300% 300% !important;
+  background-origin: border-box !important;
+  background-clip: padding-box, border-box !important;
   animation: sf-cosmic-gradient-shift 4s ease infinite !important;
   box-shadow: 0 0 14px rgba(121, 40, 202, 0.45) !important;
+}
+
+/* O indicador móvel desenha o destaque do rodapé inteiro. */
+[data-accent="gradient_flow"] .sidebar-footer-btn.active {
+  color: var(--white) !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
 }
 
 [data-accent="gradient_flow"] .sidebar-footer-btn.active svg,
@@ -2034,6 +2050,31 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
   white-space: nowrap;
   max-width: 290px;
 }
+.dw-detail-value-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin-left: auto;
+}
+.dw-detail-value-actions .dw-detail-url {
+  min-width: 0;
+  max-width: none;
+}
+.dw-copy-url-btn {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text-2);
+  background: var(--white-03);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.dw-copy-url-btn:hover { color: var(--ember-solid); border-color: var(--ember-solid); background: var(--ember-soft); }
+.dw-copy-url-btn.is-copied { color: var(--st-completed); border-color: color-mix(in srgb, var(--st-completed) 52%, transparent); background: color-mix(in srgb, var(--st-completed) 14%, transparent); }
 
 /* Botões Rápidos Diretos no Rodapé */
 .dw-mini-actions-row {
@@ -4857,8 +4898,11 @@ html, body, #root, .window-frame {
     0 10px 24px color-mix(in srgb, var(--bg) 22%, transparent);
   backdrop-filter: blur(16px) saturate(125%);
 }
+.sidebar-indicator { z-index: 2; }
+.navigation__item,
+.sidebar-footer-btn { position: relative; z-index: 3; }
 .sidebar-footer-btn { width: 42px; height: 42px; border-radius: 11px; }
-.sidebar-footer-btn.active { border-color: color-mix(in srgb, var(--ember-solid) 62%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--ember-solid) 15%, transparent); }
+.sidebar-footer-btn.active { border-color: transparent; background: transparent; box-shadow: none; }
 
 @media (max-height: 700px) {
   .sidebar { grid-template-rows: auto minmax(0, 1fr) 46px; gap: 8px; padding: 10px 11px; }
@@ -5007,6 +5051,30 @@ html, body, #root, .window-frame {
 .tc-minimize-btn:active,
 .torrent-confirm-window .tc-close-btn:active {
   transform: scale(0.94);
+}
+/* O destaque acompanha a caixa do SVG sem alterar seu tamanho, posição ou
+   a área clicável do botão. A sombra expande igualmente nos quatro lados. */
+.dw-controls button > svg {
+  border-radius: 5px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.dw-controls button:hover {
+  background: transparent;
+  border-color: transparent;
+}
+.dw-controls button:last-child:hover {
+  background: transparent;
+  border-color: transparent;
+}
+.dw-controls button:hover > svg {
+  --control-fill: color-mix(in srgb, var(--surface-2) 68%, transparent);
+  --control-border: color-mix(in srgb, var(--line) 82%, transparent);
+  background: var(--control-fill);
+  box-shadow: 0 0 0 2px var(--control-fill), 0 0 0 3px var(--control-border);
+}
+.dw-controls button:last-child:hover > svg {
+  --control-fill: color-mix(in srgb, var(--st-failed) 13%, transparent);
+  --control-border: color-mix(in srgb, var(--st-failed) 30%, transparent);
 }
 .dw-bar { max-width: none; height: 6px; }
 .dw-divider { margin: 0 16px; }

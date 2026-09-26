@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão em desenvolvimento: 1.0.5; última release: 1.0.4.** O SFDownloader está em beta privada para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.0.5.** O SFDownloader está em beta privada para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -108,7 +108,7 @@ Esta revisão não encontrou chaves privadas, tokens de produção, arquivos `.e
 - URLs, cookies, tokens e headers sensíveis são removidos dos logs e diagnósticos exportados.
 - Caminhos recebidos pela interface são validados antes de operações de abertura, extração e remoção.
 - A CSP do WebView bloqueia conteúdo remoto não autorizado.
-- O atualizador aceita apenas instaladores de releases oficiais e pede ação explícita antes de executá-los.
+- O atualizador aceita apenas instaladores de releases oficiais; a instalação começa após o usuário clicar para atualizar.
 
 O principal risco residual é inerente à extensão: uma extensão maliciosa que já tenha permissões concedidas pelo usuário pode tentar solicitar capturas locais. Revise extensões instaladas e permissões do navegador. Consulte o [modelo de ameaças](docs/THREAT_MODEL.md), a [política de privacidade da extensão](browser-extension/PRIVACY.md) e a [auditoria de dependências](docs/DEPENDENCY_AUDIT.md).
 

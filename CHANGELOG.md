@@ -2,7 +2,7 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
-## 1.0.5 — em preparação
+## 1.0.5 — 26/09/2026
 
 ### Downloads e interface
 

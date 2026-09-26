@@ -506,11 +506,11 @@ O plano reúne:
 - [x] Escala configurável.
 - [x] Janelas independentes de confirmação e progresso.
 - [x] Filtros, busca, seleção múltipla e menu nativo.
-- [-] Remover textos hardcoded restantes e usar o sistema de tradução; titlebar, atualizador, assistente de IA, editor de gradiente e os estados iniciais das janelas de download/torrent passaram a usar i18n. Ainda faltam auditoria e conversão das janelas auxiliares legadas.
+- [-] Remover textos hardcoded restantes e usar o sistema de tradução; titlebar, atualizador, editor de gradiente e os estados iniciais das janelas de download/torrent passaram a usar i18n. Ainda faltam auditoria e conversão das janelas auxiliares legadas.
 - [x] Validar todas as traduções por paridade de chaves.
 - [-] Adicionar navegação por teclado; cartões de download agora são focáveis e selecionáveis com Enter/Espaço, e selects personalizados aceitam setas, Home/End, Enter/Espaço e Escape, ignorando opções desabilitadas. O fluxo manual completo por todas as janelas ainda precisa ser validado.
 - [x] Adicionar foco visível consistente; tokens globais aplicam anel de foco de alto contraste em controles navegáveis por teclado, inclusive onde estilos específicos removem o outline nativo.
-- [-] Revisar labels e descrição acessível de botões apenas com ícone; controles do titlebar, atualizador, assistente, gradiente, categorias e janelas de confirmação/progresso receberam `aria-label`. Falta auditoria das janelas auxiliares legadas.
+- [-] Revisar labels e descrição acessível de botões apenas com ícone; controles do titlebar, atualizador, gradiente, categorias e janelas de confirmação/progresso receberam `aria-label`. Falta auditoria das janelas auxiliares legadas.
 - [-] Validar contraste nos temas claro e escuro; selects e seletor de pasta deixaram de forçar fundo escuro no tema claro e usam tokens semânticos. Ainda falta inspeção visual completa dos dois temas.
 - [x] Respeitar preferência de redução de movimento; `prefers-reduced-motion` desativa transições, animações repetidas e rolagem suave em todas as janelas.
 - [ ] Testar escalas do Windows e zoom interno combinados.

@@ -6,6 +6,7 @@ import {
   Palette,
   Download,
   Folder,
+  Volume2,
   Settings2,
   Gauge,
   Sliders,
@@ -497,6 +498,34 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         />
                       </div>
                     </div>
+                    <div className="cfg-item-row cfg-sound-row">
+                      <div className="cfg-item-left">
+                        <Volume2 size={18} className="cfg-item-icon" />
+                        <div>
+                          <strong className="cfg-item-label">{t.settings.downloadsTab.soundOnCompleteLabel}</strong>
+                          <span className="cfg-item-desc">{t.settings.downloadsTab.soundOnCompleteDesc}</span>
+                        </div>
+                      </div>
+                      <div className="cfg-item-right cfg-sound-controls">
+                        <button
+                          type="button"
+                          className="cfg-sound-preview"
+                          onClick={() => void invoke("play_completion_sound").catch((cause) => setError(ipcErrorMessage(cause, t.settings.downloadsTab.soundTestFailed)))}
+                        >
+                          <Play size={12} aria-hidden="true" />
+                          {t.settings.downloadsTab.testSound}
+                        </button>
+                        <Toggle
+                          label={t.settings.downloadsTab.soundOnCompleteLabel}
+                          checked={draft.playSoundOnComplete ?? true}
+                          onChange={(val) => {
+                            const next = { ...draft, playSoundOnComplete: val };
+                            setDraft(next);
+                            void save(next);
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -961,12 +990,10 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
           <SettingsAdvancedTab
             t={t}
             launchOnStartup={draft.launchOnStartup}
-            showAiAssistant={draft.showAiAssistant ?? false}
             onLaunchOnStartupChange={(value) => {
               update("launchOnStartup", value);
               void setLaunchOnStartup(value).catch(console.error);
             }}
-            onShowAiAssistantChange={(value) => update("showAiAssistant", value)}
             onOpenBrowserIntegration={openBrowserIntegration}
             onOpenDebugWindow={openDebugWindow}
             onExportPreferences={exportPreferences}

@@ -1,6 +1,36 @@
 use reqwest::Url;
 
 #[tauri::command]
+pub async fn play_completion_sound() -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        return tokio::task::spawn_blocking(|| {
+            use windows_sys::Win32::Media::Audio::{
+                PlaySoundW, SND_MEMORY, SND_NODEFAULT, SND_SYNC,
+            };
+            static SOUND: &[u8] = include_bytes!("../../assets/download-complete.wav");
+            // SND_MEMORY is synchronous: keep the embedded WAV alive until playback ends.
+            let played = unsafe {
+                PlaySoundW(
+                    SOUND.as_ptr().cast::<u16>(),
+                    std::ptr::null_mut(),
+                    SND_MEMORY | SND_NODEFAULT | SND_SYNC,
+                )
+            };
+            if played == 0 {
+                Err("Não foi possível reproduzir o som de conclusão.".into())
+            } else {
+                Ok(())
+            }
+        })
+        .await
+        .map_err(|error| error.to_string())?;
+    }
+    #[cfg(not(windows))]
+    Ok(())
+}
+
+#[tauri::command]
 pub fn open_folder(path: String) -> Result<(), String> {
     let canonical =
         crate::download::paths::canonical_existing_directory(std::path::Path::new(&path))?;

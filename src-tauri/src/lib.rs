@@ -337,6 +337,7 @@ pub fn run() {
             commands::browser_extension::get_firefox_xpi_path,
             commands::system::open_folder,
             commands::system::open_url,
+            commands::system::play_completion_sound,
             commands::transfer::start_drag_folder,
             commands::transfer::parse_torrent_info,
             commands::transfer::confirm_torrent,

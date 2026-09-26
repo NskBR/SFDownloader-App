@@ -2,6 +2,13 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.5 — em preparação
+
+### Downloads e interface
+
+- Som discreto ao concluir downloads em segundo plano, com opção para desativar e botão para testar o som.
+- Removidos o assistente flutuante, sua opção nas configurações e referências relacionadas.
+
 ## 1.0.4 — 13/09/2026
 
 ### Atualização do aplicativo

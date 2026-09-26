@@ -1,6 +1,6 @@
 [package]
 name = "SFDownloader"
-version = "1.0.4"
+version = "1.0.5"
 description = "A modern desktop download manager"
 authors = ["SFDownloader Contributors"]
 edition = "2021"
@@ -39,7 +39,7 @@ drag = "2.1.1"
 librqbit = "9.0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_Media_Audio"] }
 
 [dev-dependencies]
 sevenz-rust2 = { version = "0.21.2", features = ["aes256", "compress"] }

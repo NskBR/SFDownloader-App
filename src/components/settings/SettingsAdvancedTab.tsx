@@ -1,4 +1,4 @@
-import { Bot, Bug, Clock, Download, Globe, Settings2, Upload } from "lucide-react";
+import { Bug, Clock, Download, Globe, Settings2, Upload } from "lucide-react";
 import { useRef } from "react";
 import type { Translations } from "../../i18n";
 import { Toggle } from "../ui/Toggle";
@@ -6,9 +6,7 @@ import { Toggle } from "../ui/Toggle";
 interface SettingsAdvancedTabProps {
   t: Translations;
   launchOnStartup: boolean;
-  showAiAssistant: boolean;
   onLaunchOnStartupChange: (value: boolean) => void;
-  onShowAiAssistantChange: (value: boolean) => void;
   onOpenBrowserIntegration: () => void;
   onOpenDebugWindow: () => void;
   onExportPreferences: () => void;
@@ -19,9 +17,7 @@ interface SettingsAdvancedTabProps {
 export function SettingsAdvancedTab({
   t,
   launchOnStartup,
-  showAiAssistant,
   onLaunchOnStartupChange,
-  onShowAiAssistantChange,
   onOpenBrowserIntegration,
   onOpenDebugWindow,
   onExportPreferences,
@@ -55,18 +51,6 @@ export function SettingsAdvancedTab({
             </div>
           </div>
 
-          <div className="cfg-item-row">
-            <div className="cfg-item-left">
-              <Bot size={18} className="cfg-item-icon" />
-              <div>
-                <strong className="cfg-item-label">{t.settings.advancedTab.floatingAiLabel}</strong>
-                <span className="cfg-item-desc">{t.settings.advancedTab.floatingAiDesc}</span>
-              </div>
-            </div>
-            <div className="cfg-item-right">
-              <Toggle checked={showAiAssistant} onChange={onShowAiAssistantChange} />
-            </div>
-          </div>
         </div>
       </div>
 

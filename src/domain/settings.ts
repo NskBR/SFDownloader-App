@@ -59,12 +59,12 @@ export interface AppSettings {
   customCategories: CustomCategory[];
   autoStartDownloads?: boolean;
   openFolderOnComplete?: boolean;
+  playSoundOnComplete?: boolean;
   autoRenameDuplicates?: boolean;
   downloadPriority?: string;
   speedLimitText?: string;
   secondaryDownloadFolder?: string;
   secondaryFolderEnabled?: boolean;
-  showAiAssistant?: boolean;
 }
 
 export const defaultSettings: AppSettings = {
@@ -96,7 +96,6 @@ export const defaultSettings: AppSettings = {
     ],
   },
   sidebarAnimation: true,
-  showAiAssistant: false,
   customCategories: [
     { id: "cat-jogos", name: "Jogos", extensions: ["iso", "rom", "pkg"] },
     { id: "cat-series", name: "Séries", extensions: ["mkv", "mp4"] },
@@ -104,6 +103,7 @@ export const defaultSettings: AppSettings = {
   ],
   autoStartDownloads: true,
   openFolderOnComplete: false,
+  playSoundOnComplete: true,
   autoRenameDuplicates: false,
   downloadPriority: "Alta",
   speedLimitText: "Sem limite",

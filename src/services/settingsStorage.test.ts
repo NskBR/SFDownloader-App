@@ -74,6 +74,13 @@ describe("settings storage", () => {
     expect(invoke).toHaveBeenCalledWith("update_extension_theme", expect.any(Object));
   });
 
+  it("preserves the disabled completion sound in storage and backups", () => {
+    const settings = { ...defaultSettings, playSoundOnComplete: false };
+    saveSettings(settings);
+    expect(loadSettings().playSoundOnComplete).toBe(false);
+    expect(importSettingsBackup(exportSettingsBackup(settings)).playSoundOnComplete).toBe(false);
+  });
+
   it("applies a remote update without emitting another native event", () => {
     const external = { ...defaultSettings, language: "en-US" as const, uiScale: 1.25 };
     expect(applyExternalSettings(external)).toEqual(external);

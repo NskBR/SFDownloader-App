@@ -271,6 +271,41 @@
   flex-shrink: 0;
 }
 
+.cfg-sound-row {
+  flex-wrap: wrap;
+}
+
+.cfg-sound-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.cfg-sound-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--white-10);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text, var(--white));
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cfg-sound-preview:hover,
+.cfg-sound-preview:focus-visible {
+  border-color: var(--ember-solid, var(--cyan));
+  color: var(--ember-solid, var(--cyan));
+  outline: none;
+}
+
 /* ==========================================================================
    ABA ARQUIVOS — CATEGORIAS & ORGANIZAÇÃO DE ARQUIVOS (FOTO DE REFERÊNCIA)
    ========================================================================== */
@@ -713,7 +748,12 @@
   top: -4px;
   right: -6px;
   color: var(--accent-warning);
-  animation: ai-pulse 2s ease-in-out infinite alternate;
+  animation: cfg-sparkle-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes cfg-sparkle-pulse {
+  from { opacity: 0.4; filter: blur(6px); }
+  to { opacity: 0.8; filter: blur(12px); }
 }
 
 .cfg-mini-sidebar {

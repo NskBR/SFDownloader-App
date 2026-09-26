@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { getAllWindows } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { AppShell } from "../components/layout/AppShell";
 import { SettingsPage } from "../pages/SettingsPage";
@@ -12,7 +13,8 @@ import { useSettings } from "../hooks/useSettings";
 import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
 import { applyThemeSettings } from "../services/theme";
-import { FloatingAiWidget } from "../components/ui/FloatingAiWidget";
+import { completionSoundGate } from "../domain/completionSound";
+import type { DownloadProgress } from "../domain/download";
 import { UpdateBanner } from "../components/UpdateBanner";
 import { SplashScreen } from "../components/ui/SplashScreen";
 interface BrowserDownloadRequest { requestId:string;url:string;fileName:string|null;fileSize:number|null;mimeType:string|null }
@@ -23,6 +25,8 @@ export function App() {
   const [activePage, setActivePage] = useState<PageId>(pageFromHash);
   const previousPage=useRef<PageId>("active");
   const { settings, persist, saved } = useSettings();
+  const currentSettings = useRef(settings);
+  currentSettings.current = settings;
   const processedLinks=useRef(new Set<string>(JSON.parse(sessionStorage.getItem("sf-downloader.processed-links")||"[]")));
   const processedTorrentPaths=useRef(new Set<string>());
   const [updateInfo, setUpdateInfo] = useState<downloadService.UpdateCheckResult | null>(null);
@@ -66,6 +70,22 @@ export function App() {
   useEffect(() => {
     void invoke("cache_theme_settings", { themeSettings: settings }).catch(console.error);
   }, [settings]);
+  useEffect(() => {
+    let disposed = false;
+    const acceptCompletion = completionSoundGate();
+    const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
+      if (!acceptCompletion(payload) || !currentSettings.current.playSoundOnComplete) return;
+      void getAllWindows().then((windows) => Promise.all(windows.map((window) => window.isFocused()))).then((focused) => {
+        if (!focused.some(Boolean) && !disposed && currentSettings.current.playSoundOnComplete) {
+          return invoke("play_completion_sound");
+        }
+      }).catch(() => {});
+    });
+    return () => {
+      disposed = true;
+      void listener.then((unlisten) => unlisten());
+    };
+  }, []);
   useEffect(()=>{void getCurrentWebview().setZoom(settings.uiScale).catch(console.error)},[settings.uiScale]);
   useEffect(() => { const handler = () => setActivePage(pageFromHash()); addEventListener("hashchange", handler); return () => removeEventListener("hashchange", handler); }, []);
   const navigate = (page: PageId) => { if(page!=="settings")previousPage.current=page;localStorage.setItem("sf-downloader.last-page",page); location.hash = page; setActivePage(page); };
@@ -103,7 +123,6 @@ export function App() {
      <>
        {splashVisible && <SplashScreen fade={splashFading} onReady={revealMainAfterSplashPaint} />}
        <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation} updateInfo={updateInfo}>{content}</AppShell>
-       {!["settings", "metrics", "profile"].includes(activePage) && (settings.showAiAssistant ?? false) && <FloatingAiWidget />}
      </>
    );
 }

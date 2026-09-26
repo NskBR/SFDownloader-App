@@ -143,10 +143,10 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     customCategories: categories,
     autoStartDownloads: booleanFrom(value.autoStartDownloads, base.autoStartDownloads ?? true),
     openFolderOnComplete: booleanFrom(value.openFolderOnComplete, base.openFolderOnComplete ?? false),
+    playSoundOnComplete: booleanFrom(value.playSoundOnComplete, base.playSoundOnComplete ?? true),
     autoRenameDuplicates: booleanFrom(value.autoRenameDuplicates, base.autoRenameDuplicates ?? false),
     downloadPriority: stringFrom(value.downloadPriority, base.downloadPriority ?? "Alta"),
     speedLimitText: stringFrom(value.speedLimitText, base.speedLimitText ?? "Sem limite"),
-    showAiAssistant: booleanFrom(value.showAiAssistant, base.showAiAssistant ?? false),
   };
 }
 

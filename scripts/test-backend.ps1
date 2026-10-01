@@ -8,11 +8,13 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $rustProject = Join-Path $projectRoot 'src-tauri'
 $previousRustFlags = [Environment]::GetEnvironmentVariable('CARGO_ENCODED_RUSTFLAGS', 'Process')
 $manifestDependency = "link-arg=/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'"
+$testExitCode = 0
 
 try {
     $env:CARGO_ENCODED_RUSTFLAGS = @('-C', 'link-arg=/MANIFEST:EMBED', '-C', $manifestDependency) -join [char]0x1f
     Push-Location $rustProject
     cargo test --lib -- @TestArgs
+    $testExitCode = $LASTEXITCODE
 }
 finally {
     if ($null -eq $previousRustFlags) {
@@ -23,3 +25,5 @@ finally {
     }
     Pop-Location
 }
+
+exit $testExitCode

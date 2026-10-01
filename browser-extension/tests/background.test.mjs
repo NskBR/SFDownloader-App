@@ -93,6 +93,7 @@ async function loadBackground(
   };
   const fetch = async (url, options = {}) => {
     if (url.endsWith("/sync")) {
+      if (testOptions.failSync) throw new Error("App closed");
       return {
         ok: true,
         json: async () => ({ token: "token", fileExts: testOptions.fileExts || [".ZIP"], blockedHosts: [] }),
@@ -103,7 +104,8 @@ async function loadBackground(
     return { ok: true };
   };
   const source = await readFile(new URL("../src/background.js", import.meta.url), "utf8");
-  vm.runInNewContext(source, {
+  const youtubeSource = await readFile(new URL("../src/youtube-url.js", import.meta.url), "utf8");
+  vm.runInNewContext(`${youtubeSource}\n${source}`, {
     URL,
     chrome,
     console,
@@ -116,9 +118,9 @@ async function loadBackground(
   return { cookieUrls, listeners, posted, storageState, createdTabs, iconCalls, cancelledDownloads, erasedDownloads };
 }
 
-function sendMessage(listener, message) {
+function sendMessage(listener, message, sender = {}) {
   return new Promise((resolve) => {
-    const keepChannelOpen = listener(message, {}, resolve);
+    const keepChannelOpen = listener(message, sender, resolve);
     assert.equal(keepChannelOpen, true);
   });
 }
@@ -329,4 +331,78 @@ test("uses the Firefox browserAction API when Chrome action is unavailable", asy
 
   assert.equal(storageState.connected, true);
   assert.ok(iconCalls.length > 0);
+});
+
+test("YouTube button sends a canonical video URL without cookies or observed credentials", async () => {
+  const { listeners, cookieUrls, posted } = await loadBackground();
+  const response = await sendMessage(listeners.message.first(), {
+    type: "youtube-download", url: "https://www.youtube.com/watch?v=NgA_JGCbEWE&t=30",
+  }, { url: "https://www.youtube.com/", frameId: 0 });
+  assert.equal(response.ok, true);
+  assert.equal(response.delivery, "bridge");
+  assert.deepEqual(cookieUrls, []);
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body), {
+    token: "token", url: "https://www.youtube.com/watch?v=NgA_JGCbEWE", requestHeaders: {},
+  });
+});
+
+test("YouTube button preserves Music URLs and does not use file extension filters", async () => {
+  const { listeners, posted } = await loadBackground({ captureEnabled: true, disabledExtensions: [".MP3", ".MP4"] });
+  const response = await sendMessage(listeners.message.first(), {
+    type: "youtube-download", url: "https://music.youtube.com/watch?v=NgA_JGCbEWE&t=2",
+  }, { url: "https://music.youtube.com/watch?v=NgA_JGCbEWE" });
+  assert.equal(response.ok, true);
+  assert.equal(JSON.parse(posted.at(-1).options.body).url, "https://music.youtube.com/watch?v=NgA_JGCbEWE");
+});
+
+test("playlist action sends only the canonical public playlist without credentials", async () => {
+  const { listeners, cookieUrls, posted } = await loadBackground();
+  const response = await sendMessage(listeners.message.first(), {type:"youtube-download", url:"https://www.youtube.com/playlist?list=PL0123456789_test&index=5"}, {url:"https://www.youtube.com/playlist?list=PL0123456789_test", frameId:0});
+  assert.equal(response.ok, true);
+  assert.deepEqual(cookieUrls, []);
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body), {token:"token",url:"https://www.youtube.com/playlist?list=PL0123456789_test",requestHeaders:{}});
+});
+
+test("Mix action preserves its seed video and list while dropping tracking and credentials", async () => {
+  const { listeners, cookieUrls, posted } = await loadBackground();
+  const source = "https://www.youtube.com/watch?v=NgA_JGCbEWE&list=RDMM&index=5&t=30";
+  const response = await sendMessage(listeners.message.first(), {type:"youtube-download",url:source}, {url:source,frameId:0});
+  assert.equal(response.ok,true);
+  assert.deepEqual(cookieUrls,[]);
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body), {token:"token",url:"https://www.youtube.com/watch?v=NgA_JGCbEWE&list=RDMM",requestHeaders:{}});
+});
+
+test("YouTube button rejects lookalike hosts, unsupported pages and untrusted frames", async () => {
+  const { listeners, posted, createdTabs, cookieUrls } = await loadBackground();
+  const url = "https://www.youtube.com/watch?v=NgA_JGCbEWE";
+  for (const [target, sender] of [
+    ["https://www.youtube.com.evil.test/watch?v=NgA_JGCbEWE", { url }],
+    ["https://www.youtube.com/playlist?list=PL_TEST", { url }],
+    [url, { url: "https://evil.test/" }], [url, { url, frameId: 1 }], [url, {}],
+  ]) {
+    assert.equal((await sendMessage(listeners.message.first(), { type: "youtube-download", url: target }, sender)).ok, false);
+  }
+  assert.deepEqual(posted, []);
+  assert.deepEqual(createdTabs, []);
+  assert.deepEqual(cookieUrls, []);
+});
+
+test("YouTube button launches the installed app when the bridge is unavailable", async () => {
+  for (const options of [{ failSync: true }, { failDownload: true }]) {
+    const { listeners, createdTabs } = await loadBackground(undefined, options);
+    const url = "https://www.youtube.com/watch?v=NgA_JGCbEWE";
+    const response = await sendMessage(listeners.message.first(), { type: "youtube-download", url }, { url });
+    assert.equal(response.delivery, "protocol");
+    assert.equal(createdTabs[0].url, `sfdownloader://download?url=${encodeURIComponent(url)}`);
+  }
+});
+
+test("disabled capture prevents manual media dispatch", async () => {
+  const { listeners, posted, createdTabs, storageState } = await loadBackground();
+  storageState.captureEnabled = false;
+  await sendMessage(listeners.message.first(), { type: "capture-toggled", enabled: false });
+  const url = "https://www.youtube.com/watch?v=NgA_JGCbEWE";
+  assert.equal((await sendMessage(listeners.message.first(), { type: "youtube-download", url }, { url })).ok, false);
+  assert.equal(posted.filter(p => p.url.endsWith("/download")).length, 0);
+  assert.deepEqual(createdTabs, []);
 });

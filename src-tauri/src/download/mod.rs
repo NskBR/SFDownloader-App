@@ -4,6 +4,8 @@ pub mod error;
 pub mod extraction;
 pub mod filename;
 pub mod http_metadata;
+pub mod media;
+pub mod media_query;
 pub mod paths;
 pub mod preparation;
 pub mod retry;

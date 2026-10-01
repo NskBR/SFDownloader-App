@@ -119,6 +119,15 @@ CREATE INDEX IF NOT EXISTS idx_download_tasks_schedule ON download_tasks(schedul
 const MIGRATION_013: &str = r#"
 ALTER TABLE download_tasks ADD COLUMN torrent_selected_file_indexes TEXT;
 "#;
+const MIGRATION_014: &str = r#"
+CREATE TABLE media_downloads (
+  download_id TEXT PRIMARY KEY NOT NULL,
+  options TEXT NOT NULL,
+  phase TEXT NOT NULL DEFAULT 'queued',
+  last_error TEXT,
+  FOREIGN KEY(download_id) REFERENCES download_tasks(id) ON DELETE CASCADE
+);
+"#;
 
 const MIGRATION_012: &str = r#"
 CREATE TABLE IF NOT EXISTS global_download_schedule (
@@ -212,6 +221,12 @@ pub fn run(connection: &mut Connection) -> Result<()> {
         transaction.execute_batch("PRAGMA user_version = 13")?;
         transaction.commit()?;
     }
+    if version < 14 {
+        let transaction = connection.transaction()?;
+        transaction.execute_batch(MIGRATION_014)?;
+        transaction.execute_batch("PRAGMA user_version = 14")?;
+        transaction.commit()?;
+    }
     Ok(())
 }
 
@@ -247,6 +262,7 @@ mod tests {
             MIGRATION_011,
             MIGRATION_012,
             MIGRATION_013,
+            MIGRATION_014,
         ];
         for migration in migrations.iter().take(version as usize) {
             connection.execute_batch(migration).unwrap();
@@ -258,7 +274,7 @@ mod tests {
 
     #[test]
     fn every_supported_legacy_schema_upgrades_to_the_current_version() {
-        for version in 0..13 {
+        for version in 0..14 {
             let mut connection = Connection::open_in_memory().unwrap();
             if version > 0 {
                 apply_schema_through(&connection, version);
@@ -267,7 +283,7 @@ mod tests {
             let final_version: i64 = connection
                 .query_row("PRAGMA user_version", [], |row| row.get(0))
                 .unwrap();
-            assert_eq!(final_version, 13, "legacy schema v{version}");
+            assert_eq!(final_version, 14, "legacy schema v{version}");
             connection
                 .query_row(
                     "SELECT priority,queue_order FROM download_tasks LIMIT 1",

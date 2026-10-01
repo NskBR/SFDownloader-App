@@ -565,6 +565,33 @@ chrome.contextMenus.onClicked.addListener(info => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "youtube-download") {
+    const url = globalThis.sfYouTubeSource(message.url);
+    const senderUrl = _sender.url || _sender.tab?.url;
+    // Only our top-frame content script on an actual YouTube video may invoke this.
+    if (!url || !globalThis.sfIsYouTubePage(senderUrl) || (_sender.frameId || 0) !== 0) {
+      sendResponse({ ok: false });
+      return true;
+    }
+    void syncBridge().then(async () => {
+      if (!captureEnabledState || isBlockedHost(url)) throw new Error("YouTube integration disabled");
+      // This feature needs only the video URL, never browser cookies or captured headers.
+      if (bridge.connected) {
+        try {
+          const response = await fetch(`${BRIDGE}/download`, {
+            method: "POST",
+            body: JSON.stringify({ token: bridge.token, url, requestHeaders: {} }),
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return "bridge";
+        } catch { /* Explicit click may launch the installed app via its protocol. */ }
+      }
+      await launchProtocol(url);
+      return "protocol";
+    }).then(delivery => sendResponse({ ok: true, delivery }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
   if (message?.type === "intercept-link") {
     syncBridge().then(() => {
       const handled = captureEnabledState && shouldTakeOver(message.url, message.filename);

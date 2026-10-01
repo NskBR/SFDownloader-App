@@ -113,7 +113,9 @@ pub fn start_scheduler(
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
         loop {
             interval.tick().await;
-            if crate::commands::updater::is_preparing_install() { continue; }
+            if crate::commands::updater::is_preparing_install() {
+                continue;
+            }
             run_due_schedules(&app, &database, &runtime, &browser_bridge).await;
         }
     });
@@ -157,7 +159,10 @@ async fn run_due_schedules(
             && global_schedule.pause_outside_schedule
             && global_decision == ScheduleDecision::Wait;
         let pause_for_task = task.pause_outside_schedule && decision == ScheduleDecision::Wait;
-        if active && (pause_for_global || pause_for_task) {
+        if active
+            && (pause_for_global || pause_for_task)
+            && !(task.download_type == "media" && task.status == DownloadStatus::Assembling)
+        {
             let _ = runtime.pause(&task.id);
             crate::commands::debug::log_info(
                 "scheduler",

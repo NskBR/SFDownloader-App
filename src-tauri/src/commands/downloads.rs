@@ -3,7 +3,8 @@ use crate::database::{
     repositories::{downloads, history},
     Database,
 };
-use tauri::State;
+use crate::download::runtime::DownloadRuntime;
+use tauri::{AppHandle, Manager, State};
 
 #[cfg(target_os = "windows")]
 fn shell_open(path: &std::path::Path) -> Result<(), String> {
@@ -167,16 +168,30 @@ pub fn update_download(
 }
 
 #[tauri::command]
-pub fn remove_download(
+pub async fn remove_download(
+    app: AppHandle,
+    runtime: State<'_, DownloadRuntime>,
     database: State<'_, Database>,
     browser_bridge: State<'_, crate::browser_bridge::BrowserBridge>,
     id: String,
 ) -> Result<bool, String> {
+    let is_active_media = {
+        let connection = database.connect()?;
+        downloads::find(&connection, &id)
+            .map_err(|error| error.to_string())?
+            .is_some_and(|task| task.download_type == "media" && runtime.has(&id))
+    };
+    if is_active_media {
+        crate::download::media::stop(&app, &database, &runtime, &id, false, false).await?;
+    }
     let connection = database.connect()?;
     let removed = downloads::remove(&connection, &id)
         .map_err(|error| format!("Falha ao remover download: {error}"))?;
     if removed {
         browser_bridge.remove_headers(&id);
+        if let Some(window) = app.get_webview_window(&format!("media-progress-{id}")) {
+            let _ = window.close();
+        }
     }
     Ok(removed)
 }

@@ -2,6 +2,22 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.6 — em preparo (01/10/2026)
+
+- Extensão local 0.3.6 com botão explícito no YouTube, navegação sem duplicação e abertura da confirmação de mídia usando somente a URL do vídeo.
+- XPI Firefox 0.3.6 atualizado e incorporado ao aplicativo, com verificação de compatibilidade com os scripts da extensão.
+- Confirmação e progresso de mídia redesenhados com painéis compactos, seletor de qualidade em largura total e os tokens de fundo e destaque personalizados do aplicativo.
+- Corrigida a extração do pacote de extensão pelo aplicativo para incluir os novos scripts e a logo, validando as dependências do manifesto.
+- Fluxo independente para vídeos, Shorts e YouTube Music, com janelas próprias de confirmação e progresso que seguem o tema do aplicativo.
+- MP4 nas resoluções disponíveis e MP3 em 128, 192, 256 ou 320 kbps, com capa e metadados.
+- Nomes com sufixo `-sfd`, organização por categoria e integração à fila, prioridade, limites, histórico, pausa e retomada.
+- Ferramentas yt-dlp, Deno, FFmpeg LGPL e ffprobe incluídas no pacote local, com versões e hashes fixados.
+- Validação do arquivo final antes da conclusão. Playlists públicas com seleção de faixas, pasta com nome da playlist e fila por música; links com `list=` reconhecidos como playlist. Mixes permitem selecionar até 50 faixas da consulta atual, preservando o vídeo de origem. Lives e autenticação ficam fora desta versão.
+- Consultas de mídia espaçadas em 5 segundos, cache breve e fila compartilhada entre janelas e workers. Limites de requisição do YouTube aplicam espera crescente de 60/120/240/300 segundos, com contagem regressiva e bloqueio de tentativas na confirmação.
+- Confirmação de playlist/Mix em duas colunas: informações, formato e destino à esquerda; filtro e lista à direita, com duração, seleção por atalhos e rolagem própria. O tema personalizado é preservado.
+- Atualizada a biblioteca TLS para rustls 0.23.45, corrigindo RUSTSEC-2026-0285.
+- Empacotamento local por versão, preservando releases anteriores e incluindo ZIP portátil completo com ferramentas de mídia e checksums SHA-256.
+
 ## 1.0.5 — 26/09/2026
 
 ### Downloads e interface

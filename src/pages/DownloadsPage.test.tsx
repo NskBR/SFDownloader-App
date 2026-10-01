@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DownloadTask } from "../domain/download";
 import { defaultSettings } from "../domain/settings";
@@ -17,6 +17,8 @@ vi.mock("../services/downloadService", () => ({
 }));
 
 const { DownloadsPage } = await import("./DownloadsPage");
+const { invoke } = await import("@tauri-apps/api/core");
+const { openDownloadConfirmation } = await import("../services/downloadService");
 
 function hookState(error: string | null, downloads: DownloadTask[] = []) {
   return {
@@ -36,11 +38,25 @@ function hookState(error: string | null, downloads: DownloadTask[] = []) {
 }
 
 describe("DownloadsPage empty and error states", () => {
-  beforeEach(() => {
+  it("opens a dedicated media confirmation while preserving HTTP and torrent routing", async () => {
+    useDownloads.mockReturnValue(hookState(null));
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    vi.mocked(invoke).mockClear();
+    vi.mocked(openDownloadConfirmation).mockClear();
+    render(<DownloadsPage settings={{...defaultSettings,rootDownloadFolder:"C:/Downloads"}} onSave={vi.fn()} filter="downloads" />);
+    const input = screen.getByRole("textbox");
+    fireEvent.paste(input, { clipboardData: { getData: () => "https://www.youtube.com/watch?v=NgA_JGCbEWE" } });
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("open_media_confirmation", { url: "https://www.youtube.com/watch?v=NgA_JGCbEWE" }));
+    expect(openDownloadConfirmation).not.toHaveBeenCalled();
+    fireEvent.paste(input, { clipboardData: { getData: () => "https://example.com/file.mp4" } });
+    await waitFor(() => expect(openDownloadConfirmation).toHaveBeenCalledWith(expect.any(String), "https://example.com/file.mp4"));
+    fireEvent.paste(input, { clipboardData: { getData: () => "magnet:?xt=urn:btih:123" } });
+    await waitFor(() => expect(openDownloadConfirmation).toHaveBeenCalledWith(expect.any(String), "magnet:?xt=urn:btih:123"));
+  });
   afterEach(() => {
     cleanup();
   });
-
+  beforeEach(() => {
     localStorage.clear();
     setError.mockClear();
   });

@@ -24,7 +24,7 @@ export interface DownloadTask {
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
-  downloadType?: "http" | "torrent";
+  downloadType?: "http" | "torrent" | "media";
   infoHash?: string | null;
   seeds?: number;
   peers?: number;

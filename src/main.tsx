@@ -12,12 +12,16 @@ import { TorrentProgressWindow } from "./pages/TorrentProgressWindow";
 import { TorrentFileSelectionWindow } from "./pages/TorrentFileSelectionWindow";
 import { BrowserIntegrationPage } from "./pages/BrowserIntegrationPage";
 import { DebugLogsWindow } from "./pages/DebugLogsWindow";
+import { MediaConfirmationWindow } from "./pages/MediaConfirmationWindow";
+import { MediaProgressWindow } from "./pages/MediaProgressWindow";
 import { applyExternalSettings, loadSettings, SETTINGS_STORAGE_KEY } from "./services/settingsStorage";
 import { applyThemeSettings } from "./services/theme";
 import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
 
 const label = getCurrentWindow().label;
+const mediaConfirmMatch = label.match(/^media-confirm-(.*)$/);
+const mediaProgressMatch = label.match(/^media-progress-(.*)$/);
 const torrentConfirmMatch = label.match(/^download-torrent-confirm-(.*)$/);
 const confirmationMatch = label.match(/^download-confirm-(.*)$/);
 const torrentProgressMatch = label.match(/^(?:torrent-progress-|download-torrent-live-)(.*)$/);
@@ -44,6 +48,9 @@ const applyWindowZoom = (scale: number) => {
 if (isMainWindow) {
   document.documentElement.classList.add("window-type-main");
   document.body.classList.add("window-type-main");
+} else if (mediaConfirmMatch || mediaProgressMatch) {
+  document.documentElement.classList.add("window-type-media");
+  document.body.classList.add("window-type-media");
 } else if (isConfirmationWindow || isTorrentConfirmation) {
   document.documentElement.classList.add("window-type-confirmation");
   document.body.classList.add("window-type-confirmation");
@@ -103,7 +110,11 @@ window.addEventListener("storage", (event) => {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {isDebugWindow ? (
+    {mediaConfirmMatch ? (
+      <MediaConfirmationWindow />
+    ) : mediaProgressMatch ? (
+      <MediaProgressWindow id={mediaProgressMatch[1]} />
+    ) : isDebugWindow ? (
       <DebugLogsWindow />
     ) : isTorrentConfirmation ? (
       <TorrentConfirmationPage token={torrentConfirmMatch![1]} />

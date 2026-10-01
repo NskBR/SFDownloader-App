@@ -8,7 +8,7 @@ export default defineConfig({
     strictPort: true,
     host: "127.0.0.1",
     watch: {
-      ignored: ["**/src-tauri/target/**", "**/target/**", "**/dist/**"],
+      ignored: ["**/src-tauri/target/**", "**/target/**", "**/dist/**", "**/src-tauri/resources/media-tools/**", "**/scratch/media-tools/**", "**/scratch/media-test-target/**", "**/release/**"],
     },
   },
 });

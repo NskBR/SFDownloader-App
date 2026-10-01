@@ -39,6 +39,7 @@ impl Drop for QueuePermit {
 const ACTION_NONE: u8 = 0;
 const ACTION_PAUSE: u8 = 1;
 const ACTION_CANCEL: u8 = 2;
+const ACTION_FINALIZING: u8 = 3;
 
 const PRIORITY_AGING_INTERVAL: Duration = Duration::from_secs(120);
 
@@ -82,9 +83,32 @@ impl TaskControl {
             bandwidth_changed: Arc::new(tokio::sync::Notify::new()),
         }
     }
-    pub fn pause(&self) {
-        self.action.store(ACTION_PAUSE, Ordering::SeqCst);
+    pub fn pause(&self) -> bool {
+        if self
+            .action
+            .compare_exchange(
+                ACTION_NONE,
+                ACTION_PAUSE,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            )
+            .is_err()
+        {
+            return false;
+        }
         self.cancellation.cancel();
+        true
+    }
+    pub fn begin_finalization(&self) -> bool {
+        self.action
+            .compare_exchange(
+                ACTION_NONE,
+                ACTION_FINALIZING,
+                Ordering::SeqCst,
+                Ordering::SeqCst,
+            )
+            .is_ok()
+            || self.action.load(Ordering::SeqCst) == ACTION_FINALIZING
     }
     pub fn cancel(&self, delete_files: bool) {
         self.delete_files.store(delete_files, Ordering::SeqCst);
@@ -97,6 +121,9 @@ impl TaskControl {
     }
     pub fn was_paused(&self) -> bool {
         self.action.load(Ordering::SeqCst) == ACTION_PAUSE
+    }
+    pub fn speed_limit(&self) -> i64 {
+        self.speed_limit.load(Ordering::Relaxed)
     }
     pub fn was_cancelled(&self) -> bool {
         self.action.load(Ordering::SeqCst) == ACTION_CANCEL
@@ -269,7 +296,9 @@ impl DownloadRuntime {
             .map_err(|_| "Falha ao acessar downloads ativos.".to_string())?;
         if let Some(control) = tasks.get(id) {
             if pause {
-                control.pause()
+                if !control.pause() {
+                    return Err("Aguarde a finalização antes de pausar.".into());
+                }
             } else {
                 control.cancel(delete_files)
             };
@@ -300,6 +329,21 @@ impl DownloadRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn media_finalization_blocks_pause_but_accepts_cancel() {
+        let control = TaskControl::new();
+        assert!(control.begin_finalization());
+        assert!(control.begin_finalization());
+        assert!(!control.pause());
+        assert!(!control.cancellation.is_cancelled());
+        control.cancel(false);
+        assert!(control.cancellation.is_cancelled());
+        assert!(control.was_cancelled());
+        assert!(!control.begin_finalization());
+        let paused = TaskControl::new();
+        assert!(paused.pause());
+        assert!(!paused.begin_finalization());
+    }
     #[test]
     fn pause_and_cancel_have_distinct_intents() {
         let paused = TaskControl::new();

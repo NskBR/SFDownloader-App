@@ -2,6 +2,8 @@
 
 Este documento reúne as justificativas de permissões e o uso de dados para Chrome Web Store, navegadores Chromium e Mozilla AMO.
 
+A versão 0.3.6 inclui integração explícita com o YouTube e não será submetida à Chrome Web Store. As informações abaixo documentam a integração geral; não constituem uma garantia de aprovação por lojas. O botão YouTube envia somente a URL do vídeo para abrir a confirmação de mídia no aplicativo.
+
 ## Finalidade única
 
 A extensão detecta downloads iniciados pelo usuário e os encaminha ao SF Downloader instalado na mesma máquina. Ela não oferece anúncios, analytics, telemetria, execução de código remoto nem comunicação com servidores do desenvolvedor.

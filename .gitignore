@@ -5,6 +5,7 @@ src-tauri/target/
 src-tauri/target-updater-test/
 *.log
 scratch/
+src-tauri/resources/media-tools/
 
 # Executaveis e instaladores locais de release
 release/
@@ -17,6 +18,7 @@ browser-extension/release/*.xpi
 !browser-extension/
 !browser-extension/release/
 !browser-extension/release/7c2944a3066543438b23-0.3.5.xpi
+!browser-extension/release/7c2944a3066543438b23-0.3.6.xpi
 
 # Backups e zips locais
 *.zip

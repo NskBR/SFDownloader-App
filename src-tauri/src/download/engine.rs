@@ -829,10 +829,12 @@ mod tests {
     }
 
     fn temporary_download_root() -> PathBuf {
-        std::env::temp_dir().join(format!(
+        let root = std::env::temp_dir().join(format!(
             "sf-downloader-engine-test-{}",
             uuid::Uuid::new_v4()
-        ))
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        root
     }
 
     async fn inspect_local_download(

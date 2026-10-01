@@ -59,6 +59,16 @@ function task(overrides: Partial<DownloadTask> = {}): DownloadTask {
 }
 
 describe("useDownloads", () => {
+  it("uses the final media size after conversion instead of transferred bytes", async () => {
+    listDownloads.mockResolvedValue([task({ downloadType: "media", totalDownloaded: 800, fileSize: 800 })]);
+    const { result } = renderHook(() => useDownloads(defaultSettings));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      listeners.get("download-progress")?.({ payload: { id: "download-1", downloaded: 100, total: 100, speed: 0, status: "completed", error: null } });
+    });
+    expect(result.current.downloads[0].totalDownloaded).toBe(100);
+    expect(result.current.downloads[0].fileSize).toBe(100);
+  });
   beforeEach(() => {
     listeners.clear();
     listDownloads.mockReset();

@@ -19,7 +19,7 @@ export function useDownloads(settings: AppSettings) {
             const existing = current.find((c) => c.id === item.id);
             const latestProg = latest.current.get(item.id);
             const isActive = ["downloading", "checking_files", "assembling", "extracting", "completed"].includes(item.status);
-            const maxDownloaded = isActive
+            const maxDownloaded = isActive && !(item.downloadType === "media" && item.status === "completed")
               ? Math.max(item.totalDownloaded, existing?.totalDownloaded ?? 0, latestProg?.downloaded ?? 0)
               : item.totalDownloaded;
             const maxSpeed = item.status === "downloading" && item.speedCurrent === 0
@@ -48,7 +48,7 @@ export function useDownloads(settings: AppSettings) {
             ? items.map((i) => {
                 if (i.id !== payload.id) return i;
                 const isActive = ["downloading", "checking_files", "assembling", "extracting", "completed"].includes(payload.status);
-                const nextDownloaded = isActive
+                const nextDownloaded = isActive && !(i.downloadType === "media" && payload.status === "completed")
                   ? Math.max(i.totalDownloaded, payload.downloaded)
                   : payload.downloaded;
                 const nextSpeed = payload.status === "downloading" && payload.speed === 0
@@ -134,9 +134,9 @@ export function useDownloads(settings: AppSettings) {
   };
   const resume = async (id: string) => {
     try {
-      await service.resumeDownload(id);
+      const resumed = await service.resumeDownload(id);
       setDownloads((items) =>
-        items.map((i) => (i.id === id ? { ...i, status: "downloading" } : i)),
+        items.map((i) => (i.id === id ? { ...i, status: i.downloadType === "media" ? (latest.current.get(id)?.status ?? resumed?.status ?? "pending") : "downloading" } : i)),
       );
     } catch (cause) {
       setError(

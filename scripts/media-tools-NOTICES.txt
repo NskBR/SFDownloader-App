@@ -1,0 +1,31 @@
+SFDownloader - bundled media tools (Windows x64)
+
+yt-dlp is a separate executable from https://github.com/yt-dlp/yt-dlp.
+Its source project is under the Unlicense; the official executable includes
+third-party components. See yt-dlp-LICENSE.txt and yt-dlp-third-party-licenses.txt.
+The official executable includes yt-dlp-ejs. No external plugins are loaded.
+
+Deno is a separate JavaScript runtime from https://github.com/denoland/deno.
+See deno-LICENSE.txt (MIT).
+
+FFmpeg and ffprobe: Copyright (c) 2000-2026 the FFmpeg developers.
+This distribution uses the LGPL shared build from BtbN/FFmpeg-Builds,
+without --enable-gpl or --enable-nonfree. It enables LGPL version 3.
+The SFDownloader executable launches FFmpeg/ffprobe as separate processes;
+FFmpeg's libav DLLs remain separate in the media-tools directory and the
+FFmpeg executables can run independently. SFDownloader verifies its bundled
+tool hashes; to use changed tools through SFDownloader, regenerate the
+verification manifest and rebuild this open-source app locally.
+See ffmpeg/LICENSE.txt and the GPL/LGPL license texts in ffmpeg-source.tar.gz.
+
+The exact FFmpeg source revision and the distributor's pinned build recipes
+are included as ffmpeg-source.tar.gz and ffmpeg-build-recipes.tar.gz.
+The latter contains dependency revisions, download locations, patches and
+the build instructions. The recorded configuration is included as
+ffmpeg-build-configuration.txt. Sources are not needed to run the app.
+Source project: https://ffmpeg.org/ ; build project:
+https://github.com/BtbN/FFmpeg-Builds
+
+Versions, immutable download URLs and SHA-256 hashes are pinned in
+scripts/media-tools.lock.json. Preparation and app builds run locally.
+Tools are updated together with SFDownloader releases.

@@ -55,6 +55,12 @@ pub async fn open_download_confirmation(
     token: String,
     url: String,
 ) -> Result<(), String> {
+    if crate::download::media::youtube_source(&url).is_ok() {
+        let window = app
+            .get_webview_window("main")
+            .ok_or("Janela principal indisponível.")?;
+        return crate::commands::media::open_media_confirmation(app, window, url).await;
+    }
     let is_torrent = url.starts_with("magnet:") || url.to_lowercase().ends_with(".torrent");
     let label = if is_torrent {
         format!("download-torrent-confirm-{}", token)
@@ -121,6 +127,21 @@ pub async fn open_download_confirmation(
 
 #[tauri::command]
 pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), String> {
+    if app
+        .state::<Database>()
+        .connect()
+        .ok()
+        .and_then(|c| downloads::find(&c, &id).ok().flatten())
+        .is_some_and(|t| t.download_type == "media")
+    {
+        return crate::commands::media::open_window(
+            &app,
+            &format!("media-progress-{id}"),
+            "Download de mídia",
+            440.0,
+            270.0,
+        );
+    }
     let is_torrent = app
         .state::<Database>()
         .connect()
@@ -327,6 +348,21 @@ pub async fn open_torrent_file_selection_window(
 
 #[tauri::command]
 pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), String> {
+    if app
+        .state::<Database>()
+        .connect()
+        .ok()
+        .and_then(|c| downloads::find(&c, &id).ok().flatten())
+        .is_some_and(|t| t.download_type == "media")
+    {
+        return crate::commands::media::open_window(
+            &app,
+            &format!("media-progress-{id}"),
+            "Download de mídia",
+            440.0,
+            270.0,
+        );
+    }
     let label = format!("download-{}", id);
     if let Some(window) = app.get_webview_window(&label) {
         let _ = window.unminimize();

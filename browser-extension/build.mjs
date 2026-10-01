@@ -15,7 +15,7 @@ for (const target of ["chromium", "firefox"]) {
   const out = join(dist, target);
   await mkdir(join(out, "icons"), { recursive: true });
   
-  for (const file of ["background.js", "content.js", "popup.html", "popup.css", "popup.js"]) {
+  for (const file of ["background.js", "background-worker.js", "content.js", "youtube-url.js", "youtube.js", "popup.html", "popup.css", "popup.js"]) {
     await cp(join(root, "src", file), join(out, file));
   }
   
@@ -28,6 +28,7 @@ for (const target of ["chromium", "firefox"]) {
   await cp(join(project, "src-tauri", "icons", "128x128.png"), join(out, "icons", "sf-large.png"));
   await cp(join(project, "src-tauri", "icons", "32x32_off.png"), join(out, "icons", "sf-small-off.png"));
   await cp(join(project, "src-tauri", "icons", "128x128_off.png"), join(out, "icons", "sf-large-off.png"));
+  await cp(join(project, "src", "assets", "sf-logo.svg"), join(out, "icons", "sf-logo.svg"));
   
   console.log(`Empacotando ${target} v${version}...`);
   

@@ -1,0 +1,33 @@
+{
+  "identifier": "com.sfdownloader.media-test",
+  "productName": "SFDownloader Media Test",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "SFDownloader Media Test",
+        "width": 1104,
+        "height": 611,
+        "minWidth": 1104,
+        "minHeight": 611,
+        "resizable": true,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "backgroundColor": "#0b0d12"
+      }
+    ]
+  },
+  "bundle": {
+    "fileAssociations": []
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "sfdownloader-media-test"
+        ]
+      }
+    }
+  }
+}

@@ -29,6 +29,14 @@ pub async fn cancel_download(
     let connection = database.connect()?;
     let task_opt = downloads::find(&connection, &id).map_err(|e| e.to_string())?;
 
+    if task_opt
+        .as_ref()
+        .is_some_and(|t| t.download_type == "media")
+    {
+        return crate::download::media::stop(&app, &database, &runtime, &id, false, delete_files)
+            .await;
+    }
+
     let is_torrent = task_opt.as_ref().is_some_and(|task| {
         task.download_type == "torrent" || task.original_url.starts_with("magnet:")
     });
@@ -204,6 +212,12 @@ pub async fn pause_download(
     runtime: State<'_, DownloadRuntime>,
     id: String,
 ) -> Result<bool, String> {
+    if downloads::find(&database.connect()?, &id)
+        .map_err(|e| e.to_string())?
+        .is_some_and(|t| t.download_type == "media")
+    {
+        return crate::download::media::stop(&app, &database, &runtime, &id, true, false).await;
+    }
     if let Ok(conn) = database.connect() {
         if let Ok(Some(task)) = downloads::find(&conn, &id) {
             if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {
@@ -332,6 +346,9 @@ pub async fn replace_download_url(
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "Download não encontrado.".to_string())?;
     let parsed = Url::parse(&new_url).map_err(|_| DownloadError::InvalidUrl.to_string())?;
+    if task.download_type == "media" {
+        return Err("Links de mídia são renovados automaticamente ao retomar o download.".into());
+    }
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err(DownloadError::UnsupportedUrlScheme.to_string());
     }
@@ -420,6 +437,31 @@ pub async fn resume_owned(
     };
     if task.status == crate::database::models::DownloadStatus::Completed {
         return Err("Este download já foi concluído.".into());
+    }
+
+    if task.download_type == "media" {
+        if runtime.has(&task.id) {
+            return Err(
+                "Esta mídia ainda está ativa ou encerrando. Aguarde antes de retomar.".into(),
+            );
+        }
+        crate::download::media::spawn(
+            app.clone(),
+            database.clone(),
+            runtime.clone(),
+            task.clone(),
+        )?;
+        let _ = crate::commands::media::open_window(
+            &app,
+            &format!("media-progress-{}", task.id),
+            "Download de mídia",
+            440.0,
+            270.0,
+        );
+        let connection = database.connect()?;
+        return downloads::find(&connection, &task.id)
+            .map_err(|error| error.to_string())?
+            .ok_or("Download não encontrado.".into());
     }
 
     if task.download_type == "torrent" || task.original_url.starts_with("magnet:") {

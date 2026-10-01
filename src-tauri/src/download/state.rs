@@ -41,7 +41,10 @@ pub fn can_transition(current: &DownloadStatus, next: &DownloadStatus) -> bool {
                 Downloading,
                 Paused | Assembling | Completed | Failed | Cancelled
             )
-            | (Paused, CheckingFiles | Downloading | Failed | Cancelled)
+            | (
+                Paused,
+                Pending | CheckingFiles | Downloading | Failed | Cancelled
+            )
             | (Assembling, Extracting | Completed | Failed | Cancelled)
             | (Extracting, Completed | Failed | Cancelled)
             | (Completed, Extracting)

@@ -1,6 +1,6 @@
 [package]
 name = "SFDownloader"
-version = "1.0.5"
+version = "1.0.6"
 description = "A modern desktop download manager"
 authors = ["SFDownloader Contributors"]
 edition = "2021"
@@ -24,7 +24,9 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
-tokio = { version = "1", features = ["fs", "io-util", "time", "macros", "sync", "net", "test-util"] }
+tokio = { version = "1", features = ["fs", "io-util", "time", "macros", "sync", "net", "test-util", "process"] }
+sha2 = "0.10"
+base64 = "0.22"
 tokio-util = "0.7"
 futures-util = "0.3"
 axum = "0.8"
@@ -39,7 +41,7 @@ drag = "2.1.1"
 librqbit = "9.0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_Media_Audio"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_Storage_FileSystem", "Win32_Security", "Win32_UI_Shell", "Win32_Media_Audio"] }
 
 [dev-dependencies]
 sevenz-rust2 = { version = "0.21.2", features = ["aes256", "compress"] }

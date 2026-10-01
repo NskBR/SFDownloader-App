@@ -1,6 +1,6 @@
 # SF Downloader Integration
 
-Versão atual: **0.3.5**.
+Versão atual: **0.3.6**.
 
 Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
@@ -14,6 +14,10 @@ Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 - Envia URL final, nome, tamanho, MIME, referer e headers necessários.
 - Cookies são consultados somente para a URL do download. Headers e cookies não são gravados em SQLite ou `localStorage`; quando uma retomada autenticada exige retenção, ficam no cofre de credenciais do sistema e são removidos ao encerrar a tarefa.
 - Usa `sfdownloader://` apenas como fallback quando a ponte local não está disponível.
+- Exibe a logo do SFDownloader e o botão **Baixar** antes dos controles de interação do YouTube. O clique abre a confirmação independente de MP4/MP3 no aplicativo; envia somente a URL do vídeo ou playlist, sem cookies ou headers do navegador. Links com `list=` abrem a seleção da playlist, e também há um botão no cabeçalho de playlists. Mixes preservam o vídeo de origem no link e abrem uma seleção de até 50 faixas retornadas na consulta.
+- Acompanha a troca de vídeos sem recarregar a página, restaura o botão quando a barra é reconstruída e respeita a opção de desativar a captura. Também há pontos de inserção para Shorts e o player do YouTube Music.
+
+O botão de mídia exige o aplicativo com o novo fluxo YouTube (1.0.6 ou desenvolvimento/teste). A versão 0.3.6 é distribuída fora da Chrome Web Store. O XPI Firefox 0.3.6 fornecido pelo mantenedor está incluído no aplicativo; o build não submete nem assina extensões automaticamente.
 
 O endpoint local exige um token aleatório criado a cada execução do aplicativo. A extensão obtém esse token pelo endpoint de sincronização.
 

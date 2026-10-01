@@ -204,7 +204,10 @@ mod tests {
         std::fs::write(root.join("second.bin"), b"two").unwrap();
         std::fs::write(root.join("unrelated.txt"), b"keep").unwrap();
         let removed = remove_known_torrent_files(&root, &files(), &[1]);
-        assert_eq!(removed, vec![root.join("second.bin")]);
+        assert_eq!(
+            removed,
+            vec![std::fs::canonicalize(&root).unwrap().join("second.bin")]
+        );
         assert!(root.join("first.bin").exists());
         assert!(!root.join("second.bin").exists());
         assert!(root.join("unrelated.txt").exists());
@@ -224,7 +227,7 @@ mod tests {
         std::fs::write(root.join("second.bin"), b"").unwrap();
         assert_eq!(
             remove_initialized_unselected_files(&root, &files(), &[0]),
-            vec![root.join("second.bin")]
+            vec![std::fs::canonicalize(&root).unwrap().join("second.bin")]
         );
         std::fs::remove_dir_all(root).unwrap();
     }

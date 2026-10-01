@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.0.5.** O SFDownloader está em beta privada para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão em preparo: 1.0.6. Última release publicada: 1.0.5.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -42,6 +42,20 @@ O próximo marco é concluir a validação manual de rede, torrent e extensões 
 
 ## Recursos
 
+### YouTube — versão 1.0.6 em preparo
+
+O novo fluxo abre uma janela independente ao colar um link de vídeo, Shorts ou YouTube Music na busca. Permite escolher MP4 na resolução disponível ou MP3 em 128/192/256/320 kbps, com capa e metadados. Os arquivos recebem o sufixo `-sfd` e seguem o destino e a organização por categoria configurados no aplicativo.
+
+A extensão 0.3.6 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.6 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
+
+Download e finalização aparecem como etapas separadas. As tarefas entram na fila geral, podem ser pausadas durante a transferência e retomadas usando os parciais, inclusive após reiniciar. A conclusão depende da validação do arquivo final com ffprobe. Links de playlist, incluindo vídeos com `list=`, abrem uma seleção de faixas com caixas de marcação, Ctrl+A e seleção por intervalo. Apenas as faixas escolhidas entram na fila e são salvas em uma pasta com o nome da playlist, com MP3 como padrão. A qualidade MP4 funciona como limite por vídeo, usando uma resolução nativa disponível sem ampliação. Playlists públicas de até 1.000 entradas são aceitas. Mixes oferecem até 50 faixas retornadas na consulta, mantendo a seleção fixa ao baixar. Lives e autenticação não são suportadas. Faixas indisponíveis identificadas na consulta são informadas; falhas posteriores aparecem individualmente na fila.
+
+As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reutilizam metadados recentes. Após um bloqueio de requisições do YouTube, a janela mostra uma contagem regressiva antes de permitir nova tentativa, com espera crescente de 60 segundos até 5 minutos. Esse controle reduz as requisições; a liberação do acesso continua dependendo do YouTube.
+
+Esta função integra a build local 1.0.6 e **ainda não faz parte da release 1.0.5 publicada**. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
+
+### Disponíveis na release atual
+
 - Downloads HTTP/HTTPS segmentados, com pausa, retomada e recuperação após reinicialização.
 - Verificação de ETag e Last-Modified antes de retomar um arquivo que pode ter mudado no servidor.
 - Fila persistente, prioridades, limite de velocidade e janela diária de download.
@@ -51,7 +65,7 @@ O próximo marco é concluir a validação manual de rede, torrent e extensões 
 - Métricas de downloads, exportação técnica e logs de diagnóstico sem credenciais.
 - Temas, cores de destaque, gradientes, escala de interface e Português (Brasil)/Inglês.
 - Integração com Chrome, Edge, Brave, Opera, Vivaldi e Firefox.
-- Atualização manual via GitHub Releases, sempre exigindo confirmação do usuário para abrir o instalador.
+- Atualização manual via GitHub Releases: após clicar para atualizar, o app baixa, verifica e instala silenciosamente, preservando os dados.
 
 ## BitTorrent/P2P — estado do motor
 
@@ -95,8 +109,8 @@ Para instalar, abra **Configurações → Integração com navegador**:
 
 1. Abra [Releases](https://github.com/NskBR/SFDownloader-App/releases) e baixe o instalador Windows `.exe`.
 2. Execute o instalador e siga as etapas do Windows.
-3. Quando a titlebar indicar uma atualização, escolha baixar a nova versão.
-4. Ao terminar, escolha quando abrir o instalador. O aplicativo não instala atualizações silenciosamente.
+3. Quando a titlebar indicar uma atualização, clique para atualizar o aplicativo.
+4. O app baixa e verifica o instalador, pausa as transferências e instala silenciosamente com uma janela de progresso. Ao concluir, reabre preservando histórico, configurações e parciais.
 
 O aplicativo ainda não possui assinatura de código pública. Verifique que o instalador veio do repositório oficial antes de ignorar qualquer alerta do Windows SmartScreen.
 
@@ -148,7 +162,7 @@ Para o backend no Windows:
 npm run release
 ```
 
-Os instaladores gerados são movidos para `release/`, uma pasta local ignorada pelo Git. A distribuição é feita manualmente; o repositório não publica builds por GitHub Actions.
+Os instaladores e o ZIP portátil completo são copiados para `release/v<versão>/`, uma pasta local ignorada pelo Git. Releases anteriores são preservadas. O ZIP inclui as ferramentas necessárias para mídia; o `.exe` avulso precisa da pasta `media-tools` ao lado para esse recurso. A distribuição é feita manualmente; o repositório não publica builds por GitHub Actions.
 
 ## Estrutura
 

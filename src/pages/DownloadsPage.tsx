@@ -40,6 +40,7 @@ import type { AppSettings } from "../domain/settings";
 import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
+import { isYouTubeUrl, openMediaConfirmation } from "../services/mediaService";
 import type { DownloadTask } from "../domain/download";
 import { sortDownloads } from "../domain/downloadOrdering";
 import { ipcErrorMessage } from "../domain/ipcErrors";
@@ -407,6 +408,10 @@ export function DownloadsPage({
     setStarting(true);
     setError(null);
     try {
+      if (isYouTubeUrl(url)) {
+        await openMediaConfirmation(url);
+        return;
+      }
       const token = crypto.randomUUID();
       localStorage.setItem(
         `sf-downloader.confirmation-${token}`,
@@ -718,7 +723,9 @@ export function DownloadsPage({
                       : item.status === "failed"
                         ? "failed"
                         : "waiting";
-              const statusLabel = isDownloading
+              const statusLabel = item.downloadType === "media" && item.status === "assembling"
+                ? (settings.language === "pt-BR" ? "Finalizando mídia" : "Finalizing media")
+                : isDownloading
                 ? t.downloads.statusDownloading
                 : isPaused
                   ? t.downloads.statusPaused

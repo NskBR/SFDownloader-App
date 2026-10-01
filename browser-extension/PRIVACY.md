@@ -1,6 +1,6 @@
 # Política de privacidade — SF Downloader Integration
 
-Última atualização: 4 de setembro de 2026.
+Última atualização: 1 de outubro de 2026.
 
 ## Resumo
 
@@ -9,6 +9,8 @@ A SF Downloader Integration existe somente para encaminhar downloads iniciados p
 ## Dados processados
 
 Quando o usuário inicia um download, a extensão pode processar a URL final, nome, tamanho, tipo MIME, página de origem e os headers/cookies estritamente necessários para acessar aquele arquivo. Cookies são consultados somente para o endereço do download.
+
+O botão de mídia no YouTube envia somente o link do vídeo após um clique explícito. Ele não consulta cookies, não envia headers de autenticação e não inicia o download antes da confirmação de formato e qualidade no aplicativo.
 
 As informações são enviadas exclusivamente para a ponte local do SF Downloader em `127.0.0.1`. Elas não trafegam para infraestrutura do desenvolvedor. A ponte exige um token aleatório renovado sempre que o aplicativo é iniciado.
 

@@ -163,10 +163,15 @@ pub fn recover_interrupted(connection: &Connection) -> Result<Vec<String>> {
         } else {
             std::fs::metadata(temp_path)
                 .ok()
+                .filter(|metadata| metadata.is_file())
                 .and_then(|metadata| i64::try_from(metadata.len()).ok())
                 .unwrap_or(*recorded)
         };
         connection.execute("UPDATE download_tasks SET status='paused',total_downloaded=?2,speed_current=0,updated_at=CURRENT_TIMESTAMP WHERE id=?1", params![id,actual])?;
+        connection.execute(
+            "UPDATE media_downloads SET phase='paused' WHERE download_id=?1",
+            [id],
+        )?;
     }
     Ok(interrupted.into_iter().map(|(id, _, _)| id).collect())
 }
@@ -528,6 +533,59 @@ mod tests {
             recover_interrupted(&connection).unwrap(),
             vec![second.id, first.id]
         );
+    }
+
+    #[test]
+    fn interrupted_media_preserves_options_partial_directory_and_progress() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        migrations::run(&mut connection).unwrap();
+        let root = std::env::temp_dir().join(format!("sf-media-recovery-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("media.webm.part"), [0_u8; 512]).unwrap();
+        let mut media_input = input();
+        media_input.download_type = "media".into();
+        media_input.temp_path = root.to_string_lossy().into_owned();
+        let task = create(&connection, media_input).unwrap();
+        let options = r#"{"format":"mp3","quality":192,"videoId":"jNQXAC9IVRw"}"#;
+        connection
+            .execute(
+                "INSERT INTO media_downloads(download_id,options,phase) VALUES(?1,?2,'converting')",
+                params![task.id, options],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "UPDATE download_tasks SET status='assembling',total_downloaded=512 WHERE id=?1",
+                [&task.id],
+            )
+            .unwrap();
+        recover_interrupted(&connection).unwrap();
+        let recovered = find(&connection, &task.id).unwrap().unwrap();
+        assert_eq!(recovered.status, DownloadStatus::Paused);
+        assert_eq!(recovered.total_downloaded, 512);
+        let saved: (String, String) = connection
+            .query_row(
+                "SELECT options,phase FROM media_downloads WHERE download_id=?1",
+                [&task.id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(saved, (options.into(), "paused".into()));
+        assert_eq!(
+            std::fs::metadata(root.join("media.webm.part"))
+                .unwrap()
+                .len(),
+            512
+        );
+        remove(&connection, &task.id).unwrap();
+        assert_eq!(
+            connection
+                .query_row("SELECT COUNT(*) FROM media_downloads", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

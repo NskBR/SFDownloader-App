@@ -392,6 +392,8 @@ export function AppShell({
               <li><Puzzle size={15} /> {t.about.featureBrowserExt}</li>
             </ul>
 
+            <p className="help-intro">{t.about.mediaTools}</p>
+
             <div className="help-meta">
               <div className="help-meta-row"><span>{t.about.version}</span><b>v{version}</b></div>
               <div className="help-meta-row">
@@ -418,6 +420,12 @@ export function AppShell({
                 onClick={() => openExternal("https://github.com/NskBR/SFDownloader-App")}
               >
                 {t.about.githubRepo}
+              </button>
+              <button
+                className="help-link"
+                onClick={() => openExternal(`https://github.com/NskBR/SFDownloader-App/releases/tag/v${version}`)}
+              >
+                {t.about.mediaLicenses}
               </button>
               <button onClick={() => setHelpOpen(false)}>{t.common.close}</button>
             </footer>

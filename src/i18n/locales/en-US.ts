@@ -403,6 +403,8 @@ export const enUS: Translations = {
     releaseStatus: "Distribution status",
     privateBetaFuture: "Private beta — public release planned for the future",
     githubRepo: "GitHub Repository",
+    mediaTools: "Media downloads use FFmpeg/ffprobe (LGPL 3), yt-dlp and Deno, with notices and sources available in the release.",
+    mediaLicenses: "Sources and licenses",
   },
 };
 

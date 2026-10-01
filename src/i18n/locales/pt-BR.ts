@@ -401,6 +401,8 @@ export const ptBR = {
     releaseStatus: "Status de distribuição",
     privateBetaFuture: "Beta privada — lançamento público planejado para o futuro",
     githubRepo: "Repositório no GitHub",
+    mediaTools: "Downloads de mídia usam FFmpeg/ffprobe (LGPL 3), yt-dlp e Deno, com avisos e fontes disponíveis na release.",
+    mediaLicenses: "Fontes e licenças",
   },
 };
 

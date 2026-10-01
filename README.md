@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão em preparo: 1.0.6. Última release publicada: 1.0.5.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.0.6.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -42,7 +42,7 @@ O próximo marco é concluir a validação manual de rede, torrent e extensões 
 
 ## Recursos
 
-### YouTube — versão 1.0.6 em preparo
+### YouTube — vídeo, música, playlists e Mixes
 
 O novo fluxo abre uma janela independente ao colar um link de vídeo, Shorts ou YouTube Music na busca. Permite escolher MP4 na resolução disponível ou MP3 em 128/192/256/320 kbps, com capa e metadados. Os arquivos recebem o sufixo `-sfd` e seguem o destino e a organização por categoria configurados no aplicativo.
 
@@ -52,7 +52,9 @@ Download e finalização aparecem como etapas separadas. As tarefas entram na fi
 
 As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reutilizam metadados recentes. Após um bloqueio de requisições do YouTube, a janela mostra uma contagem regressiva antes de permitir nova tentativa, com espera crescente de 60 segundos até 5 minutos. Esse controle reduz as requisições; a liberação do acesso continua dependendo do YouTube.
 
-Esta função integra a build local 1.0.6 e **ainda não faz parte da release 1.0.5 publicada**. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
+Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
+
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.6_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.6).
 
 ### Disponíveis na release atual
 

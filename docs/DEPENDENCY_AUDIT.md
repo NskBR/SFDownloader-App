@@ -28,7 +28,7 @@ Permanecem **7 avisos de manutenção e 2 de solidez** em dependências transiti
 
 yt-dlp, Deno, FFmpeg e ffprobe são executáveis externos e não fazem parte das árvores npm/Cargo. Seus pacotes e binários são fixados por SHA-256 em `scripts/media-tools.lock.json` e verificados no preparo local e no carregamento pelo aplicativo. FFmpeg usa a distribuição LGPL compartilhada, sem `--enable-gpl` ou `--enable-nonfree`.
 
-O pacote inclui os avisos obtidos dos fornecedores, os fontes exatos do FFmpeg e suas receitas de build. A conferência completa dos avisos/fontes das bibliotecas externas continua pendente antes da distribuição pública de mídia; essa verificação é distinta de `cargo audit` e `npm audit`. Veja [Downloads de mídia](media-downloads.md).
+O pacote inclui os avisos dos fornecedores, os fontes da revisão exata do FFmpeg, suas receitas com patches e um inventário de fontes por SHA-256. A conferência de distribuição reuniu fontes de bibliotecas externas, submódulos usados pelas receitas e pacotes Cargo, além dos avisos e textos de exceção do runtime GCC. Os 1.620 pacotes de fontes são publicados separadamente na mesma release; os avisos e o inventário acompanham os instaladores. Dependências de build/teste ou outros alvos podem estar no inventário sem serem utilizadas no Windows. Essa verificação é distinta de `cargo audit` e `npm audit`, e não demonstra reprodução binária bit a bit do ambiente do fornecedor. Veja [Downloads de mídia](media-downloads.md).
 
 ## Política de acompanhamento
 

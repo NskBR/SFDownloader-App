@@ -2,7 +2,7 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
-## 1.0.6 — em preparo (01/10/2026)
+## 1.0.6 — 01/10/2026
 
 - Extensão local 0.3.6 com botão explícito no YouTube, navegação sem duplicação e abertura da confirmação de mídia usando somente a URL do vídeo.
 - XPI Firefox 0.3.6 atualizado e incorporado ao aplicativo, com verificação de compatibilidade com os scripts da extensão.
@@ -17,6 +17,7 @@ Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 - Confirmação de playlist/Mix em duas colunas: informações, formato e destino à esquerda; filtro e lista à direita, com duração, seleção por atalhos e rolagem própria. O tema personalizado é preservado.
 - Atualizada a biblioteca TLS para rustls 0.23.45, corrigindo RUSTSEC-2026-0285.
 - Empacotamento local por versão, preservando releases anteriores e incluindo ZIP portátil completo com ferramentas de mídia e checksums SHA-256.
+- Avisos de terceiros incorporados aos instaladores, inventário de fontes com hashes e pacote separado com os fontes das ferramentas e dependências na mesma release.
 
 ## 1.0.5 — 26/09/2026
 

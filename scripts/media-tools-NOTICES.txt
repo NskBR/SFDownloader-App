@@ -7,6 +7,8 @@ The official executable includes yt-dlp-ejs. No external plugins are loaded.
 
 Deno is a separate JavaScript runtime from https://github.com/denoland/deno.
 See deno-LICENSE.txt (MIT).
+Its dependency notices are reproduced in media-tools-third-party-licenses.txt;
+the release source archive includes Deno and checksum-pinned Cargo sources.
 
 FFmpeg and ffprobe: Copyright (c) 2000-2026 the FFmpeg developers.
 This distribution uses the LGPL shared build from BtbN/FFmpeg-Builds,
@@ -23,6 +25,14 @@ are included as ffmpeg-source.tar.gz and ffmpeg-build-recipes.tar.gz.
 The latter contains dependency revisions, download locations, patches and
 the build instructions. The recorded configuration is included as
 ffmpeg-build-configuration.txt. Sources are not needed to run the app.
+The public release also includes SFDownloader_1.0.6_media-sources.zip, containing
+the supplier-pinned external library sources, gitlinks and registry sources,
+patch/build recipes and reproduced third-party license texts. Its complete
+inventory is media-sources.lock.json. Not every build/test dependency in this
+source inventory is compiled into the Windows executables. GCC runtime license
+and runtime-exception texts are included in the third-party notices.
+Download source code and notices from the same release as the binaries:
+https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.6
 Source project: https://ffmpeg.org/ ; build project:
 https://github.com/BtbN/FFmpeg-Builds
 

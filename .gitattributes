@@ -3,3 +3,8 @@
 *.bat text eol=crlf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+# Preserve exact bytes of checksum-pinned inventories and reproduced upstream notices.
+scripts/media-sources.lock.json -text whitespace=cr-at-eol
+scripts/media-tools-third-party-licenses.txt -text -diff whitespace=-trailing-space,-blank-at-eof
+scripts/media-gcc-*.txt -text whitespace=-blank-at-eof

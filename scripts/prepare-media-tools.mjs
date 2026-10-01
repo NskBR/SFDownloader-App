@@ -60,9 +60,16 @@ for (const notice of manifest.notices ?? []) {
   const target = path.join(dest, 'licenses', notice.name);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   if (!fs.existsSync(target) || hash(fs.readFileSync(target)) !== notice.sha256) {
-    const response = await fetch(notice.url);
-    if (!response.ok) throw new Error(`Licença/fonte indisponível: ${notice.name}`);
-    const data = Buffer.from(await response.arrayBuffer());
+    let data;
+    if (notice.localPath) {
+      const source = path.resolve(root, notice.localPath);
+      if (!source.startsWith(root + path.sep)) throw new Error('Caminho de aviso local inválido.');
+      data = fs.readFileSync(source);
+    } else {
+      const response = await fetch(notice.url);
+      if (!response.ok) throw new Error(`Licença/fonte indisponível: ${notice.name}`);
+      data = Buffer.from(await response.arrayBuffer());
+    }
     if (hash(data) !== notice.sha256) throw new Error(`SHA-256 inválido: ${notice.name}`);
     fs.writeFileSync(target, data);
   }

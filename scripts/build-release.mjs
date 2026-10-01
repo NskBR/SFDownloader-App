@@ -44,7 +44,14 @@ files.push(portableZip);
 const extensionVersion = JSON.parse(fs.readFileSync(path.join(root, 'browser-extension/manifest.firefox.json'), 'utf8')).version;
 copy(path.join(root, 'browser-extension/release', `sf_downloader_integration-chromium-${extensionVersion}.zip`));
 copy(path.join(root, 'browser-extension/release', `7c2944a3066543438b23-${extensionVersion}.xpi`), `sf_downloader_integration-firefox-${extensionVersion}.xpi`);
-const checksums = files.map(file => `${createHash('sha256').update(fs.readFileSync(file)).digest('hex')}  ${path.basename(file)}`).join('\n');
+const sourceZip = path.join(destination, `SFDownloader_${version}_media-sources.zip`);
+if (fs.existsSync(sourceZip)) files.push(sourceZip);
+else console.warn('O pacote de fontes de mídia deve ser preparado antes de publicar esta release.');
+const checksums = (await Promise.all(files.map(async file => {
+  const digest = createHash('sha256');
+  for await (const chunk of fs.createReadStream(file)) digest.update(chunk);
+  return `${digest.digest('hex')}  ${path.basename(file)}`;
+}))).join('\n');
 fs.writeFileSync(path.join(destination, 'SHA256SUMS.txt'), checksums + '\n');
 console.log(`Release ${version} preparada localmente: ${destination}`);
 for (const file of files) console.log(`  ${path.basename(file)}`);

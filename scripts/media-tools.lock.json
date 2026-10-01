@@ -24,6 +24,16 @@
       "name": "ffmpeg-source.tar.gz",
       "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/29e619e767",
       "sha256": "b30e29dfbf6a0a3de105f03bd9a6921be6f898e9a3ce1964eded4dc8ca4f6e8b"
+    },
+    {
+      "name": "media-tools-third-party-licenses.txt",
+      "localPath": "scripts/media-tools-third-party-licenses.txt",
+      "sha256": "cbdcf9ed13bdb03d360cc8fd0377bd52108cb4ad0dafaa87367857b7c153fad4"
+    },
+    {
+      "name": "media-sources.lock.json",
+      "localPath": "scripts/media-sources.lock.json",
+      "sha256": "a279ff4c1616c1720825e981a0992a5a5f377d8d43370ed639549a2a5d0e66fd"
     }
   ],
   "tools": [

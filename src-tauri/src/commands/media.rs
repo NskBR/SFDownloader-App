@@ -115,7 +115,7 @@ pub async fn open_media_confirmation(
     if window.label() != "main" {
         return Err("Abra o link pela janela principal.".into());
     }
-    let (canonical, id, _) = media::youtube_source(&url)?;
+    let (canonical, id, _) = media::media_source(&url)?;
     let playlist = media::is_playlist_source(&canonical);
     let label = if playlist {
         format!("media-confirm-playlist-{id}")
@@ -335,7 +335,11 @@ fn create_tasks(
     let tx = c.transaction().map_err(|e| e.to_string())?;
     let mut created = Vec::new();
     for (position, entry) in entries.into_iter().enumerate() {
-        let url = format!("https://www.youtube.com/watch?v={}", entry.video_id);
+        let url = if preview.playlist.is_some() {
+            format!("https://www.youtube.com/watch?v={}", entry.video_id)
+        } else {
+            preview.url.clone()
+        };
         if active.iter().any(|(u, f, q, dest)| {
             u == &url
                 && f == &options.format
@@ -442,6 +446,46 @@ pub async fn open_media_progress(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn social_tasks_keep_the_platform_url_and_identity() {
+        let root = std::env::temp_dir().join(format!("sf-social-queue-{}", uuid::Uuid::new_v4()));
+        let database = Database::initialize(&root.join("db")).unwrap();
+        let url = "https://www.instagram.com/reel/ABC_123/";
+        let preview=media::parse_preview(serde_json::json!({"id":"ABC_123","webpage_url":url,"title":"Reel","formats":[{"height":720,"ext":"mp4","vcodec":"h264","acodec":"aac"}]}),url.into(),"instagram-ABC_123".into(),false).unwrap();
+        let options = MediaOptions {
+            format: "mp4".into(),
+            quality: 720,
+            video_id: preview.video_id.clone(),
+            playlist: None,
+        };
+        let input = StartMediaInput {
+            format: "mp4".into(),
+            quality: 720,
+            root_folder: root.to_string_lossy().into_owned(),
+            auto_organize: false,
+            max_parallel_downloads: 1,
+            speed_limit_download: 0,
+            priority: 1,
+            selected_video_ids: None,
+        };
+        let tasks = create_tasks(
+            &database,
+            &preview,
+            &options,
+            &paths::canonical_existing_directory(&root).unwrap(),
+            &input,
+        )
+        .unwrap();
+        assert_eq!(tasks[0].original_url, url);
+        assert_eq!(
+            media::details(&database, &tasks[0].id)
+                .unwrap()
+                .options
+                .video_id,
+            "instagram-ABC_123"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn playlist_batch_persists_queue_context_and_reserves_duplicates_atomically() {

@@ -9,6 +9,19 @@ const service = await import("./downloadService");
 describe("download service", () => {
   beforeEach(() => invoke.mockClear());
 
+  it("organizes on demand without requesting creation of every category", async () => {
+    const settings = { ...defaultSettings, autoOrganizeEnabled: false, organizeFoldersOnDemand: true };
+    await service.startDownload("https://example.test/file.zip", settings);
+    await service.queueDownload("https://example.test/file.pdf", settings);
+    expect(invoke).toHaveBeenCalledWith("start_download", {
+      input: expect.objectContaining({ autoOrganize: true }),
+    });
+    expect(invoke).toHaveBeenCalledWith("queue_download", {
+      input: expect.objectContaining({ autoOrganize: true }),
+    });
+    expect(invoke).not.toHaveBeenCalledWith("create_category_folders", expect.anything());
+  });
+
   it("converts settings into the HTTP download IPC payload", async () => {
     const settings = {
       ...defaultSettings,

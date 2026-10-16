@@ -272,3 +272,10 @@ body {
 .status-text.connected {
   color: var(--st-connected);
 }
+
+.extension-update { width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font:inherit; font-size:12px; font-weight:600; line-height:1.4; cursor:pointer; }
+.extension-update:hover { border-color:var(--ember); color:var(--ember); }
+.extension-update:focus-visible { outline:2px solid var(--ember); outline-offset:2px; }
+.extension-update:disabled { cursor:wait; opacity:.65; }
+#update-result { display:block; overflow-wrap:anywhere; }
+#update-result:empty { display:none; }

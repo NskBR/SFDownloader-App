@@ -876,7 +876,7 @@ input::-ms-clear {
 .http-confirm-window .confirm-header-left { flex: 1; overflow: hidden; }
 .http-confirm-window .confirm-window-controls { flex-shrink: 0; }
 .http-confirm-window .confirm-title {
-  font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  font-family: var(--window-font, "Segoe UI Variable Text", "Segoe UI", sans-serif);
   font-size: 14px;
   font-weight: 600;
   color: var(--text);

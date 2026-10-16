@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SF Downloader Integration",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Integra downloads do navegador ao SF Downloader.",
   "permissions": [
     "activeTab",
@@ -43,6 +43,21 @@
       "js": [
         "youtube-url.js",
         "youtube.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*",
+        "https://tiktok.com/*",
+        "https://m.tiktok.com/*",
+        "https://www.instagram.com/*",
+        "https://instagram.com/*"
+      ],
+      "js": [
+        "youtube-url.js",
+        "social-media.js"
       ],
       "run_at": "document_idle",
       "all_frames": false

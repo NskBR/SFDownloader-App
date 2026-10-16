@@ -35,7 +35,7 @@ const input = (
 ) => ({
   url,
   rootFolder: rootFolder || settings.rootDownloadFolder,
-  autoOrganize: settings.autoOrganizeEnabled,
+  autoOrganize: settings.autoOrganizeEnabled || settings.organizeFoldersOnDemand,
   deleteArchiveAfterExtract: settings.deleteArchiveAfterExtract,
   maxConnections: settings.maxConnectionsPerDownload,
   maxParallelDownloads: settings.maxParallelDownloads,

@@ -39,6 +39,7 @@ pub struct MediaPreview {
     pub channel_verified: bool,
     pub file_stem: String,
     pub music: bool,
+    pub has_audio: bool,
     pub playlist: Option<PlaylistPreview>,
 }
 
@@ -97,8 +98,120 @@ fn valid_youtube_id(id: &str) -> bool {
 }
 
 pub fn is_playlist_source(url: &str) -> bool {
-    reqwest::Url::parse(url)
-        .is_ok_and(|u| u.path() == "/playlist" || u.query_pairs().any(|(k, _)| k == "list"))
+    reqwest::Url::parse(url).is_ok_and(|u| {
+        matches!(
+            u.host_str(),
+            Some("youtube.com" | "www.youtube.com" | "music.youtube.com")
+        ) && (u.path() == "/playlist" || u.query_pairs().any(|(k, _)| k == "list"))
+    })
+}
+
+pub fn source_platform(source: &str) -> &'static str {
+    match reqwest::Url::parse(source)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .as_deref()
+    {
+        Some("instagram.com" | "www.instagram.com") => "Instagram",
+        Some(
+            "tiktok.com" | "www.tiktok.com" | "m.tiktok.com" | "vm.tiktok.com" | "vt.tiktok.com",
+        ) => "TikTok",
+        _ => "YouTube",
+    }
+}
+
+/// Only individual public media URLs; no credentials, arbitrary hosts or profile pages.
+pub fn media_source(input: &str) -> Result<(String, String, bool), String> {
+    if let Ok(source) = youtube_source(input) {
+        return Ok(source);
+    }
+    let url = reqwest::Url::parse(input.trim()).map_err(|_| "Link de mídia inválido.")?;
+    if !matches!(url.scheme(), "https" | "http")
+        || !url.username().is_empty()
+        || url.password().is_some()
+        || url.port().is_some()
+    {
+        return Err("Link de mídia inválido.".into());
+    }
+    let all_parts: Vec<_> = url
+        .path_segments()
+        .into_iter()
+        .flatten()
+        .filter(|s| !s.is_empty())
+        .collect();
+    let parts = if matches!(url.host_str(), Some("instagram.com" | "www.instagram.com"))
+        && all_parts.len() == 3
+        && all_parts[0]
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b'.'))
+    {
+        &all_parts[1..]
+    } else {
+        all_parts.as_slice()
+    };
+    let valid_id = |id: &str| {
+        !id.is_empty()
+            && id.len() <= 128
+            && id
+                .bytes()
+                .all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
+    };
+    match url.host_str().unwrap_or_default() {
+        "instagram.com" | "www.instagram.com" => {
+            if parts.len() == 2
+                && matches!(parts[0], "p" | "reel" | "reels" | "tv")
+                && valid_id(parts[1])
+            {
+                let kind = if parts[0] == "reels" {
+                    "reel"
+                } else {
+                    parts[0]
+                };
+                return Ok((
+                    format!("https://www.instagram.com/{kind}/{}/", parts[1]),
+                    format!("instagram-{}", parts[1]),
+                    false,
+                ));
+            }
+        }
+        "tiktok.com" | "www.tiktok.com" | "m.tiktok.com" => {
+            if parts.len() == 3
+                && parts[0].starts_with('@')
+                && parts[0].len() > 1
+                && parts[0][1..].len() <= 128
+                && parts[0][1..]
+                    .bytes()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b'-' | b'.'))
+                && parts[1] == "video"
+                && (10..=25).contains(&parts[2].len())
+                && parts[2].bytes().all(|c| c.is_ascii_digit())
+            {
+                return Ok((
+                    format!("https://www.tiktok.com/{}/video/{}", parts[0], parts[2]),
+                    format!("tiktok-{}", parts[2]),
+                    false,
+                ));
+            }
+            if parts.len() == 2 && parts[0] == "t" && valid_id(parts[1]) {
+                return Ok((
+                    format!("https://www.tiktok.com/t/{}/", parts[1]),
+                    format!("tiktok-short-{}", parts[1]),
+                    false,
+                ));
+            }
+        }
+        "vm.tiktok.com" | "vt.tiktok.com" => {
+            if parts.len() == 1 && valid_id(parts[0]) {
+                return Ok((
+                    format!("https://{}/{}/", url.host_str().unwrap(), parts[0]),
+                    format!("tiktok-short-{}", parts[0]),
+                    false,
+                ));
+            }
+        }
+        _ => {}
+    }
+    Err("Use um link de vídeo do YouTube, TikTok ou Reel/post com vídeo do Instagram. Perfis, Stories e lives não são aceitos.".into())
 }
 
 pub fn is_mix_id(id: &str) -> bool {
@@ -389,7 +502,8 @@ async fn capture(
 pub fn friendly_error(raw: &str) -> String {
     let s = raw.to_lowercase();
     if super::media_query::is_rate_limit(raw) {
-        "O YouTube limitou temporariamente as consultas. Aguarde antes de tentar novamente.".into()
+        "A plataforma limitou temporariamente as consultas. Aguarde antes de tentar novamente."
+            .into()
     } else if s.contains("private")
         || s.contains("sign in")
         || s.contains("age-restricted")
@@ -403,8 +517,12 @@ pub fn friendly_error(raw: &str) -> String {
         "Não há espaço suficiente na pasta de destino.".into()
     } else if s.contains("requested format") {
         "Esta qualidade não está mais disponível. Abra novamente o link para escolher outra.".into()
-    } else if s.contains("403") || s.contains("429") || s.contains("bot") {
-        "O YouTube bloqueou temporariamente a consulta. Tente mais tarde ou atualize o aplicativo."
+    } else if s.contains("403")
+        || s.contains("429")
+        || s.contains("bot")
+        || s.contains("ip address is blocked")
+    {
+        "A plataforma bloqueou temporariamente a consulta. Tente mais tarde ou atualize o aplicativo."
             .into()
     } else {
         "Não foi possível baixar esta mídia. Confira a conexão e tente novamente.".into()
@@ -417,7 +535,22 @@ pub fn parse_preview(
     id: String,
     music: bool,
 ) -> Result<MediaPreview, String> {
-    if raw["id"].as_str() != Some(&id) || raw["_type"].as_str() == Some("playlist") {
+    let platform = source_platform(&url);
+    if platform != "YouTube" && raw["_type"].as_str() == Some("playlist") {
+        return Err(
+            "Posts com vários vídeos ainda não são aceitos. Use o link de um vídeo individual."
+                .into(),
+        );
+    }
+    let same_source = if platform == "YouTube" {
+        raw["id"].as_str() == Some(&id)
+    } else {
+        raw["webpage_url"]
+            .as_str()
+            .and_then(|u| media_source(u).ok())
+            .is_some_and(|(_, actual, _)| actual == id)
+    };
+    if !same_source || raw["_type"].as_str() == Some("playlist") {
         return Err("A origem não retornou o vídeo solicitado.".into());
     }
     if raw["is_live"].as_bool() == Some(true)
@@ -435,12 +568,13 @@ pub fn parse_preview(
         .ok_or("Não há formatos disponíveis para este vídeo.")?;
     let mut resolutions = BTreeSet::new();
     let mut frame_rates = HashMap::<u32, f64>::new();
-    let has_audio = formats
-        .iter()
-        .any(|f| f["acodec"].as_str().is_some_and(|c| c != "none"));
-    if !has_audio {
-        return Err("O vídeo não possui uma faixa de áudio disponível.".into());
-    }
+    let has_audio = formats.iter().any(|f| {
+        f["has_drm"].as_bool() != Some(true)
+            && (f["acodec"].as_str().is_some_and(|c| c != "none")
+                || (platform != "YouTube"
+                    && f["ext"].as_str() == Some("mp4")
+                    && f["acodec"].is_null()))
+    });
     for f in formats {
         if f["has_drm"].as_bool() == Some(true) {
             continue;
@@ -449,7 +583,10 @@ pub fn parse_preview(
             ["avc", "h264", "vp9", "vp09", "av01"]
                 .iter()
                 .any(|p| c.starts_with(p))
-        }) {
+        }) || (platform != "YouTube"
+            && f["ext"].as_str() == Some("mp4")
+            && f["vcodec"].as_str() != Some("none"))
+        {
             if let Some(h) = f["height"].as_u64().filter(|h| *h > 0 && *h <= 16384) {
                 resolutions.insert(h as u32);
                 if let Some(fps) = f["fps"]
@@ -467,16 +604,17 @@ pub fn parse_preview(
     Ok(MediaPreview {
         url,
         video_id: id,
+        has_audio,
         title: raw["title"]
             .as_str()
-            .unwrap_or("Vídeo do YouTube")
+            .unwrap_or("Vídeo")
             .chars()
             .take(300)
             .collect(),
         channel: raw["channel"]
             .as_str()
             .or(raw["uploader"].as_str())
-            .unwrap_or("YouTube")
+            .unwrap_or(platform)
             .chars()
             .take(150)
             .collect(),
@@ -486,7 +624,7 @@ pub fn parse_preview(
         frame_rates,
         view_count: raw["view_count"].as_u64(),
         channel_verified: raw["channel_is_verified"].as_bool().unwrap_or(false),
-        file_stem: media_file_stem(raw["title"].as_str().unwrap_or("Vídeo do YouTube")),
+        file_stem: media_file_stem(raw["title"].as_str().unwrap_or("Vídeo")),
         music,
         playlist: None,
     })
@@ -611,6 +749,7 @@ pub fn parse_playlist(raw: Value, url: String, id: String) -> Result<MediaPrevie
         view_count: None,
         channel_verified: false,
         music: true,
+        has_audio: true,
         playlist: Some(PlaylistPreview {
             entries,
             unavailable_count,
@@ -631,7 +770,7 @@ pub async fn inspect_with_wait(
     source: &str,
     notify: impl Fn(super::media_query::QueryWait),
 ) -> Result<MediaPreview, super::media_query::QueryError> {
-    let (url, _, _) = youtube_source(source)?;
+    let (url, _, _) = media_source(source)?;
     super::media_query::COORDINATOR
         .lookup(&url, notify, || inspect_uncached(app, &url))
         .await
@@ -641,7 +780,7 @@ async fn inspect_uncached(
     app: &AppHandle,
     source: &str,
 ) -> Result<MediaPreview, super::media_query::QueryError> {
-    let (url, id, music) = youtube_source(source)?;
+    let (mut url, mut id, music) = media_source(source)?;
     let tools = Tools::load(app)?;
     let mut command = tools.downloader();
     let playlist = is_playlist_source(&url);
@@ -669,8 +808,20 @@ async fn inspect_uncached(
             friendly_error(&error),
         ));
     }
-    let raw: Value =
-        serde_json::from_slice(&output).map_err(|_| "O YouTube retornou uma resposta inválida.")?;
+    let raw: Value = serde_json::from_slice(&output)
+        .map_err(|_| "A plataforma retornou uma resposta inválida.")?;
+    if id.starts_with("tiktok-short-") {
+        let (resolved, resolved_id, _) = media_source(
+            raw["webpage_url"]
+                .as_str()
+                .ok_or("Não foi possível resolver o link curto do TikTok.")?,
+        )?;
+        if !resolved_id.starts_with("tiktok-") || resolved_id.starts_with("tiktok-short-") {
+            return Err("Destino do link curto inválido.".into());
+        }
+        url = resolved;
+        id = resolved_id;
+    }
     let thumbnail_url = raw["thumbnail"].as_str().map(str::to_owned);
     let mut preview = if playlist {
         parse_playlist(raw, url, id)?
@@ -687,10 +838,20 @@ async fn thumbnail(source: &str) -> Option<String> {
     use base64::Engine;
     let url = reqwest::Url::parse(source).ok()?;
     if url.scheme() != "https"
-        || !matches!(
-            url.host_str(),
-            Some("i.ytimg.com" | "img.youtube.com" | "i9.ytimg.com")
-        )
+        || !url.host_str().is_some_and(|host| {
+            matches!(host, "i.ytimg.com" | "img.youtube.com" | "i9.ytimg.com")
+                || [
+                    "cdninstagram.com",
+                    "fbcdn.net",
+                    "tiktokcdn.com",
+                    "tiktokcdn-us.com",
+                    "tiktokcdn-eu.com",
+                    "tiktokcdn-eu.net",
+                    "ibytedtos.com",
+                ]
+                .iter()
+                .any(|suffix| host == *suffix || host.ends_with(&format!(".{suffix}")))
+        })
     {
         return None;
     }
@@ -739,7 +900,7 @@ pub fn validate_options(preview: &MediaPreview, options: &MediaOptions) -> Resul
         return Err("O vídeo selecionado mudou.".into());
     }
     match options.format.as_str() {
-        "mp3" if [128, 192, 256, 320].contains(&options.quality) => Ok(()),
+        "mp3" if preview.has_audio && [128, 192, 256, 320].contains(&options.quality) => Ok(()),
         "mp4" if preview.resolutions.contains(&options.quality) => Ok(()),
         _ => Err("Formato ou qualidade indisponível.".into()),
     }
@@ -1016,7 +1177,7 @@ fn transfer_command(
             .arg(format!("{}K", options.quality))
             .args(["--embed-thumbnail", "--convert-thumbnails", "jpg"]);
     } else {
-        command.arg("-f").arg(format!("bv[height={}][vcodec~=\"^(avc|h264|vp0?9|av01)\"]+ba[acodec~=\"^(mp4a|aac|opus)\"]/b[height={}][ext=mp4]", options.quality, options.quality))
+        command.arg("-f").arg(format!("bv[height={}][vcodec~=\"^(avc|h264|vp0?9|av01)\"]+ba[acodec~=\"^(mp4a|aac|opus)\"]/b[height={}][ext=mp4]/bv[height={}][ext=mp4]", options.quality, options.quality, options.quality))
                 .args(["--merge-output-format", "mp4", "--remux-video", "mp4"]);
     }
     if rate > 0 {
@@ -1159,7 +1320,14 @@ async fn run(
     let output = work.join(format!("media.{}", saved.options.format));
     let source = paths::canonical_existing_file(&output)
         .map_err(|_| "A conversão não gerou o arquivo final esperado.")?;
-    validate_output(&tools, &source, &saved.options.format, Some(control)).await?;
+    validate_output(
+        &tools,
+        &source,
+        &saved.options.format,
+        preview.has_audio,
+        Some(control),
+    )
+    .await?;
     if control.cancellation.is_cancelled() {
         return Ok(());
     }
@@ -1245,6 +1413,7 @@ pub async fn validate_output(
     tools: &Tools,
     file: &Path,
     format: &str,
+    expect_audio: bool,
     control: Option<&TaskControl>,
 ) -> Result<(), String> {
     let mut command = tools.command("ffprobe");
@@ -1284,7 +1453,7 @@ pub async fn validate_output(
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
     if !result.0
-        || !audio
+        || (!audio && (expect_audio || format == "mp3"))
         || (format == "mp4" && !video)
         || (format == "mp3" && !cover)
         || !duration.is_finite()
@@ -1371,6 +1540,83 @@ pub async fn stop(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn social_sources_are_scoped_to_individual_media_and_namespaced() {
+        let video = "https://www.tiktok.com/@user.test/video/1234567890123456789";
+        assert_eq!(
+            media_source(&format!("{video}?list=tracking")).unwrap(),
+            (video.into(), "tiktok-1234567890123456789".into(), false)
+        );
+        assert!(!is_playlist_source(&format!("{video}?list=tracking")));
+        assert_eq!(
+            media_source("https://instagram.com/reels/ABC_123/?igsh=tracking").unwrap(),
+            (
+                "https://www.instagram.com/reel/ABC_123/".into(),
+                "instagram-ABC_123".into(),
+                false
+            )
+        );
+        assert_eq!(
+            media_source("https://vt.tiktok.com/Short123/?foo=1")
+                .unwrap()
+                .1,
+            "tiktok-short-Short123"
+        );
+        for url in [
+            "https://instagram.com.evil.test/reel/ABC/",
+            "https://user@instagram.com/reel/ABC/",
+            "https://instagram.com:8080/reel/ABC/",
+            "https://instagram.com/stories/user/123/",
+            "https://instagram.com/user/",
+            "https://tiktok.com/@user/live",
+            "https://tiktok.com/@user/photo/1234567890123456789",
+            "https://vm.tiktok.com/one/two",
+        ] {
+            assert!(media_source(url).is_err(), "accepted {url}");
+        }
+    }
+    #[test]
+    fn social_preview_verifies_permalink_and_rejects_a_different_video_or_carousel() {
+        let url = "https://www.instagram.com/reel/ABC_123/";
+        let id = "instagram-ABC_123";
+        let raw = json!({"id":"numeric-id","webpage_url":url,"title":"Reel","formats":[{"ext":"mp4","height":1080,"vcodec":"h264","acodec":"aac"}]});
+        let preview = parse_preview(raw.clone(), url.into(), id.into(), false).unwrap();
+        assert_eq!(preview.resolutions, vec![1080]);
+        assert_eq!(preview.video_id, id);
+        let mut wrong = raw.clone();
+        wrong["webpage_url"] = json!("https://www.instagram.com/reel/OTHER/");
+        assert!(parse_preview(wrong, url.into(), id.into(), false).is_err());
+        let mut carousel = raw;
+        carousel["_type"] = json!("playlist");
+        assert!(parse_preview(carousel, url.into(), id.into(), false)
+            .unwrap_err()
+            .contains("vários vídeos"));
+    }
+    #[test]
+    fn silent_reels_offer_video_but_never_audio_conversion() {
+        let preview=parse_preview(json!({"id":"ABC","webpage_url":"https://www.instagram.com/reel/ABC/","formats":[{"height":1280,"ext":"mp4","vcodec":"avc1","acodec":"none"}]}),"https://www.instagram.com/reel/ABC/".into(),"instagram-ABC".into(),false).unwrap();
+        assert!(!preview.has_audio);
+        assert!(validate_options(
+            &preview,
+            &MediaOptions {
+                format: "mp4".into(),
+                quality: 1280,
+                video_id: preview.video_id.clone(),
+                playlist: None
+            }
+        )
+        .is_ok());
+        assert!(validate_options(
+            &preview,
+            &MediaOptions {
+                format: "mp3".into(),
+                quality: 192,
+                video_id: preview.video_id.clone(),
+                playlist: None
+            }
+        )
+        .is_err());
+    }
     #[tokio::test]
     #[ignore = "downloads a public YouTube video; requires network access"]
     async fn real_transfer_preserves_partials_resumes_and_reports_valid_progress() {
@@ -1450,7 +1696,7 @@ mod tests {
             output.contains("SF_PP:ExtractAudio:"),
             "conversion phase must be reported separately"
         );
-        validate_output(&tools, &root.join("media.mp3"), "mp3", None)
+        validate_output(&tools, &root.join("media.mp3"), "mp3", true, None)
             .await
             .unwrap();
         let options = MediaOptions {
@@ -1466,7 +1712,7 @@ mod tests {
         .await
         .unwrap();
         assert!(video.0, "{}", video.2);
-        validate_output(&tools, &root.join("media.mp4"), "mp4", None)
+        validate_output(&tools, &root.join("media.mp4"), "mp4", true, None)
             .await
             .unwrap();
         std::fs::remove_dir_all(root).unwrap();
@@ -1534,11 +1780,13 @@ mod tests {
                 ])
                 .arg(&file);
             assert!(capture(command, Duration::from_secs(20)).await.unwrap().0);
-            validate_output(&tools, &file, "mp3", None).await.unwrap();
+            validate_output(&tools, &file, "mp3", true, None)
+                .await
+                .unwrap();
         }
         let corrupt = root.join("broken.mp3");
         std::fs::write(&corrupt, b"not an audio file").unwrap();
-        assert!(validate_output(&tools, &corrupt, "mp3", None)
+        assert!(validate_output(&tools, &corrupt, "mp3", true, None)
             .await
             .is_err());
         std::fs::remove_dir_all(root).unwrap();

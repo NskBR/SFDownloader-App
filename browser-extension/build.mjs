@@ -15,7 +15,7 @@ for (const target of ["chromium", "firefox"]) {
   const out = join(dist, target);
   await mkdir(join(out, "icons"), { recursive: true });
   
-  for (const file of ["background.js", "background-worker.js", "content.js", "youtube-url.js", "youtube.js", "popup.html", "popup.css", "popup.js"]) {
+  for (const file of ["background.js", "background-worker.js", "content.js", "youtube-url.js", "youtube.js", "social-media.js", "popup.html", "popup.css", "popup.js"]) {
     await cp(join(root, "src", file), join(out, file));
   }
   

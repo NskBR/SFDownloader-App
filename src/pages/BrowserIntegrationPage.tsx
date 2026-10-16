@@ -24,6 +24,7 @@ export function BrowserIntegrationPage() {
   const [chromiumFolder, setChromiumFolder] = useState("");
   const [firefoxFolder, setFirefoxFolder] = useState("");
   const [firefoxXpiPath, setFirefoxXpiPath] = useState("");
+  const [firefoxXpiError, setFirefoxXpiError] = useState("");
   const [copied, setCopied] = useState(false);
   const [bridgeStatus, setBridgeStatus] = useState<service.BrowserBridgeDiagnostics | null>(null);
   const appWindow = getCurrentWindow();
@@ -37,7 +38,7 @@ export function BrowserIntegrationPage() {
       .catch(console.error);
     invoke<string>("get_firefox_xpi_path")
       .then(setFirefoxXpiPath)
-      .catch(console.error);
+      .catch(error => setFirefoxXpiError(String(error)));
   }, []);
 
   useEffect(() => {
@@ -151,7 +152,7 @@ export function BrowserIntegrationPage() {
               </div>
               <strong>{t.browserIntegration.firefoxSigningTitle}</strong>
               <span>
-                {t.browserIntegration.firefoxSigningDesc}
+                {firefoxXpiError || t.browserIntegration.firefoxSigningDesc}
               </span>
             </div>
 

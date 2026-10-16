@@ -1,5 +1,5 @@
 .update-overlay { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; background: #0008; }
-.update-dialog { width: min(400px, calc(100vw - 40px)); box-sizing: border-box; padding: 28px 32px; border: 1px solid var(--line, #34404b); border-radius: 16px; background: var(--panel, #12151b); color: var(--text); box-shadow: 0 20px 70px #0006; text-align: center; font-family: "Segoe UI", sans-serif; }
+.update-dialog { width: min(400px, calc(100vw - 40px)); box-sizing: border-box; padding: 28px 32px; border: 1px solid var(--line, #34404b); border-radius: 16px; background: var(--panel, #12151b); color: var(--text); box-shadow: 0 20px 70px #0006; text-align: center; font-family: var(--window-font, "Segoe UI", sans-serif); }
 .update-logo { width: 112px; height: 112px; position: relative; margin: 4px auto 24px; }
 .update-logo::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 1px solid #9a1efc20; background: radial-gradient(circle, #02adfd18, #9a1efc08 65%, transparent); box-shadow: 0 0 30px #02adfd0c; }
 .update-logo img { position: absolute; width: 48px; height: 56px; inset: 28px 32px; pointer-events: none; filter: drop-shadow(0 4px 10px #693efc30); }

@@ -2,6 +2,17 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.7 — 16/10/2026
+
+- Links de vídeos públicos do TikTok e Instagram/Reels no fluxo de mídia, com MP4/MP3, identificação por plataforma e suporte a vídeos sem áudio. O download real do TikTok ainda depende de validação em uma conexão sem bloqueio de IP.
+- Extensão 0.3.7 com ícones junto às ações desses sites, correção do alinhamento nos Reels e XPI Firefox assinado integrado e comparado aos arquivos atuais.
+- Botão Atualizar extensão usando o pacote do aplicativo instalado, com proteção contra downgrade, atualização da pasta gerenciada no Chromium e confirmação do XPI no Firefox.
+- Seletor de fonte e importação local de TTF/OTF, com persistência e aplicação nas janelas do app.
+- Organização de pastas sob demanda e layout de configurações adaptado para evitar opções comprimidas.
+- Corrigidos os tooltips de nome completo, sobreposição de dropdowns e controles da fila sobre o modal Sobre.
+- Barras de rolagem sem setas, acompanhando o tema.
+- Versão da extensão nas configurações derivada do manifesto; sincronização da versão Rust no lockfile.
+
 ## 1.0.6 — 01/10/2026
 
 - Extensão local 0.3.6 com botão explícito no YouTube, navegação sem duplicação e abertura da confirmação de mídia usando somente a URL do vídeo.

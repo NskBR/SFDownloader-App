@@ -1,7 +1,7 @@
 {
   "name": "SFDownloader",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner",
@@ -11,7 +11,7 @@
     "release": "node scripts/sync-versions.mjs && node scripts/build-release.mjs",
     "tauri": "tauri",
     "extension:build": "node browser-extension/build.mjs",
-    "extension:test": "node --test browser-extension/tests/background.test.mjs browser-extension/tests/content.test.mjs browser-extension/tests/youtube.test.mjs",
+    "extension:test": "node --test browser-extension/tests/background.test.mjs browser-extension/tests/content.test.mjs browser-extension/tests/youtube.test.mjs browser-extension/tests/social-media.test.mjs browser-extension/tests/popup.test.mjs",
     "extension:lint": "node browser-extension/lint.mjs",
     "versions:sync": "node scripts/sync-versions.mjs",
     "versions:check": "node scripts/sync-versions.mjs --check",

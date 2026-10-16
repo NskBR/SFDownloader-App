@@ -17,6 +17,7 @@ export interface MediaPreview {
   channelVerified?: boolean;
   fileStem?: string;
   music: boolean;
+  hasAudio?: boolean;
   playlist?: { entries: { videoId: string; title: string; index: number; duration?: number | null }[]; unavailableCount: number; mix?: boolean; snapshotLimit?: number | null } | null;
 }
 export type MediaFormat = "mp4" | "mp3";
@@ -35,6 +36,17 @@ export function isYouTubeUrl(value: string): boolean {
     return ["http:", "https:"].includes(url.protocol) && ["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname);
   } catch { return false; }
 }
+export function mediaPlatform(value: string): "YouTube" | "TikTok" | "Instagram" | null {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.port) return null;
+    if (isYouTubeUrl(value)) return "YouTube";
+    if (["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return "TikTok";
+    if (["instagram.com", "www.instagram.com"].includes(url.hostname)) return "Instagram";
+    return null;
+  } catch { return null; }
+}
+export const isMediaUrl = (value: string): boolean => mediaPlatform(value) !== null;
 export const openMediaConfirmation = (url: string) => invoke<void>("open_media_confirmation", { url });
 export interface MediaQueryWait { seconds: number; reason: "queue" | "cooldown" | "rate-limit" | "query" }
 export const inspectMedia = async (onWait?: (wait: MediaQueryWait) => void) => {
@@ -50,7 +62,7 @@ export function mediaQueryError(error: unknown): { message: string; retryAfterSe
 }
 export const mediaDetails = (id: string) => invoke<MediaDetails>("media_download_details", { id });
 export const startMediaDownload = (format: MediaFormat, quality: number, rootFolder: string, settings: AppSettings, selectedVideoIds?: string[]) => invoke<DownloadTask>("start_media_download", {
-  input: { format, quality, rootFolder, autoOrganize: settings.autoOrganizeEnabled,
+  input: { format, quality, rootFolder, autoOrganize: settings.autoOrganizeEnabled || settings.organizeFoldersOnDemand,
     maxParallelDownloads: settings.maxParallelDownloads,
     speedLimitDownload: Math.max(0, Math.round(settings.speedLimitDownloadMbps * 1024 * 1024)),
     priority: downloadPriorityValue(settings.downloadPriority), ...(selectedVideoIds ? {selectedVideoIds} : {}) },

@@ -297,6 +297,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::fonts::import_custom_font,
+            commands::fonts::list_custom_fonts,
+            commands::fonts::read_custom_font,
             create_category_folders,
             browser_bridge::browser_extension_status,
             browser_bridge::browser_extension_diagnostics,

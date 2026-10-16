@@ -12,3 +12,4 @@ pub mod task_control;
 pub mod transfer;
 pub mod updater;
 pub mod windows;
+pub mod fonts;

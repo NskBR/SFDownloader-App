@@ -23,6 +23,27 @@ const {
 const persistedEnvelope = () => JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
 
 describe("settings storage", () => {
+  it("keeps the text font in backups and window synchronization, with a safe default for older settings", () => {
+    const settings = { ...defaultSettings, fontFamily: "verdana" as const };
+    saveSettings(settings);
+    expect(loadSettings().fontFamily).toBe("verdana");
+    expect(importSettingsBackup(exportSettingsBackup(settings)).fontFamily).toBe("verdana");
+    expect(applyExternalSettings(settings).fontFamily).toBe("verdana");
+    expect(normalizeSettings({}, "pt-BR").fontFamily).toBe("default");
+    expect(normalizeSettings({ fontFamily: "unknown font" }, "pt-BR").fontFamily).toBe("default");
+    const custom = { ...defaultSettings, fontFamily: `custom:${"a".repeat(64)}` as const };
+    expect(importSettingsBackup(exportSettingsBackup(custom)).fontFamily).toBe(custom.fontFamily);
+    expect(applyExternalSettings(custom).fontFamily).toBe(custom.fontFamily);
+    expect(normalizeSettings({ fontFamily: "custom:../../file" }, "pt-BR").fontFamily).toBe("default");
+  });
+  it("preserves on-demand folders across saving and backups, defaulting off for older settings", () => {
+    const settings = { ...defaultSettings, autoOrganizeEnabled: false, organizeFoldersOnDemand: true };
+    saveSettings(settings);
+    expect(loadSettings().organizeFoldersOnDemand).toBe(true);
+    expect(importSettingsBackup(exportSettingsBackup(settings)).organizeFoldersOnDemand).toBe(true);
+    expect(normalizeSettings({ autoOrganizeEnabled: true }, "pt-BR").organizeFoldersOnDemand).toBe(false);
+  });
+
   beforeEach(() => {
     localStorage.clear();
     invoke.mockClear();

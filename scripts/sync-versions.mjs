@@ -75,6 +75,7 @@ if (lock.packages?.[""]?.version !== appVersion) {
 }
 
 synchronizeText("src-tauri/Cargo.toml", /^version = "\d+\.\d+\.\d+"$/m, `version = "${appVersion}"`, "versão Rust");
+synchronizeText("src-tauri/Cargo.lock", /(\[\[package\]\]\r?\nname = "SFDownloader"\r?\nversion = ")\d+\.\d+\.\d+("\r?\n)/, `$1${appVersion}$2`, "versão Rust no lockfile");
 synchronizeJsonVersion("browser-extension/manifest.firefox.json", extensionVersion);
 synchronizeText("browser-extension/src/popup.html", /(<span id="version-badge" class="version-badge">)v\d+\.\d+\.\d+(<\/span>)/, `$1v${extensionVersion}$2`, "badge da extensão");
 synchronizeText("browser-extension/README.md", /Versão atual: \*\*\d+\.\d+\.\d+\*\*\./, `Versão atual: **${extensionVersion}**.`, "README da extensão");

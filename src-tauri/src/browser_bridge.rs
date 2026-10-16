@@ -261,6 +261,10 @@ pub fn start(app: AppHandle, bridge: BrowserBridge) {
             .route("/sync", get(sync).options(handle_options))
             .route("/download", post(download).options(handle_options))
             .route("/disconnect", post(disconnect).options(handle_options))
+            .route(
+                "/extension/update",
+                post(update_extension).options(handle_options),
+            )
             .with_state(state);
         let address = format!("127.0.0.1:{BRIDGE_PORT}");
         match tokio::net::TcpListener::bind(&address).await {
@@ -368,6 +372,97 @@ async fn handle_options(request_headers: AxumHeaderMap) -> Response {
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
     (headers, StatusCode::NO_CONTENT).into_response()
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ExtensionUpdateRequest {
+    token: String,
+    browser: String,
+    installed_version: String,
+}
+
+fn extension_version_parts(value: &str) -> Option<[u32; 4]> {
+    let parts: Vec<_> = value.split('.').collect();
+    if !(1..=4).contains(&parts.len()) {
+        return None;
+    }
+    let mut result = [0; 4];
+    for (index, part) in parts.into_iter().enumerate() {
+        if part.is_empty() || !part.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        result[index] = part.parse().ok()?;
+    }
+    Some(result)
+}
+
+#[cfg(test)]
+mod extension_update_tests {
+    use super::*;
+    #[test]
+    fn compares_numeric_versions_without_downgrading_or_accepting_invalid_input() {
+        assert!(
+            extension_version_parts("0.3.10").unwrap() > extension_version_parts("0.3.9").unwrap()
+        );
+        assert_eq!(
+            extension_version_parts("0.3.8"),
+            extension_version_parts("0.3.8.0")
+        );
+        for value in ["", "0..3", "0.3.-1", "0.3.beta", "1.2.3.4.5", "4294967296"] {
+            assert!(extension_version_parts(value).is_none());
+        }
+        let request = serde_json::json!({"token":"secret","browser":"../../other","installedVersion":"0.3.7","path":"C:/anything"});
+        assert!(serde_json::from_value::<ExtensionUpdateRequest>(request).is_err());
+        assert!(crate::commands::browser_extension::bundled_version("../../other").is_err());
+    }
+}
+
+async fn update_extension(
+    State(state): State<BridgeState>,
+    request_headers: AxumHeaderMap,
+    body: Bytes,
+) -> Response {
+    let headers = cors_headers(&request_headers);
+    if !has_trusted_bridge_origin(&request_headers) {
+        return (headers, StatusCode::FORBIDDEN).into_response();
+    }
+    if body.len() > 1024 {
+        return (headers, StatusCode::PAYLOAD_TOO_LARGE).into_response();
+    }
+    let Ok(request) = serde_json::from_slice::<ExtensionUpdateRequest>(&body) else {
+        return (headers, StatusCode::BAD_REQUEST).into_response();
+    };
+    if request.token != state.bridge.token {
+        return (headers, StatusCode::FORBIDDEN).into_response();
+    }
+    let Some(installed) = extension_version_parts(&request.installed_version) else {
+        return (headers, StatusCode::BAD_REQUEST).into_response();
+    };
+    let result: Result<serde_json::Value,String> = async {
+        let version=crate::commands::browser_extension::bundled_version(&request.browser)?;
+        let bundled=extension_version_parts(&version).ok_or("Versão da extensão inválida.")?;
+        if installed >= bundled {
+            return Ok(serde_json::json!({"ok":true,"mode":if installed == bundled {"current"} else {"app-older"},"version":version}));
+        }
+        if request.browser == "firefox" {
+            // Firefox controls installation of signed XPIs; never replace its profile files.
+            let path=crate::commands::browser_extension::get_firefox_xpi_path(state.app.clone())?;
+            crate::commands::downloads::open_file(path)?;
+            return Ok(serde_json::json!({"ok":true,"mode":"manual","version":version}));
+        }
+        let path=crate::commands::browser_extension::get_extension_dir(state.app.clone(),request.browser)?;
+        Ok(serde_json::json!({"ok":true,"mode":"reload","version":version,"path":path}))
+    }.await;
+    match result {
+        Ok(result) => (headers, Json(result)).into_response(),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            headers,
+            Json(serde_json::json!({"ok":false,"error":error})),
+        )
+            .into_response(),
+    }
 }
 
 async fn disconnect(State(state): State<BridgeState>, request_headers: AxumHeaderMap) -> Response {

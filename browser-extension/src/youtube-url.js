@@ -32,3 +32,33 @@ globalThis.sfYouTubeSource = function (value) {
     return `https://${host}/watch?v=${id}`;
   } catch { return null; }
 };
+
+globalThis.sfMediaPlatform = function (value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+    if (["instagram.com", "www.instagram.com"].includes(url.hostname)) return "instagram";
+    if (["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return "tiktok";
+    return globalThis.sfIsYouTubePage(value) ? "youtube" : null;
+  } catch { return null; }
+};
+
+globalThis.sfSocialMediaSource = function (value) {
+  try {
+    const platform = globalThis.sfMediaPlatform(value);
+    const url = new URL(value);
+    const path = url.pathname;
+    if (platform === "instagram") {
+      const match = /^\/(?:[A-Za-z0-9_.]{1,128}\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]{1,128})\/?$/.exec(path);
+      return match ? `https://www.instagram.com/${match[1] === "reels" ? "reel" : match[1]}/${match[2]}/` : null;
+    }
+    if (platform === "tiktok") {
+      const video = /^\/@([A-Za-z0-9_.-]{1,128})\/video\/(\d{10,25})\/?$/.exec(path);
+      if (video && !["vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return `https://www.tiktok.com/@${video[1]}/video/${video[2]}`;
+      const short = ["vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)
+        ? /^\/([A-Za-z0-9_-]{1,128})\/?$/.exec(path) : /^\/t\/([A-Za-z0-9_-]{1,128})\/?$/.exec(path);
+      if (short) return `https://${["vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname) ? url.hostname : "www.tiktok.com/t"}/${short[1]}/`;
+    }
+    return null;
+  } catch { return null; }
+};

@@ -40,7 +40,7 @@ import type { AppSettings } from "../domain/settings";
 import type { PageId } from "../app/navigation";
 import { useDownloads } from "../hooks/useDownloads";
 import * as service from "../services/downloadService";
-import { isYouTubeUrl, openMediaConfirmation } from "../services/mediaService";
+import { isMediaUrl, openMediaConfirmation } from "../services/mediaService";
 import type { DownloadTask } from "../domain/download";
 import { sortDownloads } from "../domain/downloadOrdering";
 import { ipcErrorMessage } from "../domain/ipcErrors";
@@ -408,7 +408,7 @@ export function DownloadsPage({
     setStarting(true);
     setError(null);
     try {
-      if (isYouTubeUrl(url)) {
+      if (isMediaUrl(url)) {
         await openMediaConfirmation(url);
         return;
       }

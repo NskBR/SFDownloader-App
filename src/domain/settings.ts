@@ -1,3 +1,5 @@
+import type { AppFont } from "./appFonts";
+
 export type SpeedUnit = "Mbps" | "MB/s";
 export type AppTheme = "system" | "midnight" | "graphite" | "light";
 export type AppLanguage = "pt-BR" | "en-US";
@@ -41,6 +43,7 @@ export interface CustomCategory {
 export interface AppSettings {
   rootDownloadFolder: string;
   autoOrganizeEnabled: boolean;
+  organizeFoldersOnDemand: boolean;
   deleteArchiveAfterExtract: boolean;
   defaultSpeedValue: number;
   defaultSpeedUnit: SpeedUnit;
@@ -48,6 +51,7 @@ export interface AppSettings {
   maxParallelDownloads: number;
   speedLimitDownloadMbps: number;
   theme: AppTheme;
+  fontFamily: AppFont;
   uiScale: number;
   startInTrayMode: boolean;
   launchOnStartup: boolean;
@@ -72,6 +76,7 @@ export const defaultSettings: AppSettings = {
   secondaryDownloadFolder: "",
   secondaryFolderEnabled: false,
   autoOrganizeEnabled: false,
+  organizeFoldersOnDemand: false,
   deleteArchiveAfterExtract: false,
   defaultSpeedValue: 100,
   defaultSpeedUnit: "Mbps",
@@ -79,6 +84,7 @@ export const defaultSettings: AppSettings = {
   maxParallelDownloads: 3,
   speedLimitDownloadMbps: 0,
   theme: "midnight",
+  fontFamily: "default",
   uiScale: 1.1,
   startInTrayMode: false,
   launchOnStartup: false,

@@ -1,9 +1,12 @@
-# SF Downloader Integration 0.3.6 — notas para revisão AMO
+# SF Downloader Integration 0.3.7 — notas para revisão AMO
 
-## Alterações da versão 0.3.6
+## Alterações da versão 0.3.7
+
+- Adiciona ícones de download para vídeos públicos individuais do TikTok e Instagram/Reels. O envio explícito ao aplicativo contém somente a URL, sem cookies ou headers.
+- Adiciona o botão Atualizar extensão, restrito ao popup: consulta o app local autenticado e utiliza apenas o pacote incluído nele. No Firefox, a instalação do XPI continua sujeita à confirmação do navegador.
 
 - Adiciona um botão explícito no YouTube para abrir a confirmação de MP4/MP3 do aplicativo. Esse caminho envia apenas a URL do vídeo, sem cookies ou headers. A inserção acompanha a navegação da página e a preferência de captura.
-- O mantenedor forneceu o XPI 0.3.6 com arquivos de assinatura Mozilla; ele está incorporado ao aplicativo e corresponde aos scripts desta versão. O build local gera ZIPs de desenvolvimento e não solicita novas assinaturas automaticamente.
+- O mantenedor forneceu o XPI 0.3.7 com arquivos de assinatura Mozilla; ele está incorporado ao aplicativo e corresponde aos scripts desta versão. O build local gera ZIPs de desenvolvimento e não solicita novas assinaturas automaticamente.
 - Corrige a separação de credenciais: a extensão consulta e encaminha apenas cookies pertencentes à URL final do download. Cookies da página de origem não são combinados nem enviados ao host do arquivo.
 - Mantém a captura antecipada com confirmação da ponte antes de cancelar o download nativo.
 - Limita o rastreamento temporário de requests/headers e rejeita URLs locais, protocolos não reproduzíveis e requisições POST.

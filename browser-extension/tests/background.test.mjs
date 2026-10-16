@@ -67,6 +67,9 @@ async function loadBackground(
       erase(query, callback) { erasedDownloads.push(query.id); callback?.(); },
     },
     runtime: {
+      id: "sf-test",
+      getURL: path => `chrome-extension://sf-test/${path}`,
+      getManifest: () => ({version:"0.3.7",...(testOptions.firefox ? {browser_specific_settings:{gecko:{id:"integration@sfdownloader.local"}}} : {})}),
       lastError: null,
       onInstalled: listeners.installed,
       onStartup: listeners.startup,
@@ -101,6 +104,7 @@ async function loadBackground(
     }
     if (testOptions.failDownload && url.endsWith("/download")) return { ok: false, status: 503 };
     posted.push({ url, options });
+    if (url.endsWith("/extension/update")) return {ok:true,json:async()=>({ok:true,mode:"reload",version:"0.3.9",path:"C:/App/extension/chromium"})};
     return { ok: true };
   };
   const source = await readFile(new URL("../src/background.js", import.meta.url), "utf8");
@@ -124,6 +128,28 @@ function sendMessage(listener, message, sender = {}) {
     assert.equal(keepChannelOpen, true);
   });
 }
+
+test("extension update is popup-only and works with download capture disabled", async () => {
+  const {listeners,posted,cookieUrls} = await loadBackground({captureEnabled:false});
+  const send = sender => sendMessage(listeners.message.first(),{type:"update-extension"},sender);
+  assert.equal((await send({id:"sf-test",url:"https://www.youtube.com/"})).ok,false);
+  assert.equal((await send({id:"other",url:"chrome-extension://sf-test/popup.html"})).ok,false);
+  const response=await send({id:"sf-test",url:"chrome-extension://sf-test/popup.html"});
+  assert.equal(response.mode,"reload");
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body),{token:"token",browser:"chromium",installedVersion:"0.3.7"});
+  assert.deepEqual(cookieUrls,[]);
+});
+
+test("social actions require matching trusted origins and never forward cookies", async () => {
+  const {listeners,posted,cookieUrls} = await loadBackground();
+  const url = "https://www.instagram.com/reel/ABC_123/";
+  const send = (target, sender) => sendMessage(listeners.message.first(),{type:"social-download",url:target},sender);
+  assert.equal((await send(url+"?igsh=tracking",{url:"https://www.instagram.com/",frameId:0})).ok,true);
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body),{token:"token",url,requestHeaders:{}});
+  assert.deepEqual(cookieUrls,[]);
+  for (const sender of [{url:"https://evil.test/"},{url:"https://www.instagram.com.evil.test/"},{url:"https://www.tiktok.com/"},{url:"https://www.instagram.com/",frameId:2}]) assert.equal((await send(url,sender)).ok,false);
+  assert.equal((await send("https://www.instagram.com/stories/user/123/",{url:"https://www.instagram.com/"})).ok,false);
+});
 
 test("forwards only cookies belonging to the download host", async () => {
   const { cookieUrls, listeners, posted } = await loadBackground();

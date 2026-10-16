@@ -4,7 +4,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: events.listen }));
 import { invoke } from "@tauri-apps/api/core";
 import { defaultSettings } from "../domain/settings";
-import { isYouTubeUrl, formatDuration, startMediaDownload, inspectMedia, mediaQueryError } from "./mediaService";
+import { isYouTubeUrl, isMediaUrl, mediaPlatform, formatDuration, startMediaDownload, inspectMedia, mediaQueryError } from "./mediaService";
 
 beforeEach(() => { vi.clearAllMocks(); events.listen.mockResolvedValue(events.unlisten); });
 
@@ -33,6 +33,21 @@ describe("media query notifications", () => {
 });
 
 describe("media link routing", () => {
+  it("routes social media hosts without allowing credentials, ports or lookalikes", () => {
+    expect(mediaPlatform("https://www.tiktok.com/@user/video/1234567890123456789")).toBe("TikTok");
+    expect(mediaPlatform("https://www.instagram.com/reel/abc123/")).toBe("Instagram");
+    expect(isMediaUrl("https://vm.tiktok.com/abc123/")).toBe(true);
+    for (const url of ["https://tiktok.com.evil.test/@a/video/1234567890123456789", "https://instagram.com@evil.test/reel/a/", "https://user@instagram.com/reel/a/", "https://instagram.com:8080/reel/a/", "file:///instagram.com/reel/a/"]) expect(isMediaUrl(url)).toBe(false);
+  });
+  it("uses on-demand category folders for both audio and video", async () => {
+    const settings = { ...defaultSettings, autoOrganizeEnabled: false, organizeFoldersOnDemand: true };
+    for (const format of ["mp3", "mp4"] as const) {
+      await startMediaDownload(format, format === "mp3" ? 192 : 1080, "C:/Downloads", settings);
+      expect(invoke).toHaveBeenLastCalledWith("start_media_download", {
+        input: expect.objectContaining({ format, autoOrganize: true }),
+      });
+    }
+  });
   it("recognizes video, Shorts, music and playlist pages for the isolated flow", () => {
     for (const link of ["https://youtu.be/jNQXAC9IVRw?t=3", "https://youtube.com/watch?v=jNQXAC9IVRw&list=123", "https://music.youtube.com/watch?v=jNQXAC9IVRw", "https://www.youtube.com/shorts/jNQXAC9IVRw", "https://youtube.com/playlist?list=123"]) expect(isYouTubeUrl(link)).toBe(true);
   });

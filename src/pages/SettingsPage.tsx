@@ -20,6 +20,8 @@ import {
   Sparkles,
   Dices,
   HardDrive,
+  Type,
+  Upload,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
@@ -31,6 +33,8 @@ import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
 import { ipcErrorMessage } from "../domain/ipcErrors";
 import { selectedSettingsThemeId, settingsThemePresets } from "../domain/settingsThemes";
 import { downloadCategories } from "../domain/categories";
+import { appFonts, loadImportedFont, type AppFont, type ImportedFont } from "../domain/appFonts";
+import { open } from "@tauri-apps/plugin-dialog";
 import { normalizedCategoryExtensions, validCustomCategoryName } from "../domain/customCategories";
 import { exportSettingsBackup, importSettingsBackup } from "../services/settingsStorage";
 import {
@@ -99,11 +103,36 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [editName, setEditName] = useState("");
   const [editExts, setEditExts] = useState("");
   const [customizerModalOpen, setCustomizerModalOpen] = useState(false);
+  const [customFonts, setCustomFonts] = useState<ImportedFont[]>([]);
+  const [importingFont, setImportingFont] = useState(false);
+  useEffect(() => { void invoke<ImportedFont[]>("list_custom_fonts").then(setCustomFonts).catch(console.error); }, []);
+
+  const importFont = async () => {
+    if (importingFont) return;
+    setImportingFont(true);
+    setError(null);
+    try {
+      const path = await open({ multiple: false, directory: false, filters: [{ name: "Fontes / Fonts", extensions: ["ttf", "otf"] }] });
+      if (typeof path !== "string") return;
+      const font = await invoke<ImportedFont>("import_custom_font", { path });
+      await loadImportedFont(font.id);
+      setCustomFonts(current => [...current.filter(item => item.id !== font.id), font]);
+      const next = { ...draft, fontFamily: `custom:${font.id}` as AppFont };
+      setDraft(next);
+      await save(next);
+    } catch (cause) {
+      setError(ipcErrorMessage(cause, t.settings.personalization.fontImportError));
+    } finally { setImportingFont(false); }
+  };
 
   const selectedThemeId = selectedSettingsThemeId(draft.interfaceGradient);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    const next = { ...draft, [key]: value };
+    const next = {
+      ...draft, [key]: value,
+      ...(key === "autoOrganizeEnabled" && value === true ? { organizeFoldersOnDemand: false } : {}),
+      ...(key === "organizeFoldersOnDemand" && value === true ? { autoOrganizeEnabled: false } : {}),
+    };
     setDraft(next);
     if (next.rootDownloadFolder.trim()) void save(next);
     else setError("Escolha a pasta principal de downloads.");
@@ -694,6 +723,34 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
+            <div className="cfg-card">
+              <div className="cfg-card-header">
+                <div className="cfg-card-icon-box"><Type className="cfg-card-icon" size={18} /></div>
+                <div>
+                  <h3 className="cfg-card-title">{t.settings.personalization.fontTitle}</h3>
+                  <p className="cfg-card-subtitle">{t.settings.personalization.fontSubtitle}</p>
+                </div>
+              </div>
+              <div className="cfg-card-content cfg-font-controls">
+                <CustomSelect
+                  ariaLabel={t.settings.personalization.fontTitle}
+                  value={draft.fontFamily}
+                  options={[
+                    ...appFonts.map(font => ({ value: font.id as AppFont, label: font.label || t.settings.personalization.fontDefault })),
+                    ...customFonts.map(font => ({ value: `custom:${font.id}` as AppFont, label: font.name })),
+                    ...(draft.fontFamily.startsWith("custom:") && !customFonts.some(font => `custom:${font.id}` === draft.fontFamily)
+                      ? [{ value: draft.fontFamily, label: t.settings.personalization.fontUnavailable, disabled: true }] : []),
+                  ]}
+                  onChange={value => update("fontFamily", value)}
+                  disabled={importingFont}
+                />
+                <button type="button" className="cfg-btn-import-font" disabled={importingFont} onClick={() => void importFont()}>
+                  <Upload size={15} />{importingFont ? t.settings.personalization.fontImporting : t.settings.personalization.fontImport}
+                </button>
+                <span className="cfg-font-hint">{t.settings.personalization.fontImportHint}</span>
+              </div>
+            </div>
+
             {/* Card 3: Animações e Efeitos da Interface */}
             <div className="cfg-card">
               <div className="cfg-card-header" style={{ justifyContent: "space-between" }}>
@@ -733,7 +790,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: ARQUIVOS */}
         {activeTab === "arquivos" && (
           <div className="cfg-tab-view">
-            <div className="cfg-grid-2col">
+            <div className="cfg-grid-2col cfg-files-grid">
               {/* Coluna Esquerda: Categorias Personalizadas & Sobre as categorias */}
               <div className="cfg-col">
                 {/* Card 1: Categorias Personalizadas */}
@@ -912,6 +969,21 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         <Toggle
                           checked={draft.autoOrganizeEnabled}
                           onChange={(val) => update("autoOrganizeEnabled", val)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="cfg-item-row">
+                      <div className="cfg-item-left">
+                        <div>
+                          <strong className="cfg-item-label">{t.settings.filesTab.onDemandFoldersLabel}</strong>
+                          <span className="cfg-item-desc">{t.settings.filesTab.onDemandFoldersDesc}</span>
+                        </div>
+                      </div>
+                      <div className="cfg-item-right">
+                        <Toggle
+                          checked={draft.organizeFoldersOnDemand}
+                          onChange={(val) => update("organizeFoldersOnDemand", val)}
                         />
                       </div>
                     </div>

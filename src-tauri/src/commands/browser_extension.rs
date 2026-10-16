@@ -1,9 +1,9 @@
 use std::path::Path;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-const FIREFOX_XPI_NAME: &str = "sf_downloader_integration-firefox-0.3.6.xpi";
+const FIREFOX_XPI_NAME: &str = "sf_downloader_integration-firefox-0.3.7.xpi";
 const FIREFOX_XPI: &[u8] =
-    include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.3.6.xpi");
+    include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.3.7.xpi");
 
 pub fn start_drag_folder(window: &WebviewWindow, path: &str) -> Result<(), String> {
     let folder_path = crate::download::paths::canonical_existing_directory(Path::new(path))?;
@@ -86,6 +86,14 @@ macro_rules! extension_assets {
                     "../../../browser-extension/dist/",
                     $browser,
                     "/youtube.js"
+                )) as &[u8],
+            ),
+            (
+                "social-media.js",
+                include_bytes!(concat!(
+                    "../../../browser-extension/dist/",
+                    $browser,
+                    "/social-media.js"
                 )) as &[u8],
             ),
             (
@@ -173,6 +181,20 @@ fn bundled_assets(browser: &str) -> Result<&'static [(&'static str, &'static [u8
     }
 }
 
+pub fn bundled_version(browser: &str) -> Result<String, String> {
+    let assets = bundled_assets(browser)?;
+    let bytes = assets
+        .iter()
+        .find(|(name, _)| *name == "manifest.json")
+        .ok_or("Manifesto indisponível.")?
+        .1;
+    let manifest: serde_json::Value = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
+    manifest["version"]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or("Versão da extensão indisponível.".into())
+}
+
 fn extract_bundle(destination: &Path, assets: &[(&str, &[u8])]) -> Result<(), String> {
     for (name, bytes) in assets {
         let path = destination.join(name);
@@ -200,6 +222,24 @@ pub fn get_extension_dir(app: AppHandle, browser: String) -> Result<String, Stri
 
 #[tauri::command]
 pub fn get_firefox_xpi_path(app: AppHandle) -> Result<String, String> {
+    let mut archive =
+        zip::ZipArchive::new(std::io::Cursor::new(FIREFOX_XPI)).map_err(|e| e.to_string())?;
+    let signed: serde_json::Value = serde_json::from_reader(
+        archive
+            .by_name("manifest.json")
+            .map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    let assets = bundled_assets("firefox")?;
+    let manifest = assets
+        .iter()
+        .find(|(name, _)| *name == "manifest.json")
+        .ok_or("Manifesto indisponível.")?;
+    let current: serde_json::Value =
+        serde_json::from_slice(manifest.1).map_err(|e| e.to_string())?;
+    if signed["version"] != current["version"] {
+        return Err(format!("A extensão Firefox {} ainda aguarda o XPI assinado. A versão antiga não inclui os novos recursos.", current["version"].as_str().unwrap_or_default()));
+    }
     let xpi_dir = app
         .path()
         .app_data_dir()

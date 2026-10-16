@@ -4,6 +4,8 @@ const connection = document.querySelector("#connection");
 const disabledInput = document.querySelector("#disabled-extensions-input");
 const btnResetDefault = document.querySelector("#btn-reset-default");
 const versionBadge = document.querySelector("#version-badge");
+const updateButton = document.querySelector("#update-extension");
+const updateResult = document.querySelector("#update-result");
 
 // Extensões ignoradas por padrão (formatos que o navegador lida melhor nativamente)
 const DEFAULT_DISABLED_EXTENSIONS = [
@@ -18,6 +20,15 @@ const DEFAULT_DISABLED_EXTENSIONS = [
 const i18n = {
   "pt-BR": {
     appTitle: "SF Downloader",
+    updateExtension: "Atualizar extensão",
+    updatingExtension: "Verificando no aplicativo…",
+    updateCurrent: "A extensão já está atualizada.",
+    updateAppOlder: "Atualize o aplicativo primeiro: ele contém uma extensão mais antiga.",
+    updateManual: "Confirme a instalação do XPI no Firefox.",
+    updateDone: "Extensão atualizada. Recarregue as páginas abertas.",
+    updateFolder: "A extensão usa outra pasta. Carregue a pasta atualizada: ",
+    updateUnavailable: "Abra o SFDownloader atualizado e tente novamente.",
+    updateOldApp: "Atualize o SFDownloader para usar este botão.",
     autoCaptureTitle: "Captura automática",
     autoCaptureDesc: "Intercepta downloads do navegador",
     ignoredExtsTitle: "Extensões ignoradas",
@@ -34,6 +45,15 @@ const i18n = {
   },
   "en-US": {
     appTitle: "SF Downloader",
+    updateExtension: "Update extension",
+    updatingExtension: "Checking the app…",
+    updateCurrent: "The extension is already up to date.",
+    updateAppOlder: "Update the app first: it contains an older extension.",
+    updateManual: "Confirm the XPI installation in Firefox.",
+    updateDone: "Extension updated. Reload your open pages.",
+    updateFolder: "The extension uses a different folder. Load the updated folder: ",
+    updateUnavailable: "Open the updated SFDownloader app and try again.",
+    updateOldApp: "Update SFDownloader to use this button.",
     autoCaptureTitle: "Automatic capture",
     autoCaptureDesc: "Intercepts browser downloads",
     ignoredExtsTitle: "Ignored extensions",
@@ -55,6 +75,7 @@ let currentLanguage = "pt-BR";
 function applyLanguage(lang) {
   currentLanguage = (lang && String(lang).toLowerCase().startsWith("en")) ? "en-US" : "pt-BR";
   const dict = i18n[currentLanguage];
+  if (updateButton && !updateButton.disabled) updateButton.textContent = dict.updateExtension;
 
   const elAutoCaptureTitle = document.querySelector("#auto-capture-title");
   if (elAutoCaptureTitle) elAutoCaptureTitle.textContent = dict.autoCaptureTitle;
@@ -221,3 +242,32 @@ capture.addEventListener("click", () => {
 
 checkConnection();
 setInterval(checkConnection, 2000);
+
+updateButton?.addEventListener("click", () => {
+  if (updateButton.disabled) return;
+  updateButton.disabled = true;
+  updateButton.textContent = i18n[currentLanguage].updatingExtension;
+  if (updateResult) updateResult.textContent = "";
+  chrome.runtime.sendMessage({type:"update-extension"}, async response => {
+    const dict=i18n[currentLanguage];
+    const error=chrome.runtime.lastError;
+    if (response?.ok && response.mode === "reload") {
+      // Check the loaded manifest next time: an unpacked copy might be installed
+      // from Downloads instead of the app-managed extension directory.
+      await storageSet({pendingExtensionUpdate:{version:response.version,path:response.path}});
+      chrome.runtime.reload();
+      return;
+    }
+    if (updateResult) updateResult.textContent = error || !response?.ok
+      ? response?.error === "app-too-old" ? dict.updateOldApp : response?.error && !["Failed to fetch","fetch failed","app-unavailable"].includes(response.error) ? response.error : dict.updateUnavailable
+      : response.mode === "manual" ? dict.updateManual : response.mode === "app-older" ? dict.updateAppOlder : dict.updateCurrent;
+    updateButton.disabled = false;
+    updateButton.textContent = dict.updateExtension;
+  });
+});
+void storageGet(["pendingExtensionUpdate","language"]).then(({pendingExtensionUpdate:pending,language}) => {
+  if (!pending || !updateResult) return;
+  const dict=i18n[language?.toLowerCase().startsWith("en") ? "en-US" : "pt-BR"];
+  updateResult.textContent = version === pending.version ? dict.updateDone : dict.updateFolder + pending.path;
+  chrome.storage.local.remove("pendingExtensionUpdate");
+});

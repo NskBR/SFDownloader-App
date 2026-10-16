@@ -1,4 +1,5 @@
 import type { AppSettings, GradientConfig, GradientStop } from "../domain/settings";
+import { applyFontSettings } from "../domain/appFonts";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -171,6 +172,7 @@ function stopCosmicFlow() {
 }
 
 export function applyThemeSettings(settings: AppSettings): void {
+  applyFontSettings(settings.fontFamily);
   const root = document.documentElement;
   root.dataset.appColor = settings.appColor;
   root.dataset.theme = "midnight";

@@ -7,9 +7,9 @@ import zipfile
 ROOT = Path(__file__).resolve().parent.parent
 LOCK = ROOT / "scripts/media-sources.lock.json"
 inventory = json.loads(LOCK.read_text(encoding="utf-8"))
-version = inventory["release"].removeprefix("v")
+version = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
 cache = ROOT / "scratch/media-sources"
-destination = ROOT / "release" / inventory["release"]
+destination = ROOT / "release" / f"v{version}"
 destination.mkdir(parents=True, exist_ok=True)
 
 for entry in inventory["archives"]:

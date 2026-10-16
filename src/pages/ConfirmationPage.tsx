@@ -251,13 +251,13 @@ export function ConfirmationPage({ token }: { token: string }) {
     try {
       const task = await service.startDownload(
         preview.url,
-        isCustomFolder ? { ...settings, autoOrganizeEnabled: false } : settings,
+        isCustomFolder ? { ...settings, autoOrganizeEnabled: false, organizeFoldersOnDemand: false } : settings,
         destination,
         payload?.requestId,
         true,
         autoExtract,
         isArchive && password.trim() ? password : undefined,
-        !isCustomFolder && settings.autoOrganizeEnabled
+        !isCustomFolder && (settings.autoOrganizeEnabled || settings.organizeFoldersOnDemand)
           ? selectedCategory
           : undefined,
         force,

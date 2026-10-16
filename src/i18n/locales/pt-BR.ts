@@ -1,3 +1,5 @@
+import { version as extensionVersion } from "../../../browser-extension/manifest.chromium.json";
+
 export const ptBR = {
   common: {
     save: "Salvar alterações",
@@ -233,6 +235,14 @@ export const ptBR = {
       advanced: "Avançado",
     },
     personalization: {
+      fontTitle: "Fonte dos textos",
+      fontSubtitle: "Escolha a fonte da interface. A mudança é aplicada em todas as janelas.",
+      fontDefault: "Padrão do aplicativo",
+      fontImport: "Importar fonte",
+      fontImporting: "Importando…",
+      fontImportHint: "TTF ou OTF, até 10 MB. A fonte fica salva neste aplicativo.",
+      fontImportError: "Não foi possível carregar esta fonte. Escolha um arquivo TTF ou OTF válido.",
+      fontUnavailable: "Fonte importada indisponível — importe novamente",
       appThemeTitle: "Tema do aplicativo",
       appThemeSubtitle: "Escolha o tema que define a aparência geral do app.",
       customTheme: "Personalizado",
@@ -294,6 +304,8 @@ export const ptBR = {
       aboutCategoriesDesc: "Os arquivos serão movidos para a pasta correspondente com base nas extensões informadas. Use vírgula para separar múltiplas extensões: ex: mp4, mkv, avi",
       fileOrgTitle: "Organização de Arquivos",
       fileOrgSubtitle: "Defina como seus arquivos baixados serão organizados.",
+      onDemandFoldersLabel: "Criar pastas conforme os downloads",
+      onDemandFoldersDesc: "Cria só a pasta da categoria usada ao adicionar um download.",
       createSubfoldersLabel: "Criar subpastas por categoria",
       createSubfoldersDesc: "Organiza os downloads em pastas por tipo de arquivo.",
       autoRenameLabel: "Renomear arquivos automaticamente",
@@ -315,8 +327,8 @@ export const ptBR = {
       launchOnStartupDesc: "Inicia o aplicativo oculto na bandeja do sistema ao ligar o computador.",
       browserIntegrationCardTitle: "Integração de Navegadores",
       browserIntegrationCardSubtitle: "Captação automática de links nos navegadores web.",
-      extensionBadge: "Extensão v0.3.5",
-      extensionCardDesc: "Instale a extensão oficial do SF Downloader (versão v0.3.5) para capturar downloads nos navegadores Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox.",
+      extensionBadge: `Extensão v${extensionVersion}`,
+      extensionCardDesc: `Instale a extensão oficial do SF Downloader (versão v${extensionVersion}) para capturar downloads nos navegadores Chromium (Chrome, Edge, Opera, Brave, Vivaldi) e Firefox.`,
       configureIntegrationBtn: "Configurar Integração",
       debugMenuTitle: "Menu Debug",
       debugMenuSubtitle: "Logs do sistema em tempo real e diagnóstico de falhas.",
@@ -378,7 +390,7 @@ export const ptBR = {
     step2Chromium: "Ative o “Modo do desenvolvedor” no canto superior direito da página.",
     step3Chromium: "Arraste a peça acima para a página de extensões do navegador.",
     firefoxSigningTitle: "Extensão Firefox assinada pela Mozilla",
-    firefoxSigningDesc: "O XPI 0.3.5 assinado está incluído no aplicativo e será aberto no Firefox para confirmação da instalação.",
+    firefoxSigningDesc: "O XPI assinado correspondente será aberto no Firefox para confirmação da instalação.",
     installFirefoxXpi: "Instalar no Firefox",
     firefoxSigningStep1: "Clique em “Instalar no Firefox” e confirme a instalação no navegador.",
     firefoxSigningStep2: "Depois, abra o popup da extensão e confira se ela se conecta ao SFDownloader.",

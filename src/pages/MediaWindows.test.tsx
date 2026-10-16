@@ -42,6 +42,13 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("media confirmation", () => {
+  it("labels Instagram and disables audio conversion when the source is silent", async () => {
+    mocks.inspect.mockResolvedValue({...preview,url:"https://www.instagram.com/reel/ABC/",hasAudio:false});
+    render(<MediaConfirmationWindow />);
+    await screen.findByText(/Instagram/);
+    expect((screen.getByRole("button",{name:/Áudio.*MP3/}) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Vídeo sem faixa de áudio na origem.")).toBeTruthy();
+  });
   it("filters without losing hidden selections, shows durations and sends the full checked set", async () => {
     mocks.inspect.mockResolvedValue({...preview,music:true,playlist:{mix:true,snapshotLimit:50,unavailableCount:0,entries:[
       {videoId:preview.videoId,title:"Música primeira",index:1,duration:295},

@@ -13,6 +13,7 @@ import { useSettings } from "../hooks/useSettings";
 import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
 import { applyThemeSettings } from "../services/theme";
+import { applyFontSettings } from "../domain/appFonts";
 import { completionSoundGate } from "../domain/completionSound";
 import type { DownloadProgress } from "../domain/download";
 import { UpdateBanner } from "../components/UpdateBanner";
@@ -67,6 +68,7 @@ export function App() {
   useEffect(()=>{
     applyThemeSettings(settings);
   },[settings.accentColor, settings.appColor, settings.interfaceGradient]);
+  useEffect(() => applyFontSettings(settings.fontFamily), [settings.fontFamily]);
   useEffect(() => {
     void invoke("cache_theme_settings", { themeSettings: settings }).catch(console.error);
   }, [settings]);

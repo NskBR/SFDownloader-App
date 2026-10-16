@@ -1,6 +1,6 @@
 # SF Downloader Integration
 
-Versão atual: **0.3.6**.
+Versão atual: **0.3.7**.
 
 Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 
@@ -17,7 +17,7 @@ Integração Manifest V3 para Chromium (Chrome, Edge, Brave e Opera) e Firefox.
 - Exibe a logo do SFDownloader e o botão **Baixar** antes dos controles de interação do YouTube. O clique abre a confirmação independente de MP4/MP3 no aplicativo; envia somente a URL do vídeo ou playlist, sem cookies ou headers do navegador. Links com `list=` abrem a seleção da playlist, e também há um botão no cabeçalho de playlists. Mixes preservam o vídeo de origem no link e abrem uma seleção de até 50 faixas retornadas na consulta.
 - Acompanha a troca de vídeos sem recarregar a página, restaura o botão quando a barra é reconstruída e respeita a opção de desativar a captura. Também há pontos de inserção para Shorts e o player do YouTube Music.
 
-O botão de mídia exige o aplicativo com o novo fluxo YouTube (1.0.6 ou desenvolvimento/teste). A versão 0.3.6 é distribuída fora da Chrome Web Store. O XPI Firefox 0.3.6 fornecido pelo mantenedor está incluído no aplicativo; o build não submete nem assina extensões automaticamente.
+O botão de mídia exige o aplicativo com o novo fluxo YouTube (1.0.6 ou desenvolvimento/teste). A versão 0.3.7 é distribuída fora da Chrome Web Store. O XPI Firefox 0.3.7 fornecido pelo mantenedor está incluído no aplicativo; o build não submete nem assina extensões automaticamente.
 
 O endpoint local exige um token aleatório criado a cada execução do aplicativo. A extensão obtém esse token pelo endpoint de sincronização.
 
@@ -36,3 +36,5 @@ Após reconstruir, recarregue a extensão na página de extensões do navegador.
 
 As justificativas completas de permissões e uso de dados para publicação estão em [`STORE_SUBMISSION.md`](STORE_SUBMISSION.md).
 A política de privacidade está em [`PRIVACY.md`](PRIVACY.md).
+
+A 0.3.7 também adiciona ícones para vídeos individuais do TikTok e Instagram/Reels e o botão Atualizar extensão, que utiliza o pacote do aplicativo instalado (1.0.7). No Chromium, carregue a pasta preparada pelo app para permitir a atualização local. No Firefox, confirme a instalação do XPI assinado. A consulta real ao TikTok foi bloqueada por IP durante a validação; suporte de campo ainda em teste.

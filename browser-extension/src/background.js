@@ -565,16 +565,41 @@ chrome.contextMenus.onClicked.addListener(info => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "youtube-download") {
-    const url = globalThis.sfYouTubeSource(message.url);
+  if (message?.type === "update-extension") {
+    // A site content script must never be able to rewrite/reload the extension.
+    if (_sender.id !== chrome.runtime.id || _sender.url !== chrome.runtime.getURL("popup.html")) {
+      sendResponse({ok:false,error:"unauthorized"}); return true;
+    }
+    void (async () => {
+      // Updating must work even when automatic download capture is switched off.
+      const sync = await fetch(`${BRIDGE}/sync`,{cache:"no-store"});
+      if (!sync.ok) throw new Error("app-unavailable");
+      const data = await sync.json();
+      const response = await fetch(`${BRIDGE}/extension/update`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({token:data.token,browser:chrome.runtime.getManifest().browser_specific_settings ? "firefox" : "chromium",installedVersion:chrome.runtime.getManifest().version}),
+      });
+      if (response.status === 404) throw new Error("app-too-old");
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || "update-failed");
+      return result;
+    })().then(sendResponse).catch(error=>sendResponse({ok:false,error:error.message}));
+    return true;
+  }
+  if (message?.type === "youtube-download" || message?.type === "social-download") {
+    const social = message.type === "social-download";
+    const url = social ? globalThis.sfSocialMediaSource(message.url) : globalThis.sfYouTubeSource(message.url);
     const senderUrl = _sender.url || _sender.tab?.url;
     // Only our top-frame content script on an actual YouTube video may invoke this.
-    if (!url || !globalThis.sfIsYouTubePage(senderUrl) || (_sender.frameId || 0) !== 0) {
+    const validSender = social
+      ? url && globalThis.sfMediaPlatform(senderUrl) === globalThis.sfMediaPlatform(url)
+      : globalThis.sfIsYouTubePage(senderUrl);
+    if (!url || !validSender || (_sender.frameId || 0) !== 0) {
       sendResponse({ ok: false });
       return true;
     }
     void syncBridge().then(async () => {
-      if (!captureEnabledState || isBlockedHost(url)) throw new Error("YouTube integration disabled");
+      if (!captureEnabledState || isBlockedHost(url)) throw new Error("Media integration disabled");
       // This feature needs only the video URL, never browser cookies or captured headers.
       if (bridge.connected) {
         try {

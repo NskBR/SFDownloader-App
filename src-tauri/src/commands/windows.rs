@@ -55,7 +55,7 @@ pub async fn open_download_confirmation(
     token: String,
     url: String,
 ) -> Result<(), String> {
-    if crate::download::media::youtube_source(&url).is_ok() {
+    if crate::download::media::media_source(&url).is_ok() {
         let window = app
             .get_webview_window("main")
             .ok_or("Janela principal indisponível.")?;

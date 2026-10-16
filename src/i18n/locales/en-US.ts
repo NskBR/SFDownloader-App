@@ -1,3 +1,5 @@
+import { version as extensionVersion } from "../../../browser-extension/manifest.chromium.json";
+
 import type { Translations } from "./pt-BR";
 
 export const enUS: Translations = {
@@ -235,6 +237,14 @@ export const enUS: Translations = {
       advanced: "Advanced",
     },
     personalization: {
+      fontTitle: "Text font",
+      fontSubtitle: "Choose the interface font. Changes apply to all windows.",
+      fontDefault: "Application default",
+      fontImport: "Import font",
+      fontImporting: "Importing…",
+      fontImportHint: "TTF or OTF, up to 10 MB. The font is saved in this app.",
+      fontImportError: "Could not load this font. Choose a valid TTF or OTF file.",
+      fontUnavailable: "Imported font unavailable — import it again",
       appThemeTitle: "Application Theme",
       appThemeSubtitle: "Choose the theme that defines the overall app appearance.",
       customTheme: "Custom",
@@ -296,6 +306,8 @@ export const enUS: Translations = {
       aboutCategoriesDesc: "Files will be moved to the matching folder based on specified extensions. Use comma to separate multiple extensions: e.g. mp4, mkv, avi",
       fileOrgTitle: "File Organization",
       fileOrgSubtitle: "Define how your downloaded files will be organized.",
+      onDemandFoldersLabel: "Create folders as downloads are added",
+      onDemandFoldersDesc: "Creates only the required category folder when adding a download.",
       createSubfoldersLabel: "Create subfolders by category",
       createSubfoldersDesc: "Organizes downloads into folders by file type.",
       autoRenameLabel: "Auto-rename files",
@@ -317,8 +329,8 @@ export const enUS: Translations = {
       launchOnStartupDesc: "Starts the application minimized in the system tray on computer startup.",
       browserIntegrationCardTitle: "Browser Integration",
       browserIntegrationCardSubtitle: "Automatic link capture in web browsers.",
-      extensionBadge: "Extension v0.3.5",
-      extensionCardDesc: "Install the official SF Downloader extension (version v0.3.5) to capture downloads in Chromium browsers (Chrome, Edge, Opera, Brave, Vivaldi) and Firefox.",
+      extensionBadge: `Extension v${extensionVersion}`,
+      extensionCardDesc: `Install the official SF Downloader extension (version v${extensionVersion}) to capture downloads in Chromium browsers (Chrome, Edge, Opera, Brave, Vivaldi) and Firefox.`,
       configureIntegrationBtn: "Configure Integration",
       debugMenuTitle: "Debug Menu",
       debugMenuSubtitle: "Real-time system logs and crash diagnostics.",
@@ -380,7 +392,7 @@ export const enUS: Translations = {
     step2Chromium: "Enable “Developer mode” in the top-right corner of the page.",
     step3Chromium: "Drag the item above into the browser extensions page.",
     firefoxSigningTitle: "Mozilla-signed Firefox extension",
-    firefoxSigningDesc: "The signed 0.3.5 XPI is included with the app and opens in Firefox for installation confirmation.",
+    firefoxSigningDesc: "The matching signed XPI opens in Firefox for installation confirmation.",
     installFirefoxXpi: "Install in Firefox",
     firefoxSigningStep1: "Click “Install in Firefox” and confirm the installation in the browser.",
     firefoxSigningStep2: "Then open the extension popup and verify that it connects to SFDownloader.",

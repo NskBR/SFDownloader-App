@@ -12,8 +12,8 @@
 /* ----- Reset & Custom Premium Scrollbars ----------------------------------- */
 * {
   box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-width: var(--app-scrollbar-width, thin);
+  scrollbar-color: var(--app-scrollbar-colors, rgba(255, 255, 255, 0.18) transparent);
 }
 
 ::-webkit-scrollbar {
@@ -27,7 +27,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--text-2) 38%, transparent);
   border-radius: 999px;
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
@@ -37,11 +37,25 @@
   box-shadow: 0 0 8px var(--ember-soft, rgba(0, 184, 132, 0.4));
 }
 
-::-webkit-scrollbar-button {
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:double-button {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
 }
+
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* In WebView2, standard non-auto properties override the custom scrollbar,
+   including the hidden arrow buttons. Keep thin standard bars as a fallback. */
+@supports selector(::-webkit-scrollbar) {
+  :root {
+    --app-scrollbar-width: auto;
+    --app-scrollbar-colors: auto;
+  }
+}
+
 
 html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body {
@@ -53,6 +67,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+input, select, textarea { font-family: inherit; }
 /* Evita seleção de texto ao arrastar (janela arrastável / cliques seguros) */
 body, #root {
   -webkit-user-select: none;
@@ -826,8 +841,8 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   align-items: stretch;
   align-content: stretch;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ember-solid) transparent;
+  scrollbar-width: var(--app-scrollbar-width, thin);
+  scrollbar-color: var(--app-scrollbar-colors, var(--ember-solid) transparent);
   padding: 1px 4px 8px 1px;
 }
 .metrics-chart-card {
@@ -1144,6 +1159,7 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
 .success-banner { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--st-completed); border-radius: var(--radius-sm); color: var(--st-completed); background: rgba(59,165,93,0.1); font-size: 13px; }
 
 /* ----- Dialog Sobre ------------------------------------------------------- */
+.app-shell { isolation: isolate; }
 .help-overlay { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,0.55); }
 .help-dialog { width: min(560px, 94vw); max-height: 88vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
 .help-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--line); }
@@ -1152,7 +1168,7 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
 .help-dialog header button { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: var(--muted); }
 .help-dialog header button:hover { color: var(--text); background: var(--surface); }
 .help-dialog > p { margin: 0; padding: 16px 20px; color: var(--text-2); font-size: 13.5px; line-height: 1.6; }
-.help-dialog > footer { display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--line); }
+.help-dialog > footer { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
 .help-dialog > footer button { height: 38px; padding: 0 16px; border-radius: var(--radius-sm); color: #1e1f22; background: var(--ember); font-weight: 600; }
 .help-brand { display: flex; align-items: center; gap: 12px; }
 .help-logo { width: 38px; height: 38px; border-radius: 10px; object-fit: contain; }
@@ -1535,8 +1551,8 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
   max-height: calc(100vh - 16px);
   max-width: calc(100vw - 16px);
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ember-solid) transparent;
+  scrollbar-width: var(--app-scrollbar-width, thin);
+  scrollbar-color: var(--app-scrollbar-colors, var(--ember-solid) transparent);
   min-width: 210px;
   padding: 6px;
   border: 1px solid var(--line);
@@ -3583,7 +3599,7 @@ html, body, #root, .window-frame {
   right: 0 !important;
   max-height: 132px !important;
   overflow-y: auto !important;
-  scrollbar-width: thin !important;
+  scrollbar-width: var(--app-scrollbar-width, thin) !important;
   z-index: 999999 !important;
   background: #181a20 !important;
   background-color: #181a20 !important;
@@ -4025,7 +4041,7 @@ html, body, #root, .window-frame {
 }
 
 .sf-splash-text {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--window-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
   font-size: 13.5px;
   font-weight: 500;
   letter-spacing: 0.6px;
@@ -4087,7 +4103,7 @@ html, body, #root, .window-frame {
   height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--window-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -4761,7 +4777,7 @@ html, body, #root, .window-frame {
 @media (prefers-reduced-motion: reduce) { .navigation__icon, .navigation__item { transition: none; } }
 
 /* ----- Janelas de download: hierarquia e proporções ----------------------- */
-.dw-window { font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; --dw-track: var(--line); }
+.dw-window { font-family: var(--window-font, "Segoe UI Variable Text", "Segoe UI", sans-serif); --dw-track: var(--line); }
 .dw-title { height: 60px; padding: 8px 8px 4px 16px; gap: 8px; }
 .dw-title-text { flex: 1; max-width: none; gap: 12px; overflow: hidden; }
 .dw-title-icon { width: 34px; height: 34px; padding: 6px; border-radius: 10px; background: color-mix(in srgb, var(--surface) 65%, transparent); border: 1px solid var(--line); backdrop-filter: blur(12px); }
@@ -4907,3 +4923,6 @@ html, body, #root, .window-frame {
 @media (prefers-reduced-motion: reduce) {
   .dw-window.status-downloading .dw-title-arrow { animation: none; }
 }
+
+/* Let filename titles receive hover events inside the draggable title bar. */
+.dw-title-text .dw-title-name { pointer-events: auto; }

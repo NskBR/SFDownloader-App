@@ -1,4 +1,5 @@
 import { defaultSettings, type AppSettings } from "../domain/settings";
+import { appFontIds, type AppFont } from "../domain/appFonts";
 import { emit } from "@tauri-apps/api/event";
 
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -119,6 +120,7 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     secondaryDownloadFolder: stringFrom(value.secondaryDownloadFolder, base.secondaryDownloadFolder ?? ""),
     secondaryFolderEnabled: booleanFrom(value.secondaryFolderEnabled, base.secondaryFolderEnabled ?? false),
     autoOrganizeEnabled: booleanFrom(value.autoOrganizeEnabled, base.autoOrganizeEnabled),
+    organizeFoldersOnDemand: booleanFrom(value.organizeFoldersOnDemand, base.organizeFoldersOnDemand),
     deleteArchiveAfterExtract: booleanFrom(value.deleteArchiveAfterExtract, base.deleteArchiveAfterExtract),
     defaultSpeedValue: numberFrom(value.defaultSpeedValue, base.defaultSpeedValue, 0, 16_384),
     defaultSpeedUnit: valueFrom(value.defaultSpeedUnit, ["Mbps", "MB/s"], base.defaultSpeedUnit),
@@ -126,6 +128,8 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     maxParallelDownloads: numberFrom(value.maxParallelDownloads, base.maxParallelDownloads, 1, 50, true),
     speedLimitDownloadMbps: numberFrom(value.speedLimitDownloadMbps, base.speedLimitDownloadMbps, 0, 16_384),
     theme: valueFrom(value.theme, themes, base.theme),
+    fontFamily: typeof value.fontFamily === "string" && /^custom:[a-f0-9]{64}$/.test(value.fontFamily)
+      ? value.fontFamily as AppFont : valueFrom(value.fontFamily, appFontIds, base.fontFamily),
     uiScale: numberFrom(value.uiScale, base.uiScale, 0.8, 1.5),
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),

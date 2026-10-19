@@ -26,6 +26,8 @@ export function MediaConfirmationWindow() {
   const [videoQuality, setVideoQuality] = useState(0);
   const [audioQuality, setAudioQuality] = useState(192);
   const [destination, setDestination] = useState(settings.rootDownloadFolder);
+  const [customDestination, setCustomDestination] = useState(false);
+  const destinationSettings = customDestination ? { ...settings, autoOrganizeEnabled: false, organizeFoldersOnDemand: false } : settings;
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export function MediaConfirmationWindow() {
   }, []);
 
   const selectFolder = async () => {
-    try { const selected = await open({ directory: true, multiple: false, defaultPath: destination || undefined }); if (typeof selected === "string") setDestination(selected); }
+    try { const selected = await open({ directory: true, multiple: false, defaultPath: destination || undefined }); if (typeof selected === "string") { setDestination(selected); setCustomDestination(true); } }
     catch (e) { setError(String(e)); }
   };
   const start = async () => {
@@ -80,9 +82,9 @@ export function MediaConfirmationWindow() {
     try {
       const quality = format === "mp4" ? videoQuality : audioQuality;
       if (preview.playlist) {
-        await media.startMediaDownload(format, quality, destination, settings, preview.playlist.entries.filter(entry => selected.has(entry.videoId)).map(entry => entry.videoId));
+        await media.startMediaDownload(format, quality, destination, destinationSettings, preview.playlist.entries.filter(entry => selected.has(entry.videoId)).map(entry => entry.videoId));
       } else {
-        await media.startMediaDownload(format, quality, destination, settings);
+        await media.startMediaDownload(format, quality, destination, destinationSettings);
       }
       await getCurrentWindow().close();
     } catch (e) { setError(String(e)); starting.current = false; setBusy(false); }
@@ -121,8 +123,11 @@ export function MediaConfirmationWindow() {
     return `${q}p${names[q] ? ` · ${names[q]}` : ""}${fps ? ` (${Math.round(fps)} fps)` : ""}${q === largest ? text(" — Recomendado", " — Recommended") : ""}`;
   };
   const fileName = playlist ? `${selected.size} ${text("arquivos", "files")} .${format}` : preview ? `${preview.fileStem || preview.title}-sfd.${format}` : "";
-  const categoryFolder = destination && (settings.autoOrganizeEnabled || settings.organizeFoldersOnDemand) ? `${destination.replace(/[\\/]+$/, "")} / ${format === "mp3" ? "Músicas" : "Vídeos"}` : destination;
-  const folder = playlist && categoryFolder ? `${categoryFolder.replace(/[\\/]+$/, "")} / ${preview?.fileStem || preview?.title}` : categoryFolder;
+  const separator = destination.includes("\\") ? "\\" : "/";
+  const joinFolder = (parent: string, child: string) => `${parent.replace(/[\\/]+$/, "")}${separator}${child}`;
+  const categoryFolder = destination && (destinationSettings.autoOrganizeEnabled || destinationSettings.organizeFoldersOnDemand)
+    ? joinFolder(destination, format === "mp3" ? "Músicas" : "Vídeos") : destination;
+  const folder = playlist && categoryFolder ? joinFolder(categoryFolder, preview?.fileStem || preview?.title || "") : categoryFolder;
 
   const checkedEntries = playlist?.entries.filter(entry => selected.has(entry.videoId)) ?? [];
   const estimatedBytes = format === "mp3" && checkedEntries.length > 0 && checkedEntries.every(entry => (entry.duration ?? 0) > 0)

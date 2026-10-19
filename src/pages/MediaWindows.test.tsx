@@ -4,13 +4,13 @@ import { defaultSettings } from "../domain/settings";
 import type { MediaDetails, MediaPreview } from "../services/mediaService";
 
 const mocks = vi.hoisted(() => ({
-  close: vi.fn(async () => {}), minimize: vi.fn(async () => {}), maximize: vi.fn(async () => {}),
+  settings: {} as Partial<typeof defaultSettings>, close: vi.fn(async () => {}), minimize: vi.fn(async () => {}), maximize: vi.fn(async () => {}),
   inspect: vi.fn(), start: vi.fn(), details: vi.fn(), openFile: vi.fn(), reveal: vi.fn(), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close: mocks.close, minimize: mocks.minimize, toggleMaximize:mocks.maximize }) }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(async () => "C:/Other") }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) }));
-vi.mock("../services/settingsStorage", () => ({ loadSettings: () => ({ ...defaultSettings, language: "pt-BR", rootDownloadFolder: "C:/Downloads", autoOrganizeEnabled: true }) }));
+vi.mock("../services/settingsStorage", () => ({ loadSettings: () => ({ ...defaultSettings, language: "pt-BR", rootDownloadFolder: "C:/Downloads", autoOrganizeEnabled: true, ...mocks.settings }) }));
 vi.mock("../services/mediaService", async importOriginal => ({
   ...await importOriginal<typeof import("../services/mediaService")>(),
   inspectMedia: mocks.inspect, startMediaDownload: mocks.start, mediaDetails: mocks.details,
@@ -35,6 +35,7 @@ function detail(status: MediaDetails["task"]["status"] = "completed", format: Me
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.settings = {};
   mocks.inspect.mockResolvedValue(preview);
   mocks.start.mockResolvedValue({});
   mocks.details.mockResolvedValue(detail());
@@ -42,6 +43,29 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe("media confirmation", () => {
+  it.each(["mp3", "mp4"] as const)("keeps the root separate from the %s category with on-demand folders", async format => {
+    mocks.settings = { autoOrganizeEnabled:false, organizeFoldersOnDemand:true, rootDownloadFolder:"C:\\Downloads" };
+    render(<MediaConfirmationWindow />);
+    await screen.findByText(preview.title);
+    if (format === "mp3") fireEvent.click(screen.getByRole("button", {name:"Áudio MP3"}));
+    expect(screen.getByTitle(`C:\\Downloads\\${format === "mp3" ? "Músicas" : "Vídeos"}`)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", {name:format === "mp3" ? "Baixar áudio" : "Baixar vídeo"}));
+    await waitFor(() => expect(mocks.start).toHaveBeenCalledWith(format,format === "mp3" ? 192 : 2160,"C:\\Downloads",
+      expect.objectContaining({autoOrganizeEnabled:false, organizeFoldersOnDemand:true})));
+  });
+
+  it("uses the selected folder directly instead of appending another category", async () => {
+    render(<MediaConfirmationWindow />);
+    await screen.findByText(preview.title);
+    fireEvent.click(screen.getByRole("button", {name:"Alterar"}));
+    await screen.findByTitle("C:/Other");
+    fireEvent.click(screen.getByRole("button", {name:"Áudio MP3"}));
+    expect(screen.getByTitle("C:/Other")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", {name:"Baixar áudio"}));
+    await waitFor(() => expect(mocks.start).toHaveBeenCalledWith("mp3",192,"C:/Other",
+      expect.objectContaining({autoOrganizeEnabled:false, organizeFoldersOnDemand:false})));
+  });
+
   it("labels Instagram and disables audio conversion when the source is silent", async () => {
     mocks.inspect.mockResolvedValue({...preview,url:"https://www.instagram.com/reel/ABC/",hasAudio:false});
     render(<MediaConfirmationWindow />);
@@ -162,7 +186,7 @@ describe("media confirmation", () => {
     render(<MediaConfirmationWindow />);
     await screen.findByRole("heading", { name:"Baixar playlist" });
     expect(screen.getByText("Playlist · pasta própria")).toBeTruthy();
-    expect(screen.getByTitle("C:/Downloads / Músicas / Minha playlist")).toBeTruthy();
+    expect(screen.getByTitle("C:/Downloads/Músicas/Minha playlist")).toBeTruthy();
     expect(screen.getByRole("button", {name:"Áudio MP3"}).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText(/faixa\(s\) indisponível/)).toBeTruthy();
     expect(screen.getByText("Música dois")).toBeTruthy();
@@ -176,7 +200,7 @@ describe("media confirmation", () => {
     await screen.findByText("Playlist · pasta própria");
     fireEvent.click(screen.getByRole("button",{name:"Vídeo MP4"}));
     expect(screen.getByRole("button",{name:"Qualidade de saída"}).textContent).toContain("Até 1080p");
-    expect(screen.getByTitle("C:/Downloads / Vídeos / Playlist")).toBeTruthy();
+    expect(screen.getByTitle("C:/Downloads/Vídeos/Playlist")).toBeTruthy();
     fireEvent.click(screen.getByRole("button",{name:"Baixar playlist"}));
     await waitFor(() => expect(mocks.start).toHaveBeenCalledWith("mp4",1080,"C:/Downloads",expect.anything(),[preview.videoId]));
   });
@@ -187,7 +211,7 @@ describe("media confirmation", () => {
     expect(screen.getByRole("button", { name: "Qualidade de saída" }).textContent).toContain("2160p · 4K — Recomendado");
     fireEvent.click(screen.getByRole("button", { name: "Áudio MP3" }));
     expect(screen.getByRole("button", { name: "Qualidade de saída" }).textContent).toContain("192 kbps");
-    expect(screen.getByTitle("C:/Downloads / Músicas")).toBeTruthy();
+    expect(screen.getByTitle("C:/Downloads/Músicas")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Qualidade de saída" }));
     expect(screen.getAllByRole("option")).toHaveLength(4);
     fireEvent.click(screen.getByRole("option", { name: "320 kbps" }));

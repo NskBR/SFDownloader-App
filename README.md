@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.0.7.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.0.8.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -54,9 +54,14 @@ As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reuti
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.7_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.7).
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.8_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.8).
 
-### Novidades da 1.0.7
+### Novidades da 1.0.8
+
+- Corrigida a leitura de progresso de MP3/MP4 em Windows com nomes e pastas acentuados.
+- Caminho de destino legível e respeito à pasta selecionada manualmente, evitando categorias duplicadas.
+
+### Recursos da 1.0.7
 
 - Reconhecimento de vídeos públicos individuais do TikTok e Instagram/Reels e ícones de download na extensão 0.3.7. O suporte permanece em validação: Instagram foi testado com um Reel público; o teste real do TikTok encontrou bloqueio de IP.
 - Botão **Atualizar extensão** para usar o pacote do aplicativo instalado, com confirmação do XPI assinado no Firefox. No Chromium, a extensão deve estar carregada da pasta gerenciada pelo app.

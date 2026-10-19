@@ -2,6 +2,12 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.8 — 19/10/2026
+
+- Força UTF-8 nas ferramentas de mídia e tolera mensagens em codificações legadas, evitando falha na leitura do progresso com acentos.
+- Corrige a exibição do caminho de destino e evita acrescentar categorias à pasta escolhida manualmente.
+- Extensão permanece na versão 0.3.7, com XPI assinado integrado.
+
 ## 1.0.7 — 16/10/2026
 
 - Links de vídeos públicos do TikTok e Instagram/Reels no fluxo de mídia, com MP4/MP3, identificação por plataforma e suporte a vídeos sem áudio. O download real do TikTok ainda depende de validação em uma conexão sem bloqueio de IP.

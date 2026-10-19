@@ -372,6 +372,8 @@ impl Tools {
         let mut c = self.command("yt-dlp");
         c.args([
             "--ignore-config",
+            "--encoding",
+            "utf-8",
             "--no-plugin-dirs",
             "--no-update",
             "--no-cache-dir",
@@ -1242,7 +1244,7 @@ async fn run(
                 .take()
                 .ok_or("Saída de progresso indisponível.")?,
         )
-        .lines();
+        .split(b'\n');
         let stderr = child.stderr.take().ok_or("Diagnóstico indisponível.")?;
         let stderr_reader = tokio::spawn(async move {
             let mut data = Vec::new();
@@ -1262,9 +1264,12 @@ async fn run(
                 _ = tick.tick() => {
                     if !processing && control.speed_limit() != rate { restart = true; tree.stop(); let _ = child.kill().await; break; }
                 }
-                line = lines.next_line() => {
-                    let Some(line) = line.map_err(|_| "Falha ao ler o progresso da mídia.")? else { break; };
+                line = lines.next_segment() => {
+                    let Some(line) = line.map_err(|error| format!("Falha ao ler o progresso da mídia: {error}"))? else { break; };
                     if line.len() > 128 * 1024 { return Err("Resposta de progresso inválida.".into()); }
+                    // Native Windows tools can mix legacy-encoded diagnostics with UTF-8
+                    // progress. A filename in a log line must not abort the transfer.
+                    let line = String::from_utf8_lossy(&line);
                     if ["SF_PP:Merger:", "SF_PP:ExtractAudio:", "SF_PP:VideoRemuxer:", "SF_PP:Metadata:", "SF_PP:EmbedThumbnail:", "SF_PP:MoveFiles:"].iter().any(|prefix| line.starts_with(prefix)) {
                         if !control.begin_finalization() { tree.stop(); let _ = child.kill().await; let _ = stderr_reader.await; return Ok(()); }
                         processing = true;
@@ -1617,6 +1622,30 @@ mod tests {
         )
         .is_err());
     }
+    #[tokio::test]
+    async fn downloader_outputs_utf8_even_with_a_legacy_windows_encoding() {
+        let tools = Tools {
+            dir: PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/media-tools"),
+        };
+        let root = std::env::temp_dir().join(format!("sf-encoding-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&root).unwrap();
+        let metadata = root.join("info.json");
+        let title = "Músicas e Vídeos";
+        std::fs::write(&metadata, serde_json::to_vec(&json!({
+            "id":"test", "title":title, "ext":"mp4",
+            "url":"https://example.com/test.mp4", "extractor":"generic",
+            "webpage_url":"https://example.com/test.mp4"
+        })).unwrap()).unwrap();
+        let mut command = tools.downloader();
+        command.env("PYTHONIOENCODING", "cp1252")
+            .args(["--simulate", "--print", "%(title)s", "--load-info-json"])
+            .arg(&metadata);
+        let (ok, stdout, stderr) = capture(command, Duration::from_secs(20)).await.unwrap();
+        assert!(ok, "{stderr}");
+        assert_eq!(String::from_utf8(stdout).unwrap().trim(), title);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[tokio::test]
     #[ignore = "downloads a public YouTube video; requires network access"]
     async fn real_transfer_preserves_partials_resumes_and_reports_valid_progress() {

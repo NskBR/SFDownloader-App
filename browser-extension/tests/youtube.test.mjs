@@ -179,3 +179,39 @@ test("ignores retained hidden watch controls and replaces an invalidated extensi
     assert.equal(buttons[0].textContent, "");
   } finally { f.close(); }
 });
+
+test("Shorts action follows the active player across navigation and uses icon layout", async () => {
+  const html = '<ytd-reel-video-renderer is-active><div class="ytReelPlayerOverlayViewModelHostActions"></div></ytd-reel-video-renderer>';
+  const f = fixture({url:"https://www.youtube.com/shorts/NgA_JGCbEWE",html});
+  try {
+    await f.flush();
+    const host = f.window.document.getElementById("sfdownloader-youtube-action");
+    assert.ok(host.hasAttribute("data-shorts"));
+    assert.equal(host.parentElement.className,"ytReelPlayerOverlayViewModelHostActions");
+    f.shadow.querySelector("button").click(); await f.flush();
+    assert.equal(f.messages[0].url,videoUrl);
+    f.window.history.pushState({},"","/shorts/abcdefghijk");
+    f.window.document.dispatchEvent(new f.window.Event("yt-navigate-finish")); await f.flush();
+    f.shadow.querySelector("button").click(); await f.flush();
+    assert.equal(f.messages[1].url,"https://www.youtube.com/watch?v=abcdefghijk");
+    assert.equal(f.window.document.querySelectorAll("#sfdownloader-youtube-action").length,1);
+  } finally { f.close(); }
+});
+
+test("desktop extracted Shorts actions do not require is-active and ignore preloaded players", async () => {
+  const html = '<ytd-shorts><ytd-reel-video-renderer id="offscreen"><reel-action-bar-view-model></reel-action-bar-view-model></ytd-reel-video-renderer><ytd-reel-video-renderer id="visible" extract-action-bar><yt-reel-player-overlay-view-model><div class="ytReelPlayerOverlayViewModelActionsContainer"><reel-action-bar-view-model id="current-actions"></reel-action-bar-view-model></div></yt-reel-player-overlay-view-model></ytd-reel-video-renderer></ytd-shorts>';
+  const f = fixture({url:"https://www.youtube.com/shorts/NgA_JGCbEWE",html});
+  try {
+    const rect = top => ({left:0,right:450,top,bottom:top+700,width:450,height:700});
+    f.window.document.getElementById('offscreen').getBoundingClientRect = () => rect(1000);
+    f.window.document.getElementById('visible').getBoundingClientRect = () => rect(0);
+    await f.flush();
+    assert.equal(f.window.document.getElementById('sfdownloader-youtube-action').parentElement.id,'current-actions');
+    f.shadow.querySelector('button').click(); await f.flush();
+    assert.equal(f.messages[0].url,videoUrl);
+    f.window.document.getElementById('visible').getBoundingClientRect = () => rect(-1000);
+    f.window.document.getElementById('offscreen').getBoundingClientRect = () => rect(0);
+    f.window.document.dispatchEvent(new f.window.Event('scroll')); await f.flush();
+    assert.equal(f.window.document.getElementById('sfdownloader-youtube-action').closest('ytd-reel-video-renderer').id,'offscreen');
+  } finally { f.close(); }
+});

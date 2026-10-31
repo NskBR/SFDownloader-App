@@ -69,7 +69,7 @@ async function loadBackground(
     runtime: {
       id: "sf-test",
       getURL: path => `chrome-extension://sf-test/${path}`,
-      getManifest: () => ({version:"0.3.7",...(testOptions.firefox ? {browser_specific_settings:{gecko:{id:"integration@sfdownloader.local"}}} : {})}),
+      getManifest: () => ({version:"0.3.8",...(testOptions.firefox ? {browser_specific_settings:{gecko:{id:"integration@sfdownloader.local"}}} : {})}),
       lastError: null,
       onInstalled: listeners.installed,
       onStartup: listeners.startup,
@@ -136,7 +136,7 @@ test("extension update is popup-only and works with download capture disabled", 
   assert.equal((await send({id:"other",url:"chrome-extension://sf-test/popup.html"})).ok,false);
   const response=await send({id:"sf-test",url:"chrome-extension://sf-test/popup.html"});
   assert.equal(response.mode,"reload");
-  assert.deepEqual(JSON.parse(posted.at(-1).options.body),{token:"token",browser:"chromium",installedVersion:"0.3.7"});
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body),{token:"token",browser:"chromium",installedVersion:"0.3.8"});
   assert.deepEqual(cookieUrls,[]);
 });
 

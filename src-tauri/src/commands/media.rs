@@ -256,7 +256,7 @@ pub async fn start_media_download(
         &format!("media-progress-{}", task.id),
         "Download de mídia",
         440.0,
-        312.0,
+        254.0,
     );
     PREVIEWS
         .lock()
@@ -439,7 +439,7 @@ pub async fn open_media_progress(
         &format!("media-progress-{id}"),
         "Download de mídia",
         440.0,
-        312.0,
+        254.0,
     )
 }
 

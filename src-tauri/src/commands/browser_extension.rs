@@ -1,9 +1,9 @@
 use std::path::Path;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-const FIREFOX_XPI_NAME: &str = "sf_downloader_integration-firefox-0.3.7.xpi";
+const FIREFOX_XPI_NAME: &str = "sf_downloader_integration-firefox-0.3.8.xpi";
 const FIREFOX_XPI: &[u8] =
-    include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.3.7.xpi");
+    include_bytes!("../../../browser-extension/release/7c2944a3066543438b23-0.3.8.xpi");
 
 pub fn start_drag_folder(window: &WebviewWindow, path: &str) -> Result<(), String> {
     let folder_path = crate::download::paths::canonical_existing_directory(Path::new(path))?;

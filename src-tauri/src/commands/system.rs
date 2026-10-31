@@ -1,9 +1,14 @@
 use reqwest::Url;
 
+#[cfg(windows)]
+static COMPLETION_SOUND_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 #[tauri::command]
 pub async fn play_completion_sound() -> Result<(), String> {
     #[cfg(windows)]
     {
+        // PlaySound is process-wide: overlapping calls can interrupt each other.
+        let _guard = COMPLETION_SOUND_LOCK.lock().await;
         return tokio::task::spawn_blocking(|| {
             use windows_sys::Win32::Media::Audio::{
                 PlaySoundW, SND_MEMORY, SND_NODEFAULT, SND_SYNC,

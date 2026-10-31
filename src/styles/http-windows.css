@@ -27,6 +27,7 @@
   min-width: 0;
 }
 .confirm-header-left, .confirm-header-left * { pointer-events: none; }
+.confirm-header-left .confirm-title { pointer-events: auto; }
 .confirm-header-icon { color: var(--st-completed, var(--accent-primary)); flex-shrink: 0; }
 .confirm-title {
   font-size: 15px;

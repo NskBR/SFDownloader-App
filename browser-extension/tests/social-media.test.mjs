@@ -68,13 +68,17 @@ test('Instagram supports desktop Reel actions without an article wrapper',async(
   try {await f.flush();assert.equal(f.window.document.querySelectorAll('[data-sf-social-action]').length,1);f.shadows[0].querySelector('button').click();await f.flush();assert.equal(f.messages[0].url,instagram);} finally {f.close();}
 });
 test('Reel download is a separate icon action and never widens the share row',async()=>{
-  const html=`<article><video></video><a href="${instagram}">Video</a><aside style="display:flex;flex-direction:column;align-items:center"><div id="like"><button><svg aria-label="Curtir"></svg></button></div><div id="share"><button><svg aria-label="Compartilhar"></svg></button></div><div id="save"><button><svg aria-label="Salvar"></svg></button></div></aside></article>`;
+  const html=`<article><video></video><a href="${instagram}">Video</a><aside style="display:flex;flex-direction:column;align-items:center"><div id="like"><button><svg aria-label="Curtir"></svg></button></div><div id="share" style="margin-top:8px;margin-bottom:16px;padding-top:4px;padding-bottom:4px"><button><svg aria-label="Compartilhar"></svg></button></div><div id="save"><button><svg aria-label="Salvar"></svg></button></div></aside></article>`;
   const f=fixture(instagram,html);
   try {
     await f.flush();
     const host=f.window.document.querySelector('[data-sf-social-action]');
     assert.equal(host.parentElement.tagName,'ASIDE');
+    assert.equal(host.style.alignSelf,'center');
     assert.equal(host.previousElementSibling.id,'share');
+    assert.equal(host.style.marginTop,'8px');
+    assert.equal(host.style.marginBottom,'16px');
+    assert.equal(host.style.paddingTop,'4px');
     assert.equal(host.nextElementSibling.id,'save');
     assert.equal(f.window.document.querySelector('#share').children.length,1);
     assert.equal(f.shadows[0].querySelector('button').title,'SFDownloader · Escolher MP4 ou MP3');

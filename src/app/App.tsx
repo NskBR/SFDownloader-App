@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { getAllWindows } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { AppShell } from "../components/layout/AppShell";
 import { SettingsPage } from "../pages/SettingsPage";
@@ -77,11 +76,10 @@ export function App() {
     const acceptCompletion = completionSoundGate();
     const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
       if (!acceptCompletion(payload) || !currentSettings.current.playSoundOnComplete) return;
-      void getAllWindows().then((windows) => Promise.all(windows.map((window) => window.isFocused()))).then((focused) => {
-        if (!focused.some(Boolean) && !disposed && currentSettings.current.playSoundOnComplete) {
-          return invoke("play_completion_sound");
-        }
-      }).catch(() => {});
+      if (disposed) return;
+      void invoke("play_completion_sound").catch((error) => {
+        console.error("[SOUND] Falha ao reproduzir o som de conclusão:", error);
+      });
     });
     return () => {
       disposed = true;

@@ -280,7 +280,7 @@ export const ptBR = {
       openOnCompleteLabel: "Abrir pasta ao finalizar",
       openOnCompleteDesc: "Abre a pasta de destino quando o download terminar.",
       soundOnCompleteLabel: "Som ao concluir download",
-      soundOnCompleteDesc: "Toca um aviso discreto quando o aplicativo estiver em segundo plano.",
+      soundOnCompleteDesc: "Toca um aviso discreto ao concluir um download, mesmo com o aplicativo aberto.",
       testSound: "Testar som",
       soundTestFailed: "Não foi possível reproduzir o som.",
       tipTitle: "Dica",

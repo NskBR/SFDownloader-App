@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.0.8.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.0.9.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -54,9 +54,16 @@ As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reuti
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.8_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.8).
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.9_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.9).
 
-### Novidades da 1.0.8
+### Novidades da 1.0.9
+
+- Janela de progresso de mídia compacta, com transferência por bytes e status de conversão/capa.
+- Som de conclusão também com o app em foco e reprodução sequencial dos avisos.
+- Correções de tooltip e arraste nas confirmações.
+- Extensão 0.3.8 com botão nos Shorts atuais, ajuste de espaçamento no Instagram e XPI Firefox assinado integrado.
+
+### Correções da 1.0.8
 
 - Corrigida a leitura de progresso de MP3/MP4 em Windows com nomes e pastas acentuados.
 - Caminho de destino legível e respeito à pasta selecionada manualmente, evitando categorias duplicadas.

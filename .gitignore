@@ -23,3 +23,5 @@ browser-extension/release/*.xpi
 
 # Backups e zips locais
 *.zip
+
+!browser-extension/release/7c2944a3066543438b23-0.3.8.xpi

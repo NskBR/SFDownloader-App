@@ -238,6 +238,24 @@ describe("media confirmation", () => {
 });
 
 describe("media progress", () => {
+  it("shows measured download progress without a stage timeline", async () => {
+    const d = detail("downloading", "mp3");
+    d.task.totalDownloaded = 2097152; d.task.fileSize = 8388608;
+    mocks.details.mockResolvedValue(d);
+    render(<MediaProgressWindow id="test" />);
+    await screen.findByText("25%");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("25");
+    expect(document.querySelector(".media-stages")).toBeNull();
+  });
+  it("shows unknown transfer size without inventing a percentage", async () => {
+    const d = detail("downloading"); d.task.fileSize = null;
+    mocks.details.mockResolvedValue(d);
+    render(<MediaProgressWindow id="test" />);
+    await screen.findByText("Baixando mídia");
+    expect(screen.getByRole("progressbar").hasAttribute("aria-valuenow")).toBe(false);
+    expect(screen.queryByText("0%")).toBeNull();
+  });
+
   it("labels playlist progress as the current track rather than the entire playlist", async () => {
     const current = detail("downloading");
     current.options.playlist = {id:"PL0123456789",title:"Minha playlist",index:2,count:8};
@@ -245,7 +263,7 @@ describe("media progress", () => {
     render(<MediaProgressWindow id="test" />);
     await screen.findByText("Playlist · faixa 2/8", {exact:false});
     expect(screen.getByTitle("Minha playlist")).toBeTruthy();
-    expect(screen.queryByText("100%")).toBeNull();
+    expect(screen.queryByText("Concluído")).toBeNull();
   });
   it("shows verified completion and opens the final file and folder", async () => {
     render(<MediaProgressWindow id="test" />);
@@ -262,8 +280,8 @@ describe("media progress", () => {
     mocks.details.mockResolvedValue(detail("assembling"));
     render(<MediaProgressWindow id="test" />);
     await screen.findByText("Convertendo áudio e adicionando capa…");
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBeNull();
-    expect(screen.queryByText("100%")).toBeNull();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
+    expect(screen.queryByText("Concluído")).toBeNull();
     expect((screen.getByRole("button", { name: "Pausar" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     fireEvent.click(screen.getByRole("button", { name: "Manter arquivos" }));
@@ -273,7 +291,7 @@ describe("media progress", () => {
     mocks.details.mockResolvedValue(detail("downloading", "mp4"));
     render(<MediaProgressWindow id="test" />);
     await screen.findByText("Baixando mídia");
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("99");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
     mocks.details.mockResolvedValue(detail("paused", "mp4"));
     fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
     await screen.findByRole("button", { name: "Retomar" });

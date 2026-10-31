@@ -101,11 +101,6 @@ html.window-type-media, body.window-type-media { width:100%; height:100%; margin
 .media-progress-track { height:5px; background:var(--line); border-radius:4px; overflow:hidden; }
 .media-progress-track > span { display:block; height:100%; border-radius:4px; background:var(--ember); transition:width .25s ease; }
 .media-progress-track.processing > span { animation:media-progress 1.8s ease-in-out infinite; }
-.media-stages { display:flex; justify-content:space-between; gap:8px; margin-top:10px; font-size:10px; line-height:14px; color:var(--text-3,var(--text-2)); font-weight:600; }
-.media-stages > span { display:flex; align-items:center; gap:5px; white-space:nowrap; }
-.media-stages > span::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
-.media-stages .active { color:var(--ember-solid); }
-.media-stages.is-complete > span:last-child { color:var(--st-completed); }
 .media-metrics { display:grid; grid-template-columns:1fr 1fr; gap:15px; min-height:57px; margin:16px 0 0; padding:11px 12px; border:1px solid var(--line); border-radius:9px; background:color-mix(in srgb,var(--surface) 55%,transparent); }
 .media-metrics > div { min-width:0; }
 .media-metrics dt { margin:0 0 5px; color:var(--text-3,var(--text-2)); text-transform:uppercase; font:9px/11px ui-monospace,Consolas,monospace; letter-spacing:.04em; }
@@ -131,7 +126,7 @@ html.window-type-media, body.window-type-media { width:100%; height:100%; margin
  .media-field-heading > span { max-width:45%; }
  .media-filename { max-width:35%; }
 }
-@media (max-width:360px) { .media-stages { font-size:9px; gap:4px; } .media-stages > span { gap:3px; } .media-quality-badge { display:none; } .media-metrics { gap:8px; padding:10px; } }
+@media (max-width:360px) { .media-quality-badge { display:none; } .media-metrics { gap:8px; padding:10px; } }
 
 /* Playlist and Mix: settings on the left, independently scrolling tracks on the right. */
 .media-preview-state { display:flex; align-items:center; gap:9px; }
@@ -218,3 +213,12 @@ html.window-type-media, body.window-type-media { width:100%; height:100%; margin
 }
 
 .media-heading h1[title] { pointer-events: auto; }
+
+/* Compact media transfer: one measured bar, processing is reported in the status. */
+.media-progress-window .media-header { min-height:54px; padding:10px 14px; }
+.media-progress-window .media-body { padding:12px 16px 4px; }
+.media-progress-window .media-progress-summary { min-height:40px; margin-bottom:12px; gap:10px; }
+.media-progress-window .media-progress-summary strong { font:700 17px/22px var(--window-font,var(--font)); }
+.media-progress-window .media-metrics { min-height:0; margin:10px 0 0; padding:0; border:0; background:none; }
+.media-progress-window .media-metrics dt { text-transform:none; font:11px/15px var(--window-font,var(--font)); letter-spacing:0; margin-bottom:2px; }
+.media-progress-window .media-footer { min-height:50px; padding:8px 16px 12px; }

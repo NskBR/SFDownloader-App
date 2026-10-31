@@ -16,14 +16,34 @@
     if (scope.matches('[role="dialog"]') || !scope.closest('article') || document.querySelectorAll('article').length === 1) candidates.push(location.href);
     return candidates.map(globalThis.sfSocialMediaSource).find(Boolean) || null;
   };
+  function matchActionLayout(action, target, after) {
+    if (platform !== 'instagram' || !after || after.parentElement !== target) return;
+    const vertical = getComputedStyle(target).flexDirection === 'column';
+    const style = getComputedStyle(after);
+    const rect = after.getBoundingClientRect();
+    const desired = {
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      boxSizing: 'border-box', flexShrink: '0', alignSelf: 'center',
+      width: vertical && rect.width > 0 ? `${rect.width}px` : '',
+      height: vertical && rect.height > 0 ? `${rect.height}px` : '',
+      marginTop: vertical ? style.marginTop : '0px',
+      marginBottom: vertical ? style.marginBottom : '0px',
+      paddingTop: vertical ? style.paddingTop : '0px',
+      paddingBottom: vertical ? style.paddingBottom : '0px',
+    };
+    // Avoid observer loops: only write styles when layout actually changes.
+    for (const [key,value] of Object.entries(desired)) {
+      if (action.host.style[key] !== value) action.host.style[key] = value;
+    }
+  }
   function mount(target, scope, after = null) {
     let action = actions.get(target);
-    if (action) { action.scope = scope; return; }
+    if (action) { action.scope = scope; matchActionLayout(action,target,after); return; }
     const host = document.createElement('span');
     host.dataset.sfSocialAction = platform;
     host.style.cssText = platform === 'tiktok'
       ? 'display:flex;flex-direction:column;align-items:center;margin:8px 0;flex:none;'
-      : 'display:inline-flex;align-items:center;justify-content:center;flex:none;margin:0;vertical-align:middle;';
+      : 'display:inline-flex;align-items:center;justify-content:center;flex:none;margin:0;align-self:center;vertical-align:middle;';
     const shadow = host.attachShadow({mode:'closed'});
     const style = document.createElement('style');
     style.textContent = `
@@ -36,7 +56,7 @@
       button:disabled { opacity:.55; cursor:wait; }
       svg { width:23px; height:23px; flex:none; }
       .label { display:none; }
-      :host([data-sf-social-action="instagram"]) button { width:40px; height:40px; padding:8px; }
+      :host([data-sf-social-action="instagram"]) button { box-sizing:border-box; width:40px; height:40px; padding:8px; flex-shrink:0; }
       :host([data-sf-social-action="tiktok"]) button { flex-direction:column; gap:6px; border-radius:24px; padding:8px 6px; }
       :host([data-sf-social-action="tiktok"]) svg { box-sizing:content-box; width:24px; height:24px; padding:12px; border-radius:50%; background:rgba(128,128,128,.18); }
       output { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483647;
@@ -57,6 +77,7 @@
     button.append(icon,label); shadow.append(style,button,status);
     if (after?.parentElement === target) after.after(host); else target.append(host);
     action = {host,button,label,scope,busy:false,timer:null}; actions.set(target,action);
+    matchActionLayout(action,target,after);
     button.addEventListener('click', async event => {
       event.preventDefault(); event.stopPropagation();
       if (!enabled || action.busy || !action.host.isConnected) return;

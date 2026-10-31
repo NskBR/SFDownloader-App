@@ -17,6 +17,9 @@
       border-radius:18px; background:var(--yt-spec-badge-chip-background, #f2f2f2); color:inherit;
       font:500 14px/20px Roboto, Arial, sans-serif; white-space:nowrap; cursor:pointer;
       transition:background 150ms, border-color 150ms; }
+    :host([data-shorts]) { display:flex !important; justify-content:center; margin:0 0 12px !important; }
+    :host([data-shorts]) button { width:48px; height:48px; padding:12px; border:0; border-radius:50%; }
+    :host([data-shorts]) button > span { display:none; }
     button:hover { background:var(--yt-spec-button-chip-background-hover, #e5e5e5); }
     button:focus-visible { outline:2px solid #02adfd; outline-offset:3px; }
     button:disabled { cursor:wait; opacity:.7; }
@@ -95,7 +98,19 @@
       return document.querySelector("ytmusic-player-bar #right-controls, ytmusic-player-bar .right-controls");
     }
     if (location.pathname.startsWith("/shorts/")) {
-      return document.querySelector("ytd-reel-video-renderer[is-active] #actions");
+      const players = [...document.querySelectorAll('ytd-shorts ytd-reel-video-renderer, ytd-reel-video-renderer')]
+        .filter(player => !player.closest('[hidden], [aria-hidden="true"]'));
+      // Current desktop Shorts extracts the action bar and omits is-active.
+      // Choose the largest visible player, never an offscreen preloaded Short.
+      const visibleArea = element => {
+        const r = element.getBoundingClientRect();
+        return Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)) *
+          Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
+      };
+      const player = players.filter(p => visibleArea(p) > 0).sort((a,b) => visibleArea(b)-visibleArea(a))[0]
+        || players.find(p => p.hasAttribute('is-active'));
+      if (!player) return null;
+      return player.querySelector('reel-action-bar-view-model, .ytwReelActionBarViewModelHost, #actions, .reel-player-overlay-actions, .ytReelPlayerOverlayViewModelHostActions, #actions-container');
     }
     if (location.pathname === "/playlist") {
       for (const selector of ["ytd-playlist-header-renderer #top-level-buttons-computed", "ytd-playlist-sidebar-primary-info-renderer #menu", "yt-page-header-renderer .yt-page-header-view-model__page-header-headline"]) {
@@ -116,6 +131,7 @@
     const source = globalThis.sfYouTubeSource(location.href);
     const target = source && enabled && !navigating ? findContainer() : null;
     if (!target) { host.remove(); return; }
+    host.toggleAttribute("data-shorts", location.pathname.startsWith("/shorts/"));
     if (host.parentElement !== target) target.prepend(host);
   }
   function scheduleUpdate() {
@@ -139,10 +155,12 @@
   document.addEventListener("yt-navigate-start", () => { navigating = true; host.remove(); });
   document.addEventListener("yt-navigate-finish", () => { navigating = false; status.textContent = ""; scheduleUpdate(); });
   document.addEventListener("yt-page-data-updated", scheduleUpdate);
+  document.addEventListener("scroll", scheduleUpdate, {capture:true, passive:true});
+  window.addEventListener("resize", scheduleUpdate);
   window.addEventListener("popstate", () => { navigating = false; scheduleUpdate(); });
   // Also restores the action when YouTube replaces the toolbar asynchronously.
   const observer = new MutationObserver(scheduleUpdate);
-  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["is-active", "hidden"] });
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["is-active", "hidden", "aria-hidden"] });
   updateLabel();
   scheduleUpdate();
 })();

@@ -282,7 +282,7 @@ export const enUS: Translations = {
       openOnCompleteLabel: "Open folder upon completion",
       openOnCompleteDesc: "Opens destination folder when download finishes.",
       soundOnCompleteLabel: "Sound when download finishes",
-      soundOnCompleteDesc: "Plays a subtle alert when the app is in the background.",
+      soundOnCompleteDesc: "Plays a subtle alert when a download completes, even with the app in focus.",
       testSound: "Test sound",
       soundTestFailed: "Could not play the sound.",
       tipTitle: "Tip",

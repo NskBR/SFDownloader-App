@@ -8,7 +8,7 @@ function fixture(response,initial={}) {
   const dom=new JSDOM(html,{url:'https://extension.test/popup.html',runScripts:'outside-only'});
   const {window}=dom; const state={captureEnabled:false,language:'pt-BR',disabledExtensions:[],...initial}; const messages=[];let reloads=0;
   window.setInterval=()=>0;
-  window.chrome={runtime:{lastError:null,getManifest:()=>({version:'0.3.7'}),reload:()=>reloads++,sendMessage:(message,callback)=>{messages.push(message);callback?.(response);}},storage:{local:{get:(keys,callback)=>callback({...(!Array.isArray(keys)&&typeof keys==='object'?keys:{}),...state}),set:(values,callback)=>{Object.assign(state,values);callback?.();},remove:key=>delete state[key]}}};
+  window.chrome={runtime:{lastError:null,getManifest:()=>({version:'0.3.8'}),reload:()=>reloads++,sendMessage:(message,callback)=>{messages.push(message);callback?.(response);}},storage:{local:{get:(keys,callback)=>callback({...(!Array.isArray(keys)&&typeof keys==='object'?keys:{}),...state}),set:(values,callback)=>{Object.assign(state,values);callback?.();},remove:key=>delete state[key]}}};
   window.eval(script);
   return {window,state,messages,reloads:()=>reloads,flush:()=>new Promise(resolve=>setImmediate(resolve)),close:()=>window.close()};
 }

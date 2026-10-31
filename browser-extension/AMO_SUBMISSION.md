@@ -1,3 +1,12 @@
+# SF Downloader Integration 0.3.8 — notas para revisão AMO
+
+## Alterações da versão 0.3.8
+
+- Compatibilidade do botão de download com mais layouts de Shorts no YouTube.
+- Alinhamento central do ícone de download nos Reels do Instagram.
+- Mantém permissões e fluxo de envio da URL ao aplicativo.
+- XPI 0.3.8 assinado fornecido pelo mantenedor e integrado ao aplicativo após comparação dos arquivos.
+
 # SF Downloader Integration 0.3.7 — notas para revisão AMO
 
 ## Alterações da versão 0.3.7

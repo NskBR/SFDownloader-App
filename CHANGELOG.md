@@ -2,6 +2,14 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.0.9 — 30/10/2026
+
+- Janela de progresso de mídia compacta, com barra de transferência e status de finalização, sem linha de etapas.
+- Tooltip do nome completo na confirmação HTTP e áreas de arraste corrigidas na confirmação de mídia.
+- Som de conclusão também em primeiro plano e reprodução sequencial dos avisos.
+- Extensão 0.3.8 com suporte ao layout atual de Shorts e espaçamento do ícone no Instagram.
+- XPI Firefox 0.3.8 assinado integrado e verificado contra o pacote atual.
+
 ## 1.0.8 — 19/10/2026
 
 - Força UTF-8 nas ferramentas de mídia e tolera mensagens em codificações legadas, evitando falha na leitura do progresso com acentos.

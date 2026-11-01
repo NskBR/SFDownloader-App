@@ -40,6 +40,22 @@ export interface CustomCategory {
   extensions: string[];
 }
 
+export type GameTheme = "none" | "cyberpunk" | "cs2" | "star-citizen" | "god-of-war-ragnarok";
+
+export interface TestThemeSettings {
+  preset: "custom" | "cyberpunk" | "cs2" | "star-citizen" | "god-of-war-ragnarok";
+  enabled: boolean;
+  imageId: string | null;
+  css: string;
+  darkness: number;
+  panelOpacity: number;
+  position: "center" | "left" | "right";
+}
+
+export const defaultTestTheme: TestThemeSettings = {
+  preset: "custom", enabled: false, imageId: null, css: "", darkness: 50, panelOpacity: 85, position: "center",
+};
+
 export interface AppSettings {
   rootDownloadFolder: string;
   autoOrganizeEnabled: boolean;
@@ -52,6 +68,8 @@ export interface AppSettings {
   speedLimitDownloadMbps: number;
   theme: AppTheme;
   fontFamily: AppFont;
+  testTheme: TestThemeSettings;
+  gameTheme: GameTheme;
   uiScale: number;
   startInTrayMode: boolean;
   launchOnStartup: boolean;
@@ -85,6 +103,8 @@ export const defaultSettings: AppSettings = {
   speedLimitDownloadMbps: 0,
   theme: "midnight",
   fontFamily: "default",
+  testTheme: { ...defaultTestTheme },
+  gameTheme: "none",
   uiScale: 1.1,
   startInTrayMode: false,
   launchOnStartup: false,

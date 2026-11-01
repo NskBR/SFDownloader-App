@@ -381,6 +381,7 @@ export function AppShell({
               </button>
             </header>
 
+            <div className="help-body">
             <p className="help-intro">
               {t.about.description}
             </p>
@@ -414,6 +415,7 @@ export function AppShell({
               </div>
             </div>
 
+            </div>
             <footer>
               <button
                 className="help-link"

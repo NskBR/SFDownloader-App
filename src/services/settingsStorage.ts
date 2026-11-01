@@ -73,6 +73,7 @@ function freshDefaults(language: AppSettings["language"]): AppSettings {
   return {
     ...defaultSettings,
     language,
+    testTheme: { ...defaultSettings.testTheme },
     interfaceGradient: {
       ...defaultSettings.interfaceGradient,
       stops: defaultSettings.interfaceGradient.stops.map((stop) => ({ ...stop })),
@@ -89,6 +90,8 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
   const base = freshDefaults(fallbackLanguage);
   if (!isRecord(value)) return base;
 
+  const testTheme = isRecord(value.testTheme) ? value.testTheme : {};
+  const legacyGameTheme = value.gameTheme === undefined && testTheme.enabled === true && testTheme.preset === "cyberpunk";
   const gradient = isRecord(value.interfaceGradient) ? value.interfaceGradient : {};
   const stops = Array.isArray(gradient.stops)
     ? gradient.stops
@@ -130,6 +133,16 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     theme: valueFrom(value.theme, themes, base.theme),
     fontFamily: typeof value.fontFamily === "string" && /^custom:[a-f0-9]{64}$/.test(value.fontFamily)
       ? value.fontFamily as AppFont : valueFrom(value.fontFamily, appFontIds, base.fontFamily),
+    testTheme: {
+      preset: valueFrom(testTheme.preset, ["custom", "cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok"], "custom"),
+      enabled: legacyGameTheme ? false : booleanFrom(testTheme.enabled, false),
+      imageId: typeof testTheme.imageId === "string" && (testTheme.imageId === "builtin:cyberpunk" || testTheme.imageId === "builtin:cs2" || testTheme.imageId === "builtin:star-citizen" || testTheme.imageId === "builtin:god-of-war-ragnarok" || /^[a-f0-9]{64}$/.test(testTheme.imageId)) ? testTheme.imageId : null,
+      css: typeof testTheme.css === "string" ? testTheme.css.slice(0, 20000) : "",
+      darkness: numberFrom(testTheme.darkness, base.testTheme.darkness, 30, 85),
+      panelOpacity: numberFrom(testTheme.panelOpacity, base.testTheme.panelOpacity, 60, 100),
+      position: valueFrom(testTheme.position, ["center", "left", "right"], "center"),
+    },
+    gameTheme: valueFrom(value.gameTheme, ["none", "cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok"], legacyGameTheme ? "cyberpunk" : "none"),
     uiScale: numberFrom(value.uiScale, base.uiScale, 0.8, 1.5),
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),

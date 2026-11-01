@@ -23,7 +23,9 @@
         "center": true,
         "visible": false,
         "decorations": false,
-        "backgroundColor": "#0b0d12"
+        "transparent": true,
+        "shadow": false,
+        "backgroundColor": "#00000000"
       }
     ],
     "security": {

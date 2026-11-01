@@ -1,0 +1,26 @@
+[
+  {
+    "id": "cyberpunk",
+    "file": "cyberpunk.png",
+    "sha256": "d7d46631cff7ff3333f2e2de661a0d463392e98c27650f23420b0510caf39631",
+    "bytes": 5834086
+  },
+  {
+    "id": "cs2",
+    "file": "cs2.png",
+    "sha256": "2397ad6fa459e5be7aff77ea78f6acc4ed2db95c8694e932992c9d3468e0dfa8",
+    "bytes": 4798608
+  },
+  {
+    "id": "star-citizen",
+    "file": "star-citizen.png",
+    "sha256": "c216353607e529a915e938c8e6b3202e34e136e430d6bf641695e8959ccebe83",
+    "bytes": 3474392
+  },
+  {
+    "id": "god-of-war-ragnarok",
+    "file": "god-of-war-ragnarok.png",
+    "sha256": "d9c65d0ab63b45b25e3f6238d37dc995477f55b69ec04e22a5a4afed831d728b",
+    "bytes": 4472506
+  }
+]

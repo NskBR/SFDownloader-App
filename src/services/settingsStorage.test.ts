@@ -116,3 +116,32 @@ describe("settings storage", () => {
     expect(() => importSettingsBackup(JSON.stringify({ settings }))).toThrow("inválido");
   });
 });
+
+it("normalizes experimental theme input and preserves legacy defaults", () => {
+  const legacy=normalizeSettings({},"pt-BR");expect(legacy.testTheme.enabled).toBe(false);
+  const settings=normalizeSettings({testTheme:{enabled:true,imageId:"file:///private",css:".sidebar{color:red}",darkness:-1,panelOpacity:200,position:"url(evil)"}},"pt-BR");
+  expect(settings.testTheme).toEqual({preset:"custom",enabled:true,imageId:null,css:".sidebar{color:red}",darkness:30,panelOpacity:100,position:"center"});
+  const restored=importSettingsBackup(exportSettingsBackup({...defaultSettings,testTheme:{...defaultSettings.testTheme,enabled:true,imageId:"a".repeat(64)}}));
+  expect(restored.testTheme.imageId).toBe("a".repeat(64));
+});
+
+it("restores built-in themes without depending on locally imported files",()=>{
+ const restored=normalizeSettings({testTheme:{enabled:true,preset:"cyberpunk",imageId:"builtin:cyberpunk"}},"pt-BR");
+ expect(restored.testTheme.imageId).toBe("builtin:cyberpunk");
+ expect(restored.testTheme.preset).toBe("cyberpunk");
+});
+
+it("migrates the previous Cyberpunk preset into Game themes and preserves custom CSS",()=>{
+ const legacy=normalizeSettings({testTheme:{enabled:true,preset:"cyberpunk",imageId:"builtin:cyberpunk",css:".sidebar{color:red}"}},"pt-BR");
+ expect(legacy.gameTheme).toBe("cyberpunk");expect(legacy.testTheme.enabled).toBe(false);expect(legacy.testTheme.css).toContain("color:red");
+ const current=normalizeSettings({...defaultSettings,gameTheme:"cs2"},"pt-BR");expect(current.gameTheme).toBe("cs2");
+ expect(importSettingsBackup(exportSettingsBackup(current)).gameTheme).toBe("cs2");
+});
+
+it.each(["star-citizen","god-of-war-ragnarok"] as const)("persists and backs up %s",id=>{
+ const settings={...defaultSettings,gameTheme:id};saveSettings(settings);
+ expect(loadSettings().gameTheme).toBe(id);
+ expect(importSettingsBackup(exportSettingsBackup(settings)).gameTheme).toBe(id);
+ const custom=normalizeSettings({testTheme:{enabled:true,preset:id,imageId:`builtin:${id}`}},"pt-BR");
+ expect(custom.testTheme.preset).toBe(id);expect(custom.testTheme.imageId).toBe(`builtin:${id}`);
+});

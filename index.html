@@ -6,16 +6,24 @@
   <meta name="theme-color" content="#0b0d12">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><path fill=%22%237d5cff%22 d=%22M6 0 2 6h3l-1 4 4-6H5z%22/></svg>">
   <title>SF Downloader</title>
+  <script>
+    // Tauri injects the window metadata before this document is parsed.
+    // Auxiliary windows have their own loading UI; only main uses the cup splash.
+    const bootLabel = window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label;
+    if (!bootLabel || bootLabel === "main") document.documentElement.dataset.bootMain = "true";
+  </script>
   <style>
     html,body,#root{width:100%;height:100%;margin:0;padding:0;background:transparent!important;overflow:hidden}
     .boot-loader{
       position:fixed;inset:0;width:100%;height:100%;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      display:none;flex-direction:column;align-items:center;justify-content:center;
       gap:14px;
       color:#94a3b8;font:500 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
       background:radial-gradient(circle at 50% 40%,#1a1e29 0%,#0b0d12 70%);
       border-radius:12px;overflow:hidden;user-select:none;
     }
+    html[data-boot-main="true"] .boot-loader{display:flex}
+    html:not([data-boot-main="true"]) .boot-loader{display:none!important}
     .sf-splash-cup-wrap{position:relative;display:grid;place-items:center;filter:drop-shadow(0 10px 24px rgba(0,0,0,0.5))}
     .sf-splash-steam .sf-steam-1{animation:sf-steam-drift 2.2s cubic-bezier(0.4,0,0.2,1) infinite;transform-origin:bottom center}
     .sf-splash-steam .sf-steam-2{animation:sf-steam-drift 2.2s cubic-bezier(0.4,0,0.2,1) infinite .6s;transform-origin:bottom center}

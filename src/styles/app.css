@@ -1,3 +1,5 @@
+@import "./theme-fonts.css";
+@import "./test-themes.css";
 @import "./http-windows.css";
 @import "./media.css";
 @import "./torrent-windows.css";
@@ -1161,25 +1163,25 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
 /* ----- Dialog Sobre ------------------------------------------------------- */
 .app-shell { isolation: isolate; }
 .help-overlay { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,0.55); }
-.help-dialog { width: min(560px, 94vw); max-height: 88vh; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
-.help-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px; border-bottom: 1px solid var(--line); }
+.help-dialog { display: flex; flex-direction: column; width: min(580px, 100%); max-height: calc(100dvh - 40px); overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel); box-shadow: var(--shadow); }
+.help-dialog > header { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px 20px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
 .help-dialog header span { color: var(--ember-solid); font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
 .help-dialog h2 { margin: 4px 0 0; font-size: 18px; }
 .help-dialog header button { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; color: var(--muted); }
 .help-dialog header button:hover { color: var(--text); background: var(--surface); }
-.help-dialog > p { margin: 0; padding: 16px 20px; color: var(--text-2); font-size: 13.5px; line-height: 1.6; }
-.help-dialog > footer { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
+.help-body { min-height: 0; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; }
+.help-dialog > footer { flex-shrink: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
 .help-dialog > footer button { height: 38px; padding: 0 16px; border-radius: var(--radius-sm); color: #1e1f22; background: var(--ember); font-weight: 600; }
 .help-brand { display: flex; align-items: center; gap: 12px; }
 .help-logo { width: 38px; height: 38px; border-radius: 10px; object-fit: contain; }
-.help-intro { margin: 0; padding: 16px 20px 0; color: var(--text-2); font-size: 13px; line-height: 1.6; }
-.help-features { margin: 14px 0 0; padding: 0 20px; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
+.help-intro { margin: 0; padding: 0; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+.help-features { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; }
 .help-features li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); }
 .help-features li svg { color: var(--ember-solid); flex-shrink: 0; }
-.help-meta { margin: 16px 20px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 7px; }
-.help-meta-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; }
+.help-meta { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 7px; }
+.help-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12.5px; }
 .help-meta-row span { color: var(--muted); }
-.help-meta-row b { color: var(--text); font-weight: 600; }
+.help-meta-row b { text-align: right; color: var(--text); font-weight: 600; }
 .help-contact-btn {
   display: inline-flex;
   align-items: center;
@@ -4926,3 +4928,15 @@ html, body, #root, .window-frame {
 
 /* Let filename titles receive hover events inside the draggable title bar. */
 .dw-title-text .dw-title-name { pointer-events: auto; }
+
+/* Download details loading: use the final layout's proportions, without fake progress. */
+.dw-loading { padding:24px 20px 20px; align-content:center; gap:18px; }
+.dw-loading-preview { display:flex; align-items:center; gap:18px; width:100%; }
+.dw-loading-preview > div { display:grid; gap:10px; flex:1; }
+.dw-skeleton { display:block; background:color-mix(in srgb,var(--text-2) 13%,transparent); border-radius:5px; }
+.dw-skeleton-icon { width:62px; height:62px; border-radius:50%; border:3px solid color-mix(in srgb,var(--ember-solid) 22%,transparent); background:transparent; flex-shrink:0; }
+.dw-skeleton-name { width:88%; height:13px; }
+.dw-skeleton-meta { width:56%; height:9px; }
+.dw-skeleton-size { width:34%; height:18px; }
+.dw-loading-label { margin:0; font-size:12px; color:var(--text-2); }
+.dw-load-error { display:flex; gap:10px; align-items:center; margin:0; font-size:12px; color:var(--st-failed); overflow-wrap:anywhere; }

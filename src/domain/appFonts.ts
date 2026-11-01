@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 export const appFonts = [
   { id: "default", label: "", family: "" },
   { id: "segoe", label: "Segoe UI", family: '"Segoe UI Variable Text", "Segoe UI", sans-serif' },
+  { id: "rajdhani", label: "Rajdhani", family: '"SFRajdhani", "Segoe UI", sans-serif' },
   { id: "arial", label: "Arial", family: 'Arial, "Segoe UI", sans-serif' },
   { id: "tahoma", label: "Tahoma", family: 'Tahoma, "Segoe UI", sans-serif' },
   { id: "verdana", label: "Verdana", family: 'Verdana, "Segoe UI", sans-serif' },

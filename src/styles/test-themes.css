@@ -1,0 +1,325 @@
+/* Opt-in only: cosmetic overrides never touch child windows or settings controls. */
+html.window-type-main[data-test-theme="true"] .window-frame {
+  background: linear-gradient(rgb(0 0 0 / var(--test-theme-darkness,.5)),rgb(0 0 0 / var(--test-theme-darkness,.5))),var(--test-theme-image,none),var(--bg) !important;
+  background-size: cover !important;
+  background-position: var(--test-theme-position,center) center !important;
+  background-repeat: no-repeat !important;
+}
+html.window-type-main[data-test-theme="true"] .download-card {
+  background: color-mix(in srgb,var(--surface) var(--test-theme-panel,85%),transparent) !important;
+}
+html.window-type-main[data-test-theme="true"] .sidebar {
+  background: color-mix(in srgb,var(--bg) 70%,transparent) !important;
+}
+/* Keep settings readable and the recovery button outside user-controlled selectors. */
+html.window-type-main[data-test-theme="true"] .simple-settings { background:var(--bg) !important; }
+.test-themes-heading { gap:10px; }
+.test-themes-heading > div:nth-child(2) { flex:1; min-width:0; }
+.test-themes-body { display:grid; gap:12px; padding:0 14px 14px; min-width:0; }
+.test-themes-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.test-themes-hint { margin:0; color:var(--text-2); font-size:11px; line-height:1.5; overflow-wrap:anywhere; }
+.test-themes-field { display:grid; gap:8px; min-width:0; color:var(--text); font-size:12px; }
+.test-themes-field > span { display:flex; align-items:center; gap:6px; }
+.test-themes-field textarea { width:100%; min-height:160px; max-height:360px; resize:vertical; border:1px solid var(--line); border-radius:8px; padding:12px; background:var(--bg); color:var(--text); font:12px/1.6 Consolas,monospace; user-select:text; }
+.test-themes-field textarea:focus { outline:2px solid var(--ember-solid); outline-offset:2px; }
+.test-themes-adjustments { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+.test-themes-adjustments label { display:grid; gap:8px; color:var(--text-2); font-size:11px; }
+.test-themes-adjustments input { width:100%; accent-color:var(--ember-solid); }
+.test-themes-error { color:var(--st-failed); font-size:12px; overflow-wrap:anywhere; margin:0; }
+.test-themes-assets { color:var(--text-2); font-size:11px; }
+.test-themes-assets summary { cursor:pointer; padding:6px 0; }
+.test-themes-assets > div { display:flex; justify-content:space-between; gap:10px; padding:5px 0; }
+.test-themes-assets > div > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.test-themes-assets button { color:var(--ember-solid); flex-shrink:0; }
+
+.test-themes-actions > .btn-primary { min-height:34px; padding:8px 14px; border-radius:8px; background:var(--ember); color:var(--bg); font-weight:650; font-size:12px; }
+
+/* Legibility for imported backgrounds: boxed categories, only in opt-in test mode. */
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__item {
+  background: color-mix(in srgb,var(--surface) 94%,transparent);
+  border:1px solid color-mix(in srgb,var(--text-2) 24%,transparent);
+  border-radius:10px;
+  color:var(--text);
+  box-shadow:0 2px 6px rgb(0 0 0 / .15);
+}
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__item:hover {
+  background:var(--surface-2);
+  border-color:var(--ember-solid);
+}
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__item--active {
+  background:color-mix(in srgb,var(--bg) 90%,var(--ember-solid));
+  border-color:var(--ember-solid);
+}
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__icon {
+  color:var(--text-2);
+}
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__item--active .navigation__icon {
+  color:var(--ember-solid);
+}
+html.window-type-main[data-test-theme="true"] .sidebar .navigation__group-label {
+  color:var(--text);
+  text-shadow:0 1px 4px #000;
+}
+
+/* One wallpaper and one darkness layer across the shell: no separate sidebar crop/tint. */
+html.window-type-main[data-test-theme="true"] .window-frame > .app-shell > .sidebar {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-right: 0 !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame > .app-shell > .sidebar::before {
+  background: transparent;
+}
+
+/* Text/action buttons share the footer glass; icon buttons stay inside that surface. */
+html[data-test-theme="true"] {
+  --test-glass-fill: linear-gradient(145deg,
+    color-mix(in srgb,var(--surface) 52%,transparent),
+    color-mix(in srgb,var(--surface-2) 18%,transparent)),
+    color-mix(in srgb,var(--bg-surface,var(--bg)) 26%,transparent);
+}
+html.window-type-main[data-test-theme="true"] .window-frame button {
+  border-color: transparent !important;
+  outline: none;
+}
+html.window-type-main[data-test-theme="true"] .window-frame button:where(
+  :not([role="switch"]):not([style*="background"]):not(.navigation__group):not(.sidebar-footer-btn):not(.titlebar button)
+),
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar-footer-row {
+  background: var(--test-glass-fill) !important;
+  backdrop-filter: blur(16px) saturate(125%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(125%) !important;
+  box-shadow: 0 4px 12px color-mix(in srgb,var(--bg) 20%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame button:where(
+  :not([role="switch"]):not([style*="background"]):not(.navigation__group):not(.sidebar-footer-btn):not(.titlebar button)
+):hover:not(:disabled) {
+  background: linear-gradient(var(--ember-soft),var(--ember-soft)),var(--test-glass-fill) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame button:where(
+  .navigation__item--active, .cfg-tab-btn.is-active, [aria-pressed="true"]
+) {
+  background: linear-gradient(var(--ember-soft),var(--ember-soft)),var(--test-glass-fill) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar-footer-btn {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar-footer-row {
+  border-color: transparent !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar-indicator {
+  border-color: transparent !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame button:focus-visible {
+  outline: 2px solid var(--ember-solid);
+  outline-offset: 2px;
+}
+
+html.window-type-main[data-test-theme="true"] .window-frame .navigation__icon {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Status is functional information and takes precedence over decorative theme rules. */
+html.window-type-main[data-test-theme="true"] .window-frame .download-card {
+  --test-card-status: var(--st-downloading,var(--ember-solid));
+  border-color: color-mix(in srgb,var(--test-card-status) 60%,transparent) !important;
+  border-left-color: var(--test-card-status) !important;
+  box-shadow: inset 3px 0 0 var(--test-card-status),0 4px 12px rgb(0 0 0 / .2) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.status-completed { --test-card-status: var(--st-completed); }
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.status-paused { --test-card-status: var(--st-paused); }
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.status-failed { --test-card-status: var(--st-failed); }
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.status-cancelled { --test-card-status: var(--st-cancelled); }
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.status-pending { --test-card-status: var(--muted); }
+/* Selection must stay visible above cosmetic presets, without hiding status on the left. */
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.selected {
+  --test-selection-color: var(--text-2);
+  background: linear-gradient(color-mix(in srgb,var(--test-selection-color) 16%,transparent),color-mix(in srgb,var(--test-selection-color) 16%,transparent)),color-mix(in srgb,var(--surface) 92%,transparent) !important;
+  border-bottom: 2.5px solid var(--test-selection-color) !important;
+  box-shadow: inset 3px 0 0 var(--test-card-status),inset 0 0 0 1px color-mix(in srgb,var(--test-selection-color) 65%,transparent),0 4px 12px rgb(0 0 0 / .2) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .download-card.selected.selected-multi {
+  --test-selection-color: var(--ember-solid);
+}
+/* Shared wallpaper continues through the titlebar, including previously saved presets. */
+html.window-type-main[data-test-theme="true"] .window-frame > .titlebar {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+/* A subtle edge separates adjacent navigation surfaces without framing their icons. */
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation__item {
+  border: 1px solid color-mix(in srgb,var(--text) 15%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation__item:hover {
+  border-color: color-mix(in srgb,var(--text) 26%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation__item--active {
+  border-color: color-mix(in srgb,var(--ember-solid) 42%,transparent) !important;
+}
+
+.game-themes-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.game-themes-header > div:nth-child(2) { flex:1; min-width:180px; }
+.game-themes-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)); gap:10px; padding:0 14px 14px; }
+.game-theme-tile { min-width:0; overflow:hidden; border:1px solid transparent; border-radius:12px; padding:10px; background:var(--surface); color:var(--text); display:flex; flex-direction:column; align-items:stretch; cursor:pointer; }
+html.window-type-main[data-test-theme="true"] .window-frame .game-theme-tile.is-selected,
+.game-theme-tile.is-selected { border-color:var(--ember-solid) !important; }
+.game-theme-tile:hover:not(:disabled) { background:var(--surface-2); }
+.game-theme-tile:focus-visible { outline:2px solid var(--ember-solid); outline-offset:2px; }
+.game-theme-preview { display:block; position:relative; }
+.game-theme-preview > img { display:block; width:100%; height:76px; border-radius:7px; object-fit:cover; }
+.game-theme-check { position:absolute; top:5px; right:5px; display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--ember-solid); color:var(--bg); }
+.game-theme-tile > strong { display:block; font-size:12px; line-height:1.35; margin-top:14px; text-align:center; }
+.game-theme-state { display:block; min-height:16px; font-size:10px; line-height:16px; text-align:center; color:var(--ember-solid); }
+.game-themes-error { padding:0 14px 14px; }
+
+/* Shared game/background appearance in every internal auxiliary window.
+   User CSS selectors remain confined to the main window. */
+html[data-test-theme="true"]:not(.window-type-main) #root > :is(
+  .download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window
+) {
+  background:linear-gradient(rgb(0 0 0 / var(--test-theme-darkness,.5)),rgb(0 0 0 / var(--test-theme-darkness,.5))),var(--test-theme-image,none),var(--bg) !important;
+  background-size:cover !important;
+  background-position:var(--test-theme-position,center) center !important;
+  background-repeat:no-repeat !important;
+}
+html[data-test-theme="true"]:not(.window-type-main) :is(
+  .confirm-header,.dw-titlebar,.dw-title,.media-header,.tc-header,.integr-header,.dbg-header
+) { background:transparent !important; }
+html[data-test-theme="true"]:not(.window-type-main) button:where(
+  :not([role="switch"]):not([style*="background"]):not(.media-controls button):not(.dw-controls button):not(.confirm-window-controls button):not(.tc-window-controls button):not(.integr-close):not(.dbg-close)
+) {
+  background:var(--test-glass-fill) !important;
+  backdrop-filter:blur(16px) saturate(125%);
+  -webkit-backdrop-filter:blur(16px) saturate(125%);
+  color:var(--text) !important;
+}
+html[data-test-theme="true"]:not(.window-type-main) :is(
+  .media-metrics,.confirm-field,.tc-field,.integr-bridge-status,.dbg-filters
+) { background:color-mix(in srgb,var(--surface) 80%,transparent); }
+
+/* Built-in game ornaments are inert and never take pointer or keyboard input. */
+html.window-type-main[data-test-preset="star-citizen"] .window-frame .download-card {
+  position:relative;
+  border-radius:0 !important;
+  clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px);
+}
+html.window-type-main[data-test-preset="star-citizen"] .download-card::after {
+  content:"";position:absolute;inset:4px;pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--ember-solid) 28%,transparent);
+  clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px);
+  background:linear-gradient(135deg,transparent 47%,rgb(101 185 237 / .09) 48%,rgb(101 185 237 / .09) 52%,transparent 53%) right 28px bottom / 110px 100% no-repeat;
+}
+html.window-type-main[data-test-preset="star-citizen"] .window-frame .sidebar .navigation__item {
+  border-radius:0 !important;
+  clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px);
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .window-frame .download-card {
+  position:relative;
+  border-radius:7px !important;
+  border-top-color:rgb(199 163 107 / .55) !important;
+  border-right-color:rgb(199 163 107 / .45) !important;
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .download-card::before {
+  content:"";position:absolute;inset:4px 5px 4px 7px;pointer-events:none;
+  border:1px solid rgb(199 163 107 / .22);border-radius:3px;
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .download-card::after {
+  content:"";position:absolute;right:19%;top:14px;bottom:14px;width:42px;pointer-events:none;
+  background:url("../assets/themes/ragnarok-runes.svg") center / contain no-repeat;opacity:.13;
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .window-frame .sidebar .navigation__item {
+  border-radius:5px !important;
+  clip-path:none;
+  border-color:rgb(199 163 107 / .32) !important;
+  box-shadow:inset 0 0 0 3px rgb(199 163 107 / .07) !important;
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .window-frame .sidebar .navigation__item--active {
+  border-color:rgb(199 163 107 / .7) !important;
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .navigation__group-label { color:#c7a36b; }
+
+.game-theme-tile:disabled { cursor:default; }
+
+/* Outer silhouette: small cuts leave titlebar controls and layout untouched. */
+html.window-type-main[data-test-preset="cyberpunk"] .window-frame {
+  border-radius:3px;
+  clip-path:polygon(22px 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%,0 22px);
+}
+html.window-type-main[data-test-preset="cs2"] .window-frame {
+  border-radius:3px;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px));
+}
+html.window-type-main[data-test-preset="star-citizen"] .window-frame {
+  border-radius:0;
+  clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px);
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .window-frame {
+  border-radius:14px;
+  clip-path:inset(0 round 14px);
+}
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] .window-frame::after {
+  content:"";position:absolute;inset:0;z-index:100;pointer-events:none;
+  border:1px solid rgb(199 163 107 / .55);border-radius:inherit;
+}
+html.window-type-main[data-window-maximized="true"] .window-frame {
+  border-radius:0 !important;
+  clip-path:none !important;
+}
+html.window-type-main[data-window-maximized="true"] .window-frame::after { display:none; }
+
+/* Clip the document surface too: ancestor backgrounds otherwise fill the cutouts. */
+html.window-type-main[data-test-preset="cyberpunk"] { --game-window-shape:polygon(22px 0,100% 0,100% calc(100% - 22px),calc(100% - 22px) 100%,0 100%,0 22px); }
+html.window-type-main[data-test-preset="cs2"] { --game-window-shape:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,14px 100%,0 calc(100% - 14px)); }
+html.window-type-main[data-test-preset="star-citizen"] { --game-window-shape:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px); }
+html.window-type-main[data-test-preset="god-of-war-ragnarok"] { --game-window-shape:inset(0 round 14px); }
+html.window-type-main[data-test-theme="true"][data-test-preset],
+html.window-type-main[data-test-theme="true"][data-test-preset] body,
+html.window-type-main[data-test-theme="true"][data-test-preset] #root {
+  background:transparent !important;
+  clip-path:var(--game-window-shape,none);
+}
+html.window-type-main[data-window-maximized="true"] { --game-window-shape:none !important; }
+
+/* Tabs already have a sliding indicator: avoid stacked backdrop-filter surfaces. */
+html.window-type-main[data-test-theme="true"] .cfg-nav-tabs {
+  overflow:hidden;
+  isolation:isolate;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .cfg-nav-tabs .cfg-tab-btn,
+html.window-type-main[data-test-theme="true"] .window-frame .cfg-nav-tabs .cfg-tab-btn:hover,
+html.window-type-main[data-test-theme="true"] .window-frame .cfg-nav-tabs .cfg-tab-btn.is-active {
+  background:transparent !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
+}
+
+/* Standard themes: a soft outer edge without changing the layout dimensions. */
+html.window-type-main:not([data-test-theme="true"]),
+html.window-type-main:not([data-test-theme="true"]) body,
+html.window-type-main:not([data-test-theme="true"]) #root {
+  background:transparent !important;
+  clip-path:inset(0 round 9px);
+}
+html.window-type-main:not([data-test-theme="true"]) .window-frame {
+  border-radius:9px;
+}
+html.window-type-main:not([data-test-theme="true"]) .window-frame::after {
+  content:"";position:absolute;inset:0;z-index:100;pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--text-2) 28%,transparent);
+  border-radius:inherit;
+}
+html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]),
+html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]) body,
+html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]) #root {
+  clip-path:none;
+}
+html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]) .window-frame::after { display:none; }

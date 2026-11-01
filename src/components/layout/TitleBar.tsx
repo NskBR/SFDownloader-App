@@ -42,6 +42,24 @@ export function TitleBar({
   onOpenHelp,
 }: TitleBarProps) {
   const { t } = useTranslation();
+  useEffect(() => {
+    let disposed = false;
+    let revision = 0;
+    const refresh = async () => {
+      const current = ++revision;
+      try {
+        const maximized = await appWindow.isMaximized();
+        if (!disposed && current === revision) document.documentElement.dataset.windowMaximized = String(maximized);
+      } catch { /* Keep the normal frame if window state is unavailable. */ }
+    };
+    void refresh();
+    const listener = appWindow.onResized(() => { void refresh(); });
+    return () => {
+      disposed = true;
+      void listener.then(unlisten => unlisten()).catch(() => {});
+      delete document.documentElement.dataset.windowMaximized;
+    };
+  }, []);
   const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress>(idleUpdateProgress);
   useEffect(() => {

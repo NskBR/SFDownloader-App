@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
+import { GameThemesCard } from "../components/settings/GameThemesCard";
+import { TestThemesCard } from "../components/settings/TestThemesCard";
 import { SettingsHeader } from "../components/settings/SettingsHeader";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
 import { invoke } from "@tauri-apps/api/core";
@@ -130,6 +132,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = {
       ...draft, [key]: value,
+      ...(key === "testTheme" && (value as AppSettings["testTheme"]).enabled ? { gameTheme: "none" as const } : {}),
       ...(key === "autoOrganizeEnabled" && value === true ? { organizeFoldersOnDemand: false } : {}),
       ...(key === "organizeFoldersOnDemand" && value === true ? { autoOrganizeEnabled: false } : {}),
     };
@@ -600,7 +603,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               <div className="cfg-card-content">
                 <div className="cfg-themes-grid">
                   {settingsThemePresets.map((theme) => {
-                    const isSelected = selectedThemeId === theme.id;
+                    const isSelected = draft.gameTheme === "none" && !draft.testTheme.enabled && selectedThemeId === theme.id;
 
                     return (
                       <button
@@ -611,6 +614,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           if (theme.id === "slate") {
                             const next = {
                               ...draft,
+                              gameTheme: "none" as const,
+                              testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: { ...draft.interfaceGradient, enabled: false },
                             };
                             setDraft(next);
@@ -618,6 +623,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           } else if (theme.isGradient && theme.stops) {
                             const next = {
                               ...draft,
+                              gameTheme: "none" as const,
+                              testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: {
                                 enabled: true,
                                 type: "linear" as const,
@@ -680,6 +687,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 </div>
               </div>
             </div>
+
+            <GameThemesCard selected={draft.gameTheme} onSelect={gameTheme => {
+              const next = { ...draft, gameTheme, testTheme: { ...draft.testTheme, enabled: false } };
+              setDraft(next); void save(next);
+            }} />
 
             {/* Card 2: Cor de destaque (Intacto) */}
             <div className="cfg-card">
@@ -750,6 +762,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 <span className="cfg-font-hint">{t.settings.personalization.fontImportHint}</span>
               </div>
             </div>
+
+            <TestThemesCard value={draft.testTheme} onChange={value => update("testTheme", value)} />
 
             {/* Card 3: Animações e Efeitos da Interface */}
             <div className="cfg-card">

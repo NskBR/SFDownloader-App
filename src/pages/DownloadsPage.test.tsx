@@ -38,6 +38,37 @@ function hookState(error: string | null, downloads: DownloadTask[] = []) {
 }
 
 describe("DownloadsPage empty and error states", () => {
+  it.each(["cyberpunk", "cs2", "custom"] as const)("keeps Ctrl/Shift clicks and Ctrl+A working with the %s theme", (theme) => {
+    const downloads = ["one", "two", "three"].map((id) => ({
+      id, fileName: `${id}.zip`, fileSize: 1024, totalDownloaded: 1024,
+      status: "completed", originalUrl: "https://example.test/file.zip",
+      currentUrl: "https://example.test/file.zip", extension: "zip",
+      createdAt: "2026-08-28T00:00:00Z", completedAt: "2026-08-28T00:00:01Z",
+      speedCurrent: 0, speedAverage: 1024, priority: 1, queueOrder: 0,
+    }) as DownloadTask);
+    useDownloads.mockReturnValue(hookState(null, downloads));
+    const { container } = render(<DownloadsPage settings={{ ...defaultSettings,
+      rootDownloadFolder: "C:/Downloads", gameTheme: theme === "custom" ? "none" : theme,
+      testTheme: { ...defaultSettings.testTheme, enabled: theme === "custom" },
+    }} onSave={vi.fn()} filter="downloads" />);
+    const cards = Array.from(container.querySelectorAll(".download-card"));
+    const count = () => container.querySelectorAll(".download-card.selected").length;
+    expect(cards).toHaveLength(3);
+    fireEvent.click(cards[0]);
+    fireEvent.click(cards[1], { ctrlKey: true });
+    expect(count()).toBe(2);
+    expect(cards[0].classList.contains("selected-multi")).toBe(true);
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.click(cards[0]);
+    fireEvent.click(cards[2], { shiftKey: true });
+    expect(count()).toBe(3);
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(window, { key: "a", ctrlKey: true });
+    expect(count()).toBe(3);
+    fireEvent.keyDown(window, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "a", ctrlKey: true });
+    expect(count()).toBe(0);
+  });
   it("opens a dedicated media confirmation while preserving HTTP and torrent routing", async () => {
     useDownloads.mockReturnValue(hookState(null));
     vi.mocked(invoke).mockResolvedValue(undefined);

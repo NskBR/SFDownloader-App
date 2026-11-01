@@ -58,6 +58,7 @@ const input = (
     ),
   ),
 });
+export const getDownload = (id: string) => invoke<DownloadTask | null>("get_download", { id });
 export const listDownloads = () => invoke<DownloadTask[]>("list_downloads");
 export const inspectDownload = (url: string, requestId?: string) =>
   invoke<DownloadPreview>("inspect_download", {

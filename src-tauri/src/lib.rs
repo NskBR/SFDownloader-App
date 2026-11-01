@@ -297,6 +297,11 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::theme_images::import_theme_image,
+            commands::theme_images::list_theme_images,
+            commands::theme_images::read_theme_image,
+            commands::theme_images::download_game_theme,
+            commands::theme_images::installed_game_themes,
             commands::fonts::import_custom_font,
             commands::fonts::list_custom_fonts,
             commands::fonts::read_custom_font,
@@ -307,6 +312,7 @@ pub fn run() {
             commands::context_menu::show_download_context_menu,
             commands::downloads::create_download,
             commands::downloads::list_downloads,
+            commands::downloads::get_download,
             commands::downloads::update_download,
             commands::downloads::remove_download,
             commands::downloads::list_history,

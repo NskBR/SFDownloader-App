@@ -13,3 +13,5 @@ pub mod transfer;
 pub mod updater;
 pub mod windows;
 pub mod fonts;
+
+pub mod theme_images;

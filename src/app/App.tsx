@@ -66,7 +66,7 @@ export function App() {
   useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
   useEffect(()=>{
     applyThemeSettings(settings);
-  },[settings.accentColor, settings.appColor, settings.interfaceGradient]);
+  },[settings.accentColor, settings.appColor, settings.interfaceGradient, settings.testTheme, settings.gameTheme, settings.sidebarAnimation]);
   useEffect(() => applyFontSettings(settings.fontFamily), [settings.fontFamily]);
   useEffect(() => {
     void invoke("cache_theme_settings", { themeSettings: settings }).catch(console.error);

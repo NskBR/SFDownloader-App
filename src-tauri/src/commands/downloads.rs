@@ -158,6 +158,16 @@ pub fn list_downloads(database: State<'_, Database>) -> Result<Vec<DownloadTask>
 }
 
 #[tauri::command]
+pub fn get_download(database: State<'_, Database>, id: String) -> Result<Option<DownloadTask>, String> {
+    let connection = database.connect()?;
+    let task = downloads::find(&connection, &id)
+        .map_err(|error| format!("Falha ao consultar download: {error}"))?;
+    if task.is_some() { return Ok(task); }
+    downloads::find_by_info_hash(&connection, &id)
+        .map_err(|error| format!("Falha ao consultar download: {error}"))
+}
+
+#[tauri::command]
 pub fn update_download(
     database: State<'_, Database>,
     input: UpdateDownloadInput,

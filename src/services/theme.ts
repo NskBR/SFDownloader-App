@@ -1,3 +1,6 @@
+import { createGameTheme } from "../domain/testThemePresets";
+import { applyTestTheme } from "./testThemes";
+import { defaultTestTheme } from "../domain/settings";
 import type { AppSettings, GradientConfig, GradientStop } from "../domain/settings";
 import { applyFontSettings } from "../domain/appFonts";
 
@@ -172,6 +175,7 @@ function stopCosmicFlow() {
 }
 
 export function applyThemeSettings(settings: AppSettings): void {
+  void applyTestTheme(settings.gameTheme && settings.gameTheme !== "none" ? createGameTheme(settings.gameTheme) : settings.testTheme ?? defaultTestTheme, settings.sidebarAnimation !== false);
   applyFontSettings(settings.fontFamily);
   const root = document.documentElement;
   root.dataset.appColor = settings.appColor;

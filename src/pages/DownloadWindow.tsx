@@ -9,7 +9,6 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
-  Gauge,
   Link2,
   Minus,
   Pause,
@@ -186,6 +185,7 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
 export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const { t } = useTranslation();
   const [task, setTask] = useState<DownloadTask | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [status, setStatus] = useState<DownloadStatus>("pending");
@@ -250,16 +250,17 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       "completed",
     ];
 
+    let fetching = false;
     const fetchTask = () => {
-      void Promise.all([
-        service.listDownloads(),
-        service.extractionStatus(downloadId),
-      ]).then(([list, result]) => {
+      if (fetching) return;
+      fetching = true;
+      void service.extractionStatus(downloadId).then(result => {
+        if (active) setExtraction(result);
+      }).catch(() => {});
+      void service.getDownload(downloadId).then(found => {
         if (!active) return;
-        const found = list.find(
-          (item) => item.id === downloadId || item.infoHash === downloadId,
-        );
         if (found) {
+          setLoadError(null);
           notFoundCount.current = 0;
           setTask((current) => {
             if (!current) return found;
@@ -291,14 +292,15 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
           });
 
           setStatus(found.status);
-          setExtraction(result);
         } else {
           notFoundCount.current += 1;
           if (notFoundCount.current >= 3) {
             void appWindow.close();
           }
         }
-      });
+      }).catch(cause => {
+        if (active) setLoadError(String(cause));
+      }).finally(() => { fetching = false; });
     };
 
     fetchTask();
@@ -412,7 +414,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
       <main className="dw-window">
         <header className="dw-title" data-tauri-drag-region>
           <span>
-            <Gauge />
+            <Download />
             {t.downloadWindow.title}
           </span>
           <div className="dw-controls">
@@ -434,7 +436,12 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             </button>
           </div>
         </header>
-        <div className="dw-loading" role="status">{t.downloadWindow.loadingDetails}</div>
+        <div className="dw-loading" aria-busy={!loadError}>
+          {loadError ? <p className="dw-load-error" role="alert"><AlertTriangle size={18}/>{loadError}</p> : <>
+            <div className="dw-loading-preview" aria-hidden="true"><span className="dw-skeleton dw-skeleton-icon"/><div><span className="dw-skeleton dw-skeleton-name"/><span className="dw-skeleton dw-skeleton-meta"/><span className="dw-skeleton dw-skeleton-size"/></div></div>
+            <p className="dw-loading-label" role="status">{t.downloadWindow.loadingDetails}</p>
+          </>}
+        </div>
       </main>
     );
 

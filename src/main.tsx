@@ -19,6 +19,9 @@ import { applyThemeSettings } from "./services/theme";
 import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
 
+// Prevent only the browser default; custom React context-menu handlers still run.
+document.addEventListener("contextmenu", event => event.preventDefault());
+
 const label = getCurrentWindow().label;
 const mediaConfirmMatch = label.match(/^media-confirm-(.*)$/);
 const mediaProgressMatch = label.match(/^media-progress-(.*)$/);

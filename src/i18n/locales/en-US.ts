@@ -54,6 +54,7 @@ export const enUS: Translations = {
     title: "SFDownloader",
     newVersionAvailable: "New version available",
     newVersionTooltip: "New version available! Click to open on GitHub.",
+    extensionLabel: "Extension",
     browserIntegration: "Browser Integration",
     extensionConnected: "Extension connected",
     extensionDisconnected: "Extension disconnected",
@@ -323,6 +324,8 @@ export const enUS: Translations = {
       enUS: "English (US)",
     },
     advancedTab: {
+      cssThemesTitle: "CSS themes",
+      cssThemesDescription: "Show the CSS theme editor in Personalization.",
       startupTrayTitle: "Startup and Tray Mode",
       startupTraySubtitle: "Configure application integration with the operating system.",
       launchOnStartupLabel: "Start with Windows in tray mode",

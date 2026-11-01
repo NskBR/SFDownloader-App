@@ -996,3 +996,15 @@
 @container (max-width: 680px) {
   .cfg-files-grid { grid-template-columns:minmax(0, 1fr); }
 }
+
+.css-theme-disclosure > summary { cursor:pointer;padding:14px;font-size:13px;font-weight:650;color:var(--text); }
+.css-theme-disclosure > .test-themes-card { border:0;margin:0; }
+
+/* The language menu sits at the right edge; grow inward instead of widening the page. */
+.cfg-language-select .custom-select-dropdown {
+  left:auto;
+  right:0;
+  width:max-content;
+  min-width:max(140px,100%);
+  max-width:calc(100vw - 40px);
+}

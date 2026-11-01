@@ -211,7 +211,7 @@ export function applyThemeSettings(settings: AppSettings): void {
     root.style.setProperty("--gradient-overlay", `rgba(0, 0, 0, ${overlayDarkness})`);
   } else {
     root.dataset.gradient = "false";
-    root.style.setProperty("--bg-fill", "var(--bg)");
+    root.style.setProperty("--bg-fill", settings.appColor === "slate" ? "#161A1E" : "var(--bg)");
     root.style.setProperty("--gradient-overlay", "transparent");
   }
 }

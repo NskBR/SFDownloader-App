@@ -1,7 +1,6 @@
 import React from "react";
 import { Sparkles, ExternalLink, X } from "lucide-react";
 import type { UpdateCheckResult } from "../services/downloadService";
-import { openUrl } from "../services/downloadService";
 import { useTranslation } from "../i18n";
 
 interface UpdateBannerProps {
@@ -15,9 +14,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({
 }) => {
   const { t } = useTranslation();
   const handleOpenRelease = () => {
-    if (update.release_url) {
-      void openUrl(update.release_url);
-    }
+    window.dispatchEvent(new Event("sf-show-update-notes"));
   };
 
   return (

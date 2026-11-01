@@ -429,7 +429,7 @@ export function AppShell({
               >
                 {t.about.mediaLicenses}
               </button>
-              <button onClick={() => setHelpOpen(false)}>{t.common.close}</button>
+              <button className="help-close-action" onClick={() => setHelpOpen(false)}>{t.common.close}</button>
             </footer>
           </section>
         </div>

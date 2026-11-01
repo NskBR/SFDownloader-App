@@ -323,3 +323,16 @@ html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]
   clip-path:none;
 }
 html.window-type-main[data-window-maximized="true"]:not([data-test-theme="true"]) .window-frame::after { display:none; }
+
+/* Glass replaces the primary fill, so its label needs the light text role. */
+html.window-type-main[data-test-theme="true"] .window-frame .help-close-action {
+  color:var(--text) !important;
+  font-weight:650;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ember-solid) 45%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .help-close-action:hover {
+  color:var(--text) !important;
+  box-shadow:inset 0 0 0 1px var(--ember-solid) !important;
+}
+
+.game-themes-resource-note { margin:0; padding:0 14px 14px; color:var(--text-2); font-size:11px; line-height:1.5; }

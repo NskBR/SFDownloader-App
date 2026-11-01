@@ -13,7 +13,7 @@ export interface DiscordThemePreset {
 }
 
 export const solidPresets: { id: AppColor; name: string; color: string; color2: string }[] = [
-  { id: "slate", name: "Padrão (Titânio Escuro)", color: "#12151b", color2: "#181c24" },
+  { id: "slate", name: "Padrão (Titânio Escuro)", color: "#161A1E", color2: "#20262c" },
 ];
 
 export const discordPresets: DiscordThemePreset[] = [

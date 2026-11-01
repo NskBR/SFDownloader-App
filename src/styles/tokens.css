@@ -67,7 +67,7 @@
 
 /* Paletas appColor definidas em CSS — alternadas dinamicamente via data-appcolor */
 :root[data-appcolor="slate"] {
-  --bg: #0b0d10; --panel: #12151b; --surface: #181c24; --surface-2: #202530;
+  --bg: #161A1E; --panel: #1b2025; --surface: #20262c; --surface-2: #293139;
   --line: rgba(255, 255, 255, 0.08); --line-soft: rgba(255, 255, 255, 0.04);
   --text: #f3f4f6; --text-2: #9ca3af; --muted: #6b7280; --disabled: #4b5563;
 }

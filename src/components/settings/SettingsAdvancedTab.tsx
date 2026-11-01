@@ -5,6 +5,8 @@ import { Toggle } from "../ui/Toggle";
 
 interface SettingsAdvancedTabProps {
   t: Translations;
+  cssThemesEnabled: boolean;
+  onCssThemesEnabledChange: (value:boolean)=>void;
   launchOnStartup: boolean;
   onLaunchOnStartupChange: (value: boolean) => void;
   onOpenBrowserIntegration: () => void;
@@ -16,6 +18,8 @@ interface SettingsAdvancedTabProps {
 
 export function SettingsAdvancedTab({
   t,
+  cssThemesEnabled,
+  onCssThemesEnabledChange,
   launchOnStartup,
   onLaunchOnStartupChange,
   onOpenBrowserIntegration,
@@ -27,6 +31,7 @@ export function SettingsAdvancedTab({
   const importInputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="cfg-tab-view">
+      <div className="cfg-card"><div className="cfg-card-content cfg-item-row"><div><strong className="cfg-item-label">{t.settings.advancedTab.cssThemesTitle}</strong><span className="cfg-item-desc">{t.settings.advancedTab.cssThemesDescription}</span></div><Toggle checked={cssThemesEnabled} onChange={onCssThemesEnabledChange}/></div></div>
       <div className="cfg-card">
         <div className="cfg-card-header">
           <div className="cfg-card-icon-box">

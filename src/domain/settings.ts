@@ -70,6 +70,8 @@ export interface AppSettings {
   fontFamily: AppFont;
   testTheme: TestThemeSettings;
   gameTheme: GameTheme;
+  cssThemesEnabled: boolean;
+  defaultThemeInitialized: boolean;
   uiScale: number;
   startInTrayMode: boolean;
   launchOnStartup: boolean;
@@ -105,11 +107,13 @@ export const defaultSettings: AppSettings = {
   fontFamily: "default",
   testTheme: { ...defaultTestTheme },
   gameTheme: "none",
+  cssThemesEnabled: false,
+  defaultThemeInitialized: false,
   uiScale: 1.1,
   startInTrayMode: false,
   launchOnStartup: false,
   language: "pt-BR",
-  accentColor: "ember",
+  accentColor: "blue",
   appColor: "slate",
   interfaceGradient: {
     enabled: false,
@@ -117,8 +121,8 @@ export const defaultSettings: AppSettings = {
     angle: 160,
     intensity: 40,
     stops: [
-      { color: "#16171a", position: 0 },
-      { color: "#1f2024", position: 100 },
+      { color: "#161A1E", position: 0 },
+      { color: "#161A1E", position: 100 },
     ],
   },
   sidebarAnimation: true,

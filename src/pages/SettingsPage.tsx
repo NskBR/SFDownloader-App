@@ -30,6 +30,7 @@ import { TestThemesCard } from "../components/settings/TestThemesCard";
 import { SettingsHeader } from "../components/settings/SettingsHeader";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
 import { invoke } from "@tauri-apps/api/core";
+import { defaultSettings, defaultTestTheme } from "../domain/settings";
 import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
 import { parseSpeedLimitMebibytesPerSecond } from "../domain/speedLimit";
 import { ipcErrorMessage } from "../domain/ipcErrors";
@@ -595,6 +596,12 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                   <h3 className="cfg-card-title">{t.settings.personalization.appThemeTitle}</h3>
                   <p className="cfg-card-subtitle">{t.settings.personalization.appThemeSubtitle}</p>
                 </div>
+                <button type="button" className="cfg-theme-customize-button" onClick={() => {
+                  const next = {...draft, appColor:defaultSettings.appColor, accentColor:"blue" as const,
+                    fontFamily:defaultSettings.fontFamily, interfaceGradient:{...defaultSettings.interfaceGradient},
+                    gameTheme:"none" as const, testTheme:{...defaultTestTheme}, defaultThemeInitialized:true};
+                  setDraft(next);onSave(next);
+                }}>Restaurar tema padrão</button>
                 <button type="button" className="cfg-theme-customize-button" onClick={() => setCustomizerModalOpen(true)}>
                   <Palette size={15} /> Personalizar
                 </button>
@@ -614,6 +621,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           if (theme.id === "slate") {
                             const next = {
                               ...draft,
+                              appColor: "slate" as const,
+                              accentColor: draft.defaultThemeInitialized ? draft.accentColor : "blue" as const,
+                              defaultThemeInitialized: true,
                               gameTheme: "none" as const,
                               testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: { ...draft.interfaceGradient, enabled: false },
@@ -763,7 +773,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
-            <TestThemesCard value={draft.testTheme} onChange={value => update("testTheme", value)} />
+            {draft.cssThemesEnabled && <details className="cfg-card css-theme-disclosure"><summary>Tema CSS</summary><TestThemesCard value={draft.testTheme} onChange={value => update("testTheme", value)} /></details>}
 
             {/* Card 3: Animações e Efeitos da Interface */}
             <div className="cfg-card">
@@ -1054,6 +1064,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 </div>
                 <div className="cfg-item-right">
                   <CustomSelect
+                    className="cfg-language-select"
                     value={draft.language}
                     options={[
                       { value: "pt-BR", label: t.settings.languageTab.ptBR },
@@ -1075,6 +1086,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {activeTab === "avancado" && (
           <SettingsAdvancedTab
             t={t}
+            cssThemesEnabled={draft.cssThemesEnabled}
+            onCssThemesEnabledChange={value => {
+              const next={...draft,cssThemesEnabled:value,testTheme:{...draft.testTheme,enabled:value && draft.testTheme.enabled}};
+              setDraft(next);onSave(next);
+            }}
             launchOnStartup={draft.launchOnStartup}
             onLaunchOnStartupChange={(value) => {
               update("launchOnStartup", value);

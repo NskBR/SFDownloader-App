@@ -52,6 +52,7 @@ export const ptBR = {
     title: "SFDownloader",
     newVersionAvailable: "Nova versão disponível",
     newVersionTooltip: "Nova versão disponível! Clique para abrir no GitHub.",
+    extensionLabel: "Extensão",
     browserIntegration: "Integração de Navegadores",
     extensionConnected: "Extensão conectada",
     extensionDisconnected: "Extensão desconectada",
@@ -321,6 +322,8 @@ export const ptBR = {
       enUS: "English (US)",
     },
     advancedTab: {
+      cssThemesTitle: "Temas CSS",
+      cssThemesDescription: "Exibir o editor de temas CSS em Personalização.",
       startupTrayTitle: "Inicialização e Tray Mode",
       startupTraySubtitle: "Defina a integração do aplicativo com o sistema operacional.",
       launchOnStartupLabel: "Iniciar com o Windows em modo tray",

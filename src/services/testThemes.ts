@@ -27,7 +27,10 @@ function trustedImageSource(source: string): boolean {
 }
 export function loadThemeImage(id: string): Promise<string> {
   if (id.startsWith("builtin:")) {
-    const entry=themeManifest.find(theme=>theme.id===id.slice(8));
+    const root=document.documentElement;
+    const suffix=root.classList.contains("window-type-main") ? "" :
+      root.classList.contains("window-type-confirmation") || (root.classList.contains("window-type-media") && window.innerWidth>600) ? "-medium" : "-compact";
+    const entry=themeManifest.find(theme=>theme.id===id.slice(8)+suffix);
     if(!entry) return Promise.reject(new Error("Tema desconhecido / Unknown theme"));
     return loadThemeImage(entry.sha256);
   }

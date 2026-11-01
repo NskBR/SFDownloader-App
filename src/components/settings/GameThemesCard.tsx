@@ -27,6 +27,7 @@ export function GameThemesCard({selected,onSelect}:Props){
    <span className="game-theme-preview"><img src={theme.image} alt="" draggable={false}/>{selected===theme.id&&<span className="game-theme-check"><Check size={13}/></span>}</span>
    <strong>{theme.name}</strong><span className="game-theme-state">{busy===theme.id?text("Preparando…","Preparing…"):selected===theme.id?text("Atual","Current"):installed.includes(theme.id)?text("Aplicar","Apply"):text("Baixar tema","Download theme")}</span>
   </button>)}</div>
+  <p className="game-themes-resource-note">{text("Temas com imagens e transparência podem aumentar o uso de memória RAM e GPU, principalmente com várias janelas abertas. Para menor consumo, use o tema padrão.","Themes with images and transparency may increase RAM and GPU memory usage, especially with multiple windows open. For lower resource usage, use the default theme.")}</p>
   {error&&<p role="alert" className="test-themes-error game-themes-error">{error}</p>}
  </section>;
 }

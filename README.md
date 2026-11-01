@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.0.9.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.1.0.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -54,9 +54,19 @@ As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reuti
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.0.9_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.0.9).
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.0_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.0).
 
-### Novidades da 1.0.9
+### Novidades da 1.1.0
+
+- Temas de jogos prontos, com wallpapers sob demanda e variantes menores para janelas auxiliares.
+- Tema padrão sólido `#161A1E`, restauração das preferências visuais e editor CSS opcional em Avançado.
+- Notas da release antes de baixar e instalar a atualização.
+- Melhorias nos detalhes de download, seleção múltipla, dropdowns e integração visual da extensão.
+- Temas com imagens e transparência podem aumentar o uso de RAM e memória GPU; o tema padrão é indicado para menor consumo.
+
+[Notas completas da versão](docs/releases/v1.1.0.md).
+
+### Melhorias anteriores
 
 - Janela de progresso de mídia compacta, com transferência por bytes e status de conversão/capa.
 - Som de conclusão também com o app em foco e reprodução sequencial dos avisos.

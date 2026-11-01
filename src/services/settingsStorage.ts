@@ -147,6 +147,8 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),
     language: valueFrom(value.language, languages, base.language),
+    cssThemesEnabled: value.cssThemesEnabled === true,
+    defaultThemeInitialized: value.defaultThemeInitialized === true,
     accentColor: valueFrom(value.accentColor, accents, base.accentColor),
     appColor: valueFrom(value.appColor, appColors, base.appColor),
     interfaceGradient: {

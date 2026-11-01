@@ -1,3 +1,4 @@
+import {UpdateReleaseNotes} from "../UpdateReleaseNotes";
 import { Minus, Square, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
@@ -42,6 +43,12 @@ export function TitleBar({
   onOpenHelp,
 }: TitleBarProps) {
   const { t } = useTranslation();
+  const [showReleaseNotes,setShowReleaseNotes]=useState(false);
+  useEffect(()=>{
+    const open=()=>setShowReleaseNotes(true);
+    window.addEventListener("sf-show-update-notes",open);
+    return()=>window.removeEventListener("sf-show-update-notes",open);
+  },[]);
   useEffect(() => {
     let disposed = false;
     let revision = 0;
@@ -104,6 +111,7 @@ export function TitleBar({
       data-tauri-drag-region
       onDoubleClick={() => void appWindow.toggleMaximize()}
     >
+      {showReleaseNotes && updateInfo?.available && <UpdateReleaseNotes update={updateInfo} onCancel={()=>setShowReleaseNotes(false)} onConfirm={()=>{setShowReleaseNotes(false);startUpdateDownload();}}/>}
       {(["downloading", "preparing", "installing", "cancelling", "failed"].includes(updateProgress.status)) && createPortal(
         <div className="update-overlay">
           <section className="update-dialog" role="dialog" aria-modal="true" aria-label="Atualização do aplicativo">
@@ -124,7 +132,7 @@ export function TitleBar({
         </div>, document.body)}
       <div className="titlebar-side" data-tauri-drag-region>
         {updateInfo?.available && (updateProgress.status === "idle" || updateProgress.status === "failed") && (
-          <button className="nodrag titlebar-update-badge" onClick={startUpdateDownload} title={updateInfo.installer_url ? t.titlebar.downloadUpdate : t.titlebar.locateUpdateInstaller}>
+          <button className="nodrag titlebar-update-badge" onClick={()=>setShowReleaseNotes(true)} title={updateInfo.installer_url ? t.titlebar.downloadUpdate : t.titlebar.locateUpdateInstaller}>
             <Sparkles size={12} className="icon-pulse" />
             <span>{updateProgress.status === "failed" ? t.titlebar.retryUpdateDownload : t.titlebar.downloadUpdate}</span>
             <Download size={12} />
@@ -185,12 +193,13 @@ export function TitleBar({
 
         <div className="nodrag titlebar-integration">
           <button
-            className="titlebar-theme-btn"
+            className="titlebar-theme-btn titlebar-extension-button"
             onClick={() => void invoke("open_browser_integration_window").catch(console.error)}
             title={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
             aria-label={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
           >
             <Puzzle size={16} />
+            <span>{t.titlebar.extensionLabel}</span>
             <span
               className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
               aria-hidden="true"

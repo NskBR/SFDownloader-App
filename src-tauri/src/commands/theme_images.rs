@@ -334,19 +334,19 @@ pub fn installed_game_themes(app: AppHandle) -> Result<Vec<String>, String> {
 
     let root=folder(&app)?;
 
-    Ok(game_wallpapers()?.into_iter().filter(|entry| {
-
-        read_bytes(&root.join(format!("{}.image",entry.sha256))).map(|bytes|format!("{:x}",Sha256::digest(&bytes))==entry.sha256).unwrap_or(false)
-
-    }).map(|entry|entry.id).collect())
-
+    let entries=game_wallpapers()?;
+    Ok(entries.iter().filter(|entry| !entry.id.ends_with("-compact") && !entry.id.ends_with("-medium"))
+      .filter(|entry| ["","-compact","-medium"].iter().all(|suffix| {
+        entries.iter().find(|asset|asset.id==format!("{}{suffix}",entry.id)).is_some_and(|asset|
+          read_bytes(&root.join(format!("{}.image",asset.sha256))).map(|bytes|format!("{:x}",Sha256::digest(&bytes))==asset.sha256).unwrap_or(false))
+      })).map(|entry|entry.id.clone()).collect())
 }
 
 #[tauri::command]
 
-pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
+async fn download_wallpaper(app: AppHandle, id: String) -> Result<(), String> {
 
-    if window.label()!="main" { return Err("Baixe temas pelas configurações.".into()); }
+
 
     let entry=game_wallpapers()?.into_iter().find(|entry|entry.id==id).ok_or("Tema desconhecido.")?;
 
@@ -390,3 +390,13 @@ pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: Stri
 
 }
 
+
+#[tauri::command]
+pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
+    if window.label()!="main" { return Err("Baixe temas pelas configurações.".into()); }
+    if !["cyberpunk","cs2","star-citizen","god-of-war-ragnarok"].contains(&id.as_str()) {return Err("Tema desconhecido.".into());}
+    for suffix in ["-compact","-medium",""] {
+        download_wallpaper(app.clone(),format!("{id}{suffix}")).await?;
+    }
+    Ok(())
+}

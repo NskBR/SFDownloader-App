@@ -89,3 +89,16 @@ it("keeps the current theme visible while the next wallpaper loads",async()=>{
   await applyTestTheme({...defaultTestTheme});
  }finally{URL.createObjectURL=create;URL.revokeObjectURL=revoke;vi.unstubAllGlobals();}
 });
+
+it("uses the document CSP nonce for both parsing and applying theme CSS",async()=>{
+ const trusted=document.createElement("style");trusted.nonce="production-test-nonce";document.head.append(trusted);
+ const append=document.head.append.bind(document.head);const nonces:string[]=[];
+ const spy=vi.spyOn(document.head,"append").mockImplementation((...nodes)=>{for(const node of nodes)if(node instanceof HTMLStyleElement)nonces.push(node.nonce ?? "");append(...nodes);});
+ try {
+  await applyTestTheme({...defaultTestTheme,enabled:true,css:".sidebar{color:#abcdef}"});
+  expect(nonces.length).toBeGreaterThanOrEqual(2);
+  expect(nonces.every(n=>n==="production-test-nonce")).toBe(true);
+  expect((document.getElementById("sf-test-theme-css") as HTMLStyleElement).nonce).toBe("production-test-nonce");
+  await applyTestTheme({...defaultTestTheme});
+ }finally{spy.mockRestore();trusted.remove();}
+});

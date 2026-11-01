@@ -51,10 +51,18 @@ export function loadThemeImage(id: string): Promise<string> {
 export function themeImageIds(css: string): string[] {
   return [...new Set([...css.matchAll(/theme:([a-f0-9]{64})/g)].map(match=>match[1]))];
 }
+/** In production Tauri authorizes inline styles with a per-document nonce.
+ * Reuse that nonce; never weaken CSP or authorize arbitrary external CSS. */
+function createThemeStyle(): HTMLStyleElement {
+  const style=document.createElement("style");
+  const trusted=document.querySelector<HTMLStyleElement|HTMLLinkElement>("style[nonce],link[nonce]");
+  if(trusted?.nonce) style.nonce=trusted.nonce;
+  return style;
+}
 /** Restricted visual CSS. No global selectors, structural rules, external URLs or at-rules. */
 export function compileThemeCss(css: string, images: Record<string,string>): string {
   if (css.length > 20000 || /@|\\|<|>/u.test(css)) throw new Error("CSS não permitido: regras externas, escapes e @regras estão bloqueados / Unsupported CSS");
-  const style = document.createElement("style");
+  const style = createThemeStyle();
   // An inactive stylesheet supplies the browser parser without applying user rules.
   style.media = "not all";
   style.textContent = css;
@@ -135,7 +143,7 @@ export async function applyTestTheme(settings: TestThemeSettings, animations = t
     root.style.setProperty("--test-theme-darkness",`${Math.min(85,Math.max(30,settings.darkness))/100}`);
     root.style.setProperty("--test-theme-panel",`${Math.min(100,Math.max(60,settings.panelOpacity))}%`);
     root.style.setProperty("--test-theme-position",["left","right"].includes(settings.position) ? settings.position : "center");
-    const style=document.createElement("style");style.id="sf-test-theme-css";style.textContent=css;document.head.append(style);
+    const style=createThemeStyle();style.id="sf-test-theme-css";style.textContent=css;document.head.append(style);
     root.dataset.testTheme="true";
     if(settings.preset !== "custom") root.dataset.testPreset=settings.preset;
   } catch(error) { if(revision===current){clearCurrentTheme();activeKey="";console.error("[THEME]",error);} }

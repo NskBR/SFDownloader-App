@@ -22,5 +22,53 @@
     "file": "god-of-war-ragnarok.png",
     "sha256": "d9c65d0ab63b45b25e3f6238d37dc995477f55b69ec04e22a5a4afed831d728b",
     "bytes": 4472506
+  },
+  {
+    "id": "cyberpunk-compact",
+    "file": "cyberpunk-compact.png",
+    "sha256": "b2982972857425db6a93c12ea96171ee7a4be2ed9dc2dd40e77d179edf0ec92b",
+    "bytes": 344076
+  },
+  {
+    "id": "cyberpunk-medium",
+    "file": "cyberpunk-medium.png",
+    "sha256": "6d6681332afd41455441ff882ad48961222b5fcdf9689cec50ebec4ba118af67",
+    "bytes": 986542
+  },
+  {
+    "id": "cs2-compact",
+    "file": "cs2-compact.png",
+    "sha256": "de99d37d90a637d2579565792980439120ffbaafb93695ee4d794297bf28fe20",
+    "bytes": 249935
+  },
+  {
+    "id": "cs2-medium",
+    "file": "cs2-medium.png",
+    "sha256": "d3d2688b40b6340103bb2f836169948f95fff281544977eb384469258052242c",
+    "bytes": 760092
+  },
+  {
+    "id": "star-citizen-compact",
+    "file": "star-citizen-compact.png",
+    "sha256": "dc3230c952a24f13d172a15b0b505747966d4cea4e7d3f6e5f3e78527b309da0",
+    "bytes": 194762
+  },
+  {
+    "id": "star-citizen-medium",
+    "file": "star-citizen-medium.png",
+    "sha256": "ce732b20417fcb3ae7df43480a94191cdc066a39add07bdc7a7ce89a80c3ec32",
+    "bytes": 531981
+  },
+  {
+    "id": "god-of-war-ragnarok-compact",
+    "file": "god-of-war-ragnarok-compact.png",
+    "sha256": "04c0092a924c38b15efad15adb4e788f716697dbfd179e65bc1861816812c46a",
+    "bytes": 270630
+  },
+  {
+    "id": "god-of-war-ragnarok-medium",
+    "file": "god-of-war-ragnarok-medium.png",
+    "sha256": "fd2a95d043be134a029d6c9b404f7f2aac1ad5d3373bf766a8d411fbe698bc7d",
+    "bytes": 745948
   }
 ]

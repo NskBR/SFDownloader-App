@@ -1,3 +1,4 @@
+import {watchUpdates} from "../services/updatePolling";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
@@ -52,16 +53,7 @@ export function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    void downloadService
-      .checkForUpdates()
-      .then((res) => {
-        if (res && res.available) {
-          setUpdateInfo(res);
-        }
-      })
-      .catch((err) => console.log("[UPDATER] Erro ao checar atualizações:", err));
-  }, []);
+  useEffect(() => watchUpdates(setUpdateInfo), []);
 
   useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
   useEffect(()=>{

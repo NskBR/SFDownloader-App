@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.1.1.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.1.2.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -54,7 +54,11 @@ As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reuti
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.1_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.1).
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.2_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.2).
+
+### Novidades da 1.1.2
+
+Estados de download dos temas mais claros, consulta de atualização a cada 60 segundos e botão de consulta manual em Avançado. A instalação continua exigindo confirmação. [Notas da versão](docs/releases/v1.1.2.md).
 
 ### Correção da 1.1.1
 

@@ -324,6 +324,14 @@ export const enUS: Translations = {
       enUS: "English (US)",
     },
     advancedTab: {
+      updatesTitle: "App updates",
+      updatesDescription: "Automatically checks every 60 seconds. Downloads only start after your confirmation.",
+      checkUpdates: "Check for updates",
+      checkingUpdates: "Checking…",
+      updateAvailable: "New version available: {version}. Use the update button in the title bar.",
+      upToDate: "The app is up to date.",
+      updateCheckFailed: "Unable to check for updates. Check your connection and try again.",
+
       cssThemesTitle: "CSS themes",
       cssThemesDescription: "Show the CSS theme editor in Personalization.",
       startupTrayTitle: "Startup and Tray Mode",

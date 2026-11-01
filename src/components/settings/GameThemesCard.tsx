@@ -10,7 +10,8 @@ export function GameThemesCard({selected,onSelect}:Props){
  const {language}=useTranslation();const text=(pt:string,en:string)=>language==="pt-BR"?pt:en;
  const [busy,setBusy]=useState<GameTheme|null>(null);const [error,setError]=useState<string|null>(null);
  const [installed,setInstalled]=useState<string[]>([]);
- useEffect(()=>{void invoke<string[]>("installed_game_themes").then(setInstalled).catch(()=>{});},[]);
+ const [cacheChecked,setCacheChecked]=useState(false);
+ useEffect(()=>{void invoke<string[]>("installed_game_themes").then(setInstalled).catch(()=>{}).finally(()=>setCacheChecked(true));},[]);
  const [cooldown,setCooldown]=useState(0);const locked=useRef(false);
  useEffect(()=>{if(!cooldown)return;const timer=window.setTimeout(()=>{setCooldown(value=>value-1);if(cooldown===1)locked.current=false;},1000);return()=>window.clearTimeout(timer);},[cooldown]);
  const apply=async(id:GameTheme)=>{
@@ -25,7 +26,7 @@ export function GameThemesCard({selected,onSelect}:Props){
    aria-label={`${text("Aplicar","Apply")} ${theme.id==="cs2"?"CS2":theme.name}`} aria-pressed={selected===theme.id} disabled={busy!==null||cooldown>0}
    title={language==="pt-BR"?theme.pt:theme.en} onClick={()=>void apply(theme.id)}>
    <span className="game-theme-preview"><img src={theme.image} alt="" draggable={false}/>{selected===theme.id&&<span className="game-theme-check"><Check size={13}/></span>}</span>
-   <strong>{theme.name}</strong><span className="game-theme-state">{busy===theme.id?text("Preparando…","Preparing…"):selected===theme.id?text("Atual","Current"):installed.includes(theme.id)?text("Aplicar","Apply"):text("Baixar tema","Download theme")}</span>
+   <strong>{theme.name}</strong><span className="game-theme-state">{busy===theme.id?installed.includes(theme.id)?text("Aplicando…","Applying…"):text("Baixando…","Downloading…"):!cacheChecked?text("Verificando…","Checking…"):installed.includes(theme.id)?selected===theme.id?text("Baixado · Atual","Downloaded · Current"):text("Baixado · Aplicar","Downloaded · Apply"):text("Não baixado · Clique para baixar","Not downloaded · Click to download")}</span>
   </button>)}</div>
   <p className="game-themes-resource-note">{text("Temas com imagens e transparência podem aumentar o uso de memória RAM e GPU, principalmente com várias janelas abertas. Para menor consumo, use o tema padrão.","Themes with images and transparency may increase RAM and GPU memory usage, especially with multiple windows open. For lower resource usage, use the default theme.")}</p>
   {error&&<p role="alert" className="test-themes-error game-themes-error">{error}</p>}

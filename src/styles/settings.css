@@ -1008,3 +1008,5 @@
   min-width:max(140px,100%);
   max-width:calc(100vw - 40px);
 }
+
+.cfg-update-result { margin:10px 0 0; color:var(--text-2); font-size:12px; line-height:1.5; }

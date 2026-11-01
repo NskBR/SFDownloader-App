@@ -269,6 +269,7 @@ export const openTorrentFileSelectionWindow = (taskId: string) =>
 
 export interface UpdateCheckResult {
   available: boolean;
+  check_succeeded?: boolean;
   current_version: string;
   latest_version: string;
   release_url: string;
@@ -279,8 +280,19 @@ export interface UpdateCheckResult {
   installer_size?: number | null;
 }
 
-export const checkForUpdates = (repoOverride?: string) =>
-  invoke<UpdateCheckResult>("check_for_updates", { repoOverride });
+export const UPDATE_CHECKED_EVENT = "sf-update-checked";
+const pendingUpdateChecks = new Map<string,Promise<UpdateCheckResult>>();
+export function checkForUpdates(repoOverride?: string): Promise<UpdateCheckResult> {
+  const key=repoOverride??"";
+  const pending=pendingUpdateChecks.get(key);
+  if(pending)return pending;
+  const request=invoke<UpdateCheckResult>("check_for_updates",{repoOverride}).then(result=>{
+    if(result.check_succeeded===false)throw new Error("Update server unavailable");
+    if(!repoOverride)window.dispatchEvent(new CustomEvent(UPDATE_CHECKED_EVENT,{detail:result}));
+    return result;
+  }).finally(()=>pendingUpdateChecks.delete(key));
+  pendingUpdateChecks.set(key,request);return request;
+}
 
 export interface UpdateDownloadProgress {
   status: "idle" | "downloading" | "cancelling" | "ready" | "preparing" | "installing" | "failed";

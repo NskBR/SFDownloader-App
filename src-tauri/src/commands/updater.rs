@@ -15,6 +15,7 @@ use crate::download::paths::safe_file_name;
 #[derive(Debug, Serialize, Clone)]
 pub struct UpdateCheckResult {
     pub available: bool,
+    pub check_succeeded: bool,
     pub current_version: String,
     pub latest_version: String,
     pub release_url: String,
@@ -131,6 +132,7 @@ fn is_version_newer(latest: &str, current: &str) -> bool {
 fn fallback_result(repo: &str, current_version: String) -> UpdateCheckResult {
     UpdateCheckResult {
         available: false,
+        check_succeeded: false,
         current_version: current_version.clone(),
         latest_version: current_version,
         release_url: format!("https://github.com/{repo}/releases"),
@@ -188,6 +190,8 @@ fn installer_cache_path(
     Ok((destination, temporary))
 }
 
+static UPDATE_CACHE: OnceLock<Mutex<Option<(String, UpdateCheckResult)>>> = OnceLock::new();
+
 #[tauri::command]
 pub async fn check_for_updates(
     app: AppHandle,
@@ -201,9 +205,13 @@ pub async fn check_for_updates(
     let url = format!("https://api.github.com/repos/{repo}/releases/latest");
     let client = reqwest::Client::builder()
         .user_agent("SFDownloader-updater")
+        .timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| format!("Erro ao criar cliente HTTP: {e}"))?;
-    let resp = match client.get(&url).send().await {
+    let cached=UPDATE_CACHE.get_or_init(||Mutex::new(None)).lock().map_err(|_|"Falha no cache de atualização.")?.clone();
+    let mut request=client.get(&url);
+    if let Some((etag,_))=&cached { request=request.header(reqwest::header::IF_NONE_MATCH,etag); }
+    let resp = match request.send().await {
         Ok(r) => r,
         Err(e) => {
             crate::commands::debug::log_warn(
@@ -217,6 +225,9 @@ pub async fn check_for_updates(
             return Ok(fallback_result(&repo, current_version));
         }
     };
+    if resp.status()==reqwest::StatusCode::NOT_MODIFIED {
+        if let Some((_,result))=cached { return Ok(result); }
+    }
     if !resp.status().is_success() {
         crate::commands::debug::log_warn(
             "updater",
@@ -228,6 +239,7 @@ pub async fn check_for_updates(
         );
         return Ok(fallback_result(&repo, current_version));
     }
+    let etag=resp.headers().get(reqwest::header::ETAG).and_then(|value|value.to_str().ok()).map(str::to_owned);
     let json: serde_json::Value = resp
         .json()
         .await
@@ -270,7 +282,8 @@ pub async fn check_for_updates(
             let _ = window.set_focus();
         }
     }
-    Ok(UpdateCheckResult {
+    let result=UpdateCheckResult {
+        check_succeeded: true,
         available,
         current_version,
         latest_version: if tag_name.is_empty() {
@@ -284,7 +297,9 @@ pub async fn check_for_updates(
         installer_url: installer.as_ref().map(|(url, _, _)| url.clone()),
         installer_name: installer.as_ref().map(|(_, name, _)| name.clone()),
         installer_size: installer.map(|(_, _, size)| size),
-    })
+    };
+    if let Some(etag)=etag { *UPDATE_CACHE.get_or_init(||Mutex::new(None)).lock().map_err(|_|"Falha no cache de atualização.")?=Some((etag,result.clone())); }
+    Ok(result)
 }
 
 #[tauri::command]

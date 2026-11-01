@@ -1,5 +1,6 @@
+import {checkForUpdates} from "../../services/downloadService";
 import { Bug, Clock, Download, Globe, Settings2, Upload } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Translations } from "../../i18n";
 import { Toggle } from "../ui/Toggle";
 
@@ -28,9 +29,19 @@ export function SettingsAdvancedTab({
   onImportPreferences,
   onConfigureGlobalSchedule,
 }: SettingsAdvancedTabProps) {
+  const [checking,setChecking]=useState(false);
+  const [updateMessage,setUpdateMessage]=useState("");
+  const [checkFailed,setCheckFailed]=useState(false);
+  const checkUpdates=async()=>{
+    if(checking)return;setChecking(true);setUpdateMessage("");setCheckFailed(false);
+    try{const result=await checkForUpdates();setUpdateMessage(result.available?t.settings.advancedTab.updateAvailable.replace("{version}",result.latest_version):t.settings.advancedTab.upToDate);}
+    catch{setCheckFailed(true);setUpdateMessage(t.settings.advancedTab.updateCheckFailed);}
+    finally{setChecking(false);}
+  };
   const importInputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="cfg-tab-view">
+      <section className="cfg-card"><div className="cfg-card-header"><div className="cfg-card-icon-box"><Download size={20}/></div><div><h3 className="cfg-card-title">{t.settings.advancedTab.updatesTitle}</h3><p className="cfg-card-subtitle">{t.settings.advancedTab.updatesDescription}</p></div></div><div className="cfg-card-content"><button type="button" className="cfg-btn-alterar" disabled={checking} onClick={()=>void checkUpdates()}>{checking?t.settings.advancedTab.checkingUpdates:t.settings.advancedTab.checkUpdates}</button>{updateMessage&&<p className="cfg-update-result" role={checkFailed?"alert":"status"}>{updateMessage}</p>}</div></section>
       <div className="cfg-card"><div className="cfg-card-content cfg-item-row"><div><strong className="cfg-item-label">{t.settings.advancedTab.cssThemesTitle}</strong><span className="cfg-item-desc">{t.settings.advancedTab.cssThemesDescription}</span></div><Toggle checked={cssThemesEnabled} onChange={onCssThemesEnabledChange}/></div></div>
       <div className="cfg-card">
         <div className="cfg-card-header">

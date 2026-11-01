@@ -322,6 +322,14 @@ export const ptBR = {
       enUS: "English (US)",
     },
     advancedTab: {
+      updatesTitle: "Atualizações do aplicativo",
+      updatesDescription: "Consulta automática a cada 60 segundos. O download só começa após sua confirmação.",
+      checkUpdates: "Consultar atualização",
+      checkingUpdates: "Consultando…",
+      updateAvailable: "Nova versão disponível: {version}. Use o botão de atualizar na barra superior.",
+      upToDate: "O aplicativo está atualizado.",
+      updateCheckFailed: "Não foi possível consultar. Verifique a conexão e tente novamente.",
+
       cssThemesTitle: "Temas CSS",
       cssThemesDescription: "Exibir o editor de temas CSS em Personalização.",
       startupTrayTitle: "Inicialização e Tray Mode",

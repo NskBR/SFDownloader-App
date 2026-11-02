@@ -322,5 +322,23 @@
     "file": "sarah-house/night-blue/compact.png",
     "sha256": "f21725beeffb4c7a331a4d65dd5d6a69ee1c98bc485009c93739cab00d0e89d0",
     "bytes": 200166
+  },
+  {
+    "id": "hinata",
+    "file": "hinata/main.png",
+    "sha256": "c61a1bc13631f4c316cda7c37b6814e57760a5e77472731195657a7c6120f856",
+    "bytes": 2562017
+  },
+  {
+    "id": "hinata-medium",
+    "file": "hinata/medium.png",
+    "sha256": "5c4d213f2d083012192aa25b2d98ca626444e4c515e0ace8aafc696790553227",
+    "bytes": 1211890
+  },
+  {
+    "id": "hinata-compact",
+    "file": "hinata/compact.png",
+    "sha256": "a9ea1f4d93151acf1fa25ccdb29e610a27b0d107cf93b56586926b2b8478cbd9",
+    "bytes": 410774
   }
 ]

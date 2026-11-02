@@ -1,0 +1,52 @@
+
+/* Built-in collection: bounded silhouettes keep window controls inside the frame. */
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] { --game-window-shape:polygon(16px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 16px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame .sidebar .navigation__item { border-radius:2px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="league-of-legends"] { --game-window-shape:inset(0 round 4px 12px 4px 12px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="league-of-legends"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="league-of-legends"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="league-of-legends"] .window-frame .sidebar .navigation__item { border-radius:3px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] { --game-window-shape:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%); }
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame .sidebar .navigation__item { border-radius:8px 3px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="among-us"] { --game-window-shape:inset(0 round 18px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="among-us"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="among-us"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="among-us"] .window-frame .sidebar .navigation__item { border-radius:18px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-6"] { --game-window-shape:inset(0 round 12px 12px 5px 5px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-6"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-6"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-6"] .window-frame .sidebar .navigation__item { border-radius:12px 5px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-san-andreas"] { --game-window-shape:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-san-andreas"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-san-andreas"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-san-andreas"] .window-frame .sidebar .navigation__item { border-radius:2px 8px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="the-last-of-us-2"] { --game-window-shape:inset(0 round 4px 10px 4px 4px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="the-last-of-us-2"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="the-last-of-us-2"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="the-last-of-us-2"] .window-frame .sidebar .navigation__item { border-radius:3px 9px 3px 3px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] { --game-window-shape:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px)); }
+html.window-type-main[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] .window-frame .sidebar .navigation__item { border-radius:3px 3px 8px 3px !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] { --game-window-shape:polygon(6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,100% 3px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) 100%,6px 100%,6px calc(100% - 3px),0 calc(100% - 3px),0 6px,6px 6px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame .sidebar .navigation__item { border-radius:0 !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:5px 9px 5px auto;width:28px;border-top:2px solid rgb(255 96 112 / .32);border-bottom:2px solid rgb(255 96 112 / .16);transform:skewX(-20deg); }
+html.window-type-main[data-test-theme="true"][data-test-preset="league-of-legends"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:4px;border:1px solid rgb(213 182 117 / .24);border-radius:2px 8px; }
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:12px;top:9px;width:26px;height:3px;background:#ffb54d;opacity:.35;transform:skewX(-28deg); }
+html.window-type-main[data-test-theme="true"][data-test-preset="among-us"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:14px;top:12px;width:26px;height:12px;border:2px solid rgb(130 229 255 / .2);border-radius:12px 12px 8px 8px; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-6"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:auto 12px 5px 22px;height:1px;background:linear-gradient(90deg,transparent,#ff9cce,#7edee5,transparent);opacity:.38; }
+html.window-type-main[data-test-theme="true"][data-test-preset="gta-san-andreas"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:5px 6px;border-top:1px solid rgb(167 206 137 / .24);border-bottom:1px solid rgb(167 206 137 / .12); }
+html.window-type-main[data-test-theme="true"][data-test-preset="the-last-of-us-2"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:14px;top:8px;bottom:8px;width:2px;background:repeating-linear-gradient(0deg,transparent 0 7px,rgb(169 191 171 / .24) 7px 14px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:5px 8px;border-top:1px dashed rgb(237 154 118 / .25);border-bottom:1px dashed rgb(237 154 118 / .16);border-radius:2px 2px 7px 2px; }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;inset:4px;border-top:2px solid rgb(166 216 122 / .25);border-right:2px solid rgb(166 216 122 / .12);border-bottom:2px solid rgb(0 0 0 / .3); }
+html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame .download-card {
+ clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame .sidebar .navigation__item { border-right:3px solid color-mix(in srgb,var(--ember-solid) 45%,transparent) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame .sidebar .navigation__item { border-width:2px !important; border-bottom-color:rgb(0 0 0 / .45) !important; }

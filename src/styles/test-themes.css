@@ -1,3 +1,4 @@
+@import "./game-theme-collection.css";
 /* Opt-in only: cosmetic overrides never touch child windows or settings controls. */
 html.window-type-main[data-test-theme="true"] .window-frame {
   background: linear-gradient(rgb(0 0 0 / var(--test-theme-darkness,.5)),rgb(0 0 0 / var(--test-theme-darkness,.5))),var(--test-theme-image,none),var(--bg) !important;

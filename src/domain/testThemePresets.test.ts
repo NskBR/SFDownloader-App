@@ -1,4 +1,6 @@
 import {describe,it,expect} from "vitest";
+import {gameThemeIds} from "./settings";
+import manifest from "../../themes/manifest.json";
 import {cyberpunkTestCss,createCyberpunkTheme,createCS2Theme,createGameTheme,gameThemePresets} from "./testThemePresets";
 import {compileThemeCss} from "../services/testThemes";
 describe("Cyberpunk test preset",()=>{
@@ -18,11 +20,18 @@ describe("Cyberpunk test preset",()=>{
 
 it("provides a CS2 theme with the packaged upscaled wallpaper and restricted visual CSS",()=>{
  const theme=createCS2Theme();expect(theme.preset).toBe("cs2");expect(theme.imageId).toBe("builtin:cs2");
- expect(()=>compileThemeCss(theme.css,{})).not.toThrow();expect(gameThemePresets.map(t=>t.id)).toEqual(["cyberpunk","cs2","star-citizen","god-of-war-ragnarok"]);
+ expect(()=>compileThemeCss(theme.css,{})).not.toThrow();expect(gameThemePresets.map(t=>t.id)).toEqual(gameThemeIds);
 });
 
-it.each(["star-citizen","god-of-war-ragnarok"] as const)("provides the complete %s theme",id=>{
+it.each(gameThemeIds)("provides the complete %s theme",id=>{
  const theme=createGameTheme(id);
  expect(theme.preset).toBe(id);expect(theme.imageId).toBe(`builtin:${id}`);
  expect(()=>compileThemeCss(theme.css,{})).not.toThrow();
+});
+
+it.each(gameThemeIds)("pins all three wallpaper variants for %s",id=>{
+ for(const suffix of ["","-medium","-compact"]){
+  const asset=manifest.find(a=>a.id===id+suffix);
+  expect(asset).toBeDefined();expect(asset?.sha256).toMatch(/^[a-f0-9]{64}$/);expect(asset?.bytes).toBeGreaterThan(0);
+ }
 });

@@ -40,10 +40,11 @@ export interface CustomCategory {
   extensions: string[];
 }
 
-export type GameTheme = "none" | "cyberpunk" | "cs2" | "star-citizen" | "god-of-war-ragnarok";
+export const gameThemeIds = ["cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok", "valorant", "league-of-legends", "overwatch", "among-us", "gta-6", "gta-san-andreas", "the-last-of-us-2", "red-dead-redemption-2", "minecraft"] as const;
+export type GameTheme = "none" | typeof gameThemeIds[number];
 
 export interface TestThemeSettings {
-  preset: "custom" | "cyberpunk" | "cs2" | "star-citizen" | "god-of-war-ragnarok";
+  preset: "custom" | Exclude<GameTheme, "none">;
   enabled: boolean;
   imageId: string | null;
   css: string;

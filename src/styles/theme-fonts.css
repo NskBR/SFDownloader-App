@@ -30,3 +30,49 @@ html[data-test-theme="true"][data-test-preset="god-of-war-ragnarok"] {
   --ember-soft:rgba(163,216,237,.15) !important;
   --st-downloading:#a3d8ed !important;
 }
+
+html[data-test-theme="true"][data-test-preset="valorant"] {
+  --ember:#ff6070 !important; --ember-solid:#ff6070 !important;
+  --ember-soft:color-mix(in srgb,#ff6070 15%,transparent) !important;
+  --st-downloading:#ff6070 !important;
+}
+html[data-test-theme="true"][data-test-preset="league-of-legends"] {
+  --ember:#d5b675 !important; --ember-solid:#d5b675 !important;
+  --ember-soft:color-mix(in srgb,#d5b675 15%,transparent) !important;
+  --st-downloading:#d5b675 !important;
+}
+html[data-test-theme="true"][data-test-preset="overwatch"] {
+  --ember:#ffb54d !important; --ember-solid:#ffb54d !important;
+  --ember-soft:color-mix(in srgb,#ffb54d 15%,transparent) !important;
+  --st-downloading:#ffb54d !important;
+}
+html[data-test-theme="true"][data-test-preset="among-us"] {
+  --ember:#82e5ff !important; --ember-solid:#82e5ff !important;
+  --ember-soft:color-mix(in srgb,#82e5ff 15%,transparent) !important;
+  --st-downloading:#82e5ff !important;
+}
+html[data-test-theme="true"][data-test-preset="gta-6"] {
+  --ember:#ff9cce !important; --ember-solid:#ff9cce !important;
+  --ember-soft:color-mix(in srgb,#ff9cce 15%,transparent) !important;
+  --st-downloading:#ff9cce !important;
+}
+html[data-test-theme="true"][data-test-preset="gta-san-andreas"] {
+  --ember:#a7ce89 !important; --ember-solid:#a7ce89 !important;
+  --ember-soft:color-mix(in srgb,#a7ce89 15%,transparent) !important;
+  --st-downloading:#a7ce89 !important;
+}
+html[data-test-theme="true"][data-test-preset="the-last-of-us-2"] {
+  --ember:#a9bfab !important; --ember-solid:#a9bfab !important;
+  --ember-soft:color-mix(in srgb,#a9bfab 15%,transparent) !important;
+  --st-downloading:#a9bfab !important;
+}
+html[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] {
+  --ember:#ed9a76 !important; --ember-solid:#ed9a76 !important;
+  --ember-soft:color-mix(in srgb,#ed9a76 15%,transparent) !important;
+  --st-downloading:#ed9a76 !important;
+}
+html[data-test-theme="true"][data-test-preset="minecraft"] {
+  --ember:#a6d87a !important; --ember-solid:#a6d87a !important;
+  --ember-soft:color-mix(in srgb,#a6d87a 15%,transparent) !important;
+  --st-downloading:#a6d87a !important;
+}

@@ -70,5 +70,167 @@
     "file": "god-of-war-ragnarok-medium.png",
     "sha256": "fd2a95d043be134a029d6c9b404f7f2aac1ad5d3373bf766a8d411fbe698bc7d",
     "bytes": 745948
+  },
+  {
+    "id": "valorant",
+    "file": "valorant.png",
+    "sha256": "9f82df97acdd18d10ccae8ed2126be9e8d5686ceae4e758d89f842cc590ff9df",
+    "bytes": 4408488
+  },
+  {
+    "id": "valorant-medium",
+    "file": "valorant-medium.png",
+    "sha256": "9662cb681ebfc9556521eb595ad94acdac0633ca5aaadab959d309ddde1b63ad",
+    "bytes": 711119
+  },
+  {
+    "id": "valorant-compact",
+    "file": "valorant-compact.png",
+    "sha256": "fc9db1e5293086b5cd36391e4d32aeb9350a6ec375dcd7967f68b2809e4b2627",
+    "bytes": 244097
+  },
+  {
+    "id": "league-of-legends",
+    "file": "league-of-legends.png",
+    "sha256": "86b58d34e7b66c09b1608c899e15bb446544cff85aa4e85e6e4c0b3e980ce795",
+    "bytes": 5784477
+  },
+  {
+    "id": "league-of-legends-medium",
+    "file": "league-of-legends-medium.png",
+    "sha256": "b59e881213989062a461867f195a2cc17d7b29b64e73dc3d4ce92a7467770d87",
+    "bytes": 1038319
+  },
+  {
+    "id": "league-of-legends-compact",
+    "file": "league-of-legends-compact.png",
+    "sha256": "68a393c72c97030de3b5e7f17333a73a51b37ed1e69b5f69892ba83adc874c33",
+    "bytes": 372438
+  },
+  {
+    "id": "overwatch",
+    "file": "overwatch.png",
+    "sha256": "d5fe453a449e3790f89530a1aa949084f996f301002add5a3bb9f8436b402c8e",
+    "bytes": 6366077
+  },
+  {
+    "id": "overwatch-medium",
+    "file": "overwatch-medium.png",
+    "sha256": "eabfca41f7d6955eb5d705e929fd3b11600b81b6fe07409199a45b9743639fbf",
+    "bytes": 1110243
+  },
+  {
+    "id": "overwatch-compact",
+    "file": "overwatch-compact.png",
+    "sha256": "ed0267a4a95353320a13520530faaac7ccbf070f4ae0bdfdeb18d339037031ef",
+    "bytes": 399167
+  },
+  {
+    "id": "among-us",
+    "file": "among-us.png",
+    "sha256": "931014b39bcbf7fe610b4822a81cc584f15fd148e1b6db4572f874b1505fb862",
+    "bytes": 5686329
+  },
+  {
+    "id": "among-us-medium",
+    "file": "among-us-medium.png",
+    "sha256": "17fe6adc4a209071849eba5ecaa5f0dbd111adc152f1036c2bdcaf4756728dfb",
+    "bytes": 946886
+  },
+  {
+    "id": "among-us-compact",
+    "file": "among-us-compact.png",
+    "sha256": "3924458861efd8f353ea6e7a5cc24cd43fe87d34d89d4f6b899379cdf50a9f46",
+    "bytes": 340881
+  },
+  {
+    "id": "gta-6",
+    "file": "gta-6.png",
+    "sha256": "b3892e4dd3a5cb49616f01238a37e93959b0de2cc657e53c813a2114d411d52c",
+    "bytes": 5703711
+  },
+  {
+    "id": "gta-6-medium",
+    "file": "gta-6-medium.png",
+    "sha256": "d2eecb868e103e69c877b98526edbe4b2583c8b7e04456f2b1bfb977d38127c9",
+    "bytes": 874329
+  },
+  {
+    "id": "gta-6-compact",
+    "file": "gta-6-compact.png",
+    "sha256": "ebe07a851fc3cfae35a19a27e83045ec32e6057724719e20fa8f5285bda77e4d",
+    "bytes": 305045
+  },
+  {
+    "id": "gta-san-andreas",
+    "file": "gta-san-andreas.png",
+    "sha256": "1d93c3618660c1cb3c4025f942b29f90f12e8e9d6669cc9643984b0180288f75",
+    "bytes": 6420540
+  },
+  {
+    "id": "gta-san-andreas-medium",
+    "file": "gta-san-andreas-medium.png",
+    "sha256": "5c82314f5d40c92076dbad618edad485fad51e072a255dddfa1281a8343307ef",
+    "bytes": 1087207
+  },
+  {
+    "id": "gta-san-andreas-compact",
+    "file": "gta-san-andreas-compact.png",
+    "sha256": "63267485337d868e6295579d537bafdc24fe4a0e53c54b62de28d03856db798e",
+    "bytes": 369303
+  },
+  {
+    "id": "the-last-of-us-2",
+    "file": "the-last-of-us-2.png",
+    "sha256": "25ebcc8ce6cc1f13cae1d51819c938cb25f41cf4009eb9f01b95b7aa649cdbe0",
+    "bytes": 6226139
+  },
+  {
+    "id": "the-last-of-us-2-medium",
+    "file": "the-last-of-us-2-medium.png",
+    "sha256": "2282c536a9639459331971c17bcdb5c0d02ba9a421b798c942242d30eef74d54",
+    "bytes": 1133684
+  },
+  {
+    "id": "the-last-of-us-2-compact",
+    "file": "the-last-of-us-2-compact.png",
+    "sha256": "5f31e69310ed2a230bd5773aa1d36e683c82df671b318e1c61db265ad62b43c8",
+    "bytes": 394655
+  },
+  {
+    "id": "red-dead-redemption-2",
+    "file": "red-dead-redemption-2.png",
+    "sha256": "967510e8bb87d85011ee33b4fb2eff1e4f4bb622541c1ad961811a87ac4a2d6d",
+    "bytes": 5950882
+  },
+  {
+    "id": "red-dead-redemption-2-medium",
+    "file": "red-dead-redemption-2-medium.png",
+    "sha256": "7cc50f964ba433979645638fbdfb850b1b995a33166855bc5f1c739cabad28d5",
+    "bytes": 998943
+  },
+  {
+    "id": "red-dead-redemption-2-compact",
+    "file": "red-dead-redemption-2-compact.png",
+    "sha256": "2a95ce8452642058133aca654c5132775ba3a858ec365eef0cda8547fc63d03b",
+    "bytes": 334216
+  },
+  {
+    "id": "minecraft",
+    "file": "minecraft.png",
+    "sha256": "fe79e4036247dd36ca7014bc9d93fdefc94062bd05e8b568159425928129a7c6",
+    "bytes": 5554397
+  },
+  {
+    "id": "minecraft-medium",
+    "file": "minecraft-medium.png",
+    "sha256": "61daa7f5949ca73d3f903c5159856dcb2c1c07350307ad810ea222fb687d0668",
+    "bytes": 828556
+  },
+  {
+    "id": "minecraft-compact",
+    "file": "minecraft-compact.png",
+    "sha256": "0253af71668b6a835c04e86ac21a75f6296ba5c8d140b740289cf5be7cb585cb",
+    "bytes": 310903
   }
 ]

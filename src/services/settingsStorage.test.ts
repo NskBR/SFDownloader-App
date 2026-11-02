@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defaultSettings } from "../domain/settings";
+import { defaultSettings, gameThemeIds } from "../domain/settings";
 
 const invoke = vi.fn(() => Promise.resolve());
 const emit = vi.fn(() => Promise.resolve());
@@ -138,7 +138,7 @@ it("migrates the previous Cyberpunk preset into Game themes and preserves custom
  expect(importSettingsBackup(exportSettingsBackup(current)).gameTheme).toBe("cs2");
 });
 
-it.each(["star-citizen","god-of-war-ragnarok"] as const)("persists and backs up %s",id=>{
+it.each(gameThemeIds.filter(id=>id!=="cyberpunk"))("persists and backs up %s",id=>{
  const settings={...defaultSettings,gameTheme:id};saveSettings(settings);
  expect(loadSettings().gameTheme).toBe(id);
  expect(importSettingsBackup(exportSettingsBackup(settings)).gameTheme).toBe(id);

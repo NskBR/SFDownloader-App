@@ -394,7 +394,10 @@ async fn download_wallpaper(app: AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
     if window.label()!="main" { return Err("Baixe temas pelas configurações.".into()); }
-    if !["cyberpunk","cs2","star-citizen","god-of-war-ragnarok"].contains(&id.as_str()) {return Err("Tema desconhecido.".into());}
+    let wallpapers = game_wallpapers()?;
+    if id.ends_with("-compact") || id.ends_with("-medium") || !wallpapers.iter().any(|entry| entry.id == id) {
+        return Err("Tema desconhecido.".into());
+    }
     for suffix in ["-compact","-medium",""] {
         download_wallpaper(app.clone(),format!("{id}{suffix}")).await?;
     }

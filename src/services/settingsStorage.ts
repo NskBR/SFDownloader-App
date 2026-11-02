@@ -1,4 +1,4 @@
-import { defaultSettings, type AppSettings } from "../domain/settings";
+import { gameThemeIds, defaultSettings, type AppSettings } from "../domain/settings";
 import { appFontIds, type AppFont } from "../domain/appFonts";
 import { emit } from "@tauri-apps/api/event";
 
@@ -134,15 +134,15 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     fontFamily: typeof value.fontFamily === "string" && /^custom:[a-f0-9]{64}$/.test(value.fontFamily)
       ? value.fontFamily as AppFont : valueFrom(value.fontFamily, appFontIds, base.fontFamily),
     testTheme: {
-      preset: valueFrom(testTheme.preset, ["custom", "cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok"], "custom"),
+      preset: valueFrom(testTheme.preset, ["custom", ...gameThemeIds], "custom"),
       enabled: legacyGameTheme ? false : booleanFrom(testTheme.enabled, false),
-      imageId: typeof testTheme.imageId === "string" && (testTheme.imageId === "builtin:cyberpunk" || testTheme.imageId === "builtin:cs2" || testTheme.imageId === "builtin:star-citizen" || testTheme.imageId === "builtin:god-of-war-ragnarok" || /^[a-f0-9]{64}$/.test(testTheme.imageId)) ? testTheme.imageId : null,
+      imageId: typeof testTheme.imageId === "string" && (gameThemeIds.some(id => testTheme.imageId === `builtin:${id}`) || /^[a-f0-9]{64}$/.test(testTheme.imageId)) ? testTheme.imageId : null,
       css: typeof testTheme.css === "string" ? testTheme.css.slice(0, 20000) : "",
       darkness: numberFrom(testTheme.darkness, base.testTheme.darkness, 30, 85),
       panelOpacity: numberFrom(testTheme.panelOpacity, base.testTheme.panelOpacity, 60, 100),
       position: valueFrom(testTheme.position, ["center", "left", "right"], "center"),
     },
-    gameTheme: valueFrom(value.gameTheme, ["none", "cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok"], legacyGameTheme ? "cyberpunk" : "none"),
+    gameTheme: valueFrom(value.gameTheme, ["none", ...gameThemeIds], legacyGameTheme ? "cyberpunk" : "none"),
     uiScale: numberFrom(value.uiScale, base.uiScale, 0.8, 1.5),
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),

@@ -268,5 +268,23 @@
     "file": "naruto-baryon-compact.png",
     "sha256": "f053ca4cea108cc47f88d40525a1cf0bdd97d942140f8f27d833010512f1e43c",
     "bytes": 339551
+  },
+  {
+    "id": "sarah-house",
+    "file": "sarah-house.png",
+    "sha256": "f44064d758be371d5f42751cf948f716d03aa53ffbcbb5c3ca60c52b54bc30e3",
+    "bytes": 5577673
+  },
+  {
+    "id": "sarah-house-medium",
+    "file": "sarah-house-medium.png",
+    "sha256": "b5753992273246bb73fe4f3bdec49f32e0da7c00213ad5d60038f24b64b091f6",
+    "bytes": 858474
+  },
+  {
+    "id": "sarah-house-compact",
+    "file": "sarah-house-compact.png",
+    "sha256": "7bf84b09cfedcf7f6ce5229f55457896992bd2f65848a28a1afd35c1a9353624",
+    "bytes": 295896
   }
 ]

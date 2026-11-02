@@ -253,19 +253,19 @@
   },
   {
     "id": "naruto-baryon",
-    "file": "naruto-baryon/main.png",
+    "file": "naruto/baryon/main.png",
     "sha256": "077ecaa34c2795f427cbe8c9b2804c1059ce471c6184999d78146bfb7e0483e7",
     "bytes": 5400878
   },
   {
     "id": "naruto-baryon-medium",
-    "file": "naruto-baryon/medium.png",
+    "file": "naruto/baryon/medium.png",
     "sha256": "1d64796054a263e63230341e39e0a09957408da5023eb9643f7e0d978016b591",
     "bytes": 915387
   },
   {
     "id": "naruto-baryon-compact",
-    "file": "naruto-baryon/compact.png",
+    "file": "naruto/baryon/compact.png",
     "sha256": "f053ca4cea108cc47f88d40525a1cf0bdd97d942140f8f27d833010512f1e43c",
     "bytes": 339551
   },
@@ -325,19 +325,19 @@
   },
   {
     "id": "hinata",
-    "file": "hinata/main.png",
+    "file": "naruto/hinata/main.png",
     "sha256": "c61a1bc13631f4c316cda7c37b6814e57760a5e77472731195657a7c6120f856",
     "bytes": 2562017
   },
   {
     "id": "hinata-medium",
-    "file": "hinata/medium.png",
+    "file": "naruto/hinata/medium.png",
     "sha256": "5c4d213f2d083012192aa25b2d98ca626444e4c515e0ace8aafc696790553227",
     "bytes": 1211890
   },
   {
     "id": "hinata-compact",
-    "file": "hinata/compact.png",
+    "file": "naruto/hinata/compact.png",
     "sha256": "a9ea1f4d93151acf1fa25ccdb29e610a27b0d107cf93b56586926b2b8478cbd9",
     "bytes": 410774
   }

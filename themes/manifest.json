@@ -538,5 +538,59 @@
     "file": "gta-san-andreas/the-boss/compact.png",
     "sha256": "19d7dfe4a7a34499c962f4586ee6a1df6df8ab10ae17dc6ce0970ad45917b010",
     "bytes": 119809
+  },
+  {
+    "id": "saitama--genos",
+    "file": "one-punch-man/genos/genos.png",
+    "sha256": "83f2c549d52544f5e227aff5a4128a0a6d9eac703ab73a745bacbaab2cad031b",
+    "bytes": 5987724
+  },
+  {
+    "id": "saitama--genos-medium",
+    "file": "one-punch-man/genos/genos-medium.png",
+    "sha256": "289f4928b12172a60eff0178a679a09e80fdd1743d19e57328c33bdc3d62d576",
+    "bytes": 1093156
+  },
+  {
+    "id": "saitama--genos-compact",
+    "file": "one-punch-man/genos/genos-compact.png",
+    "sha256": "fa4e19093735b763890b0dce8e1dd9562f56f33916c61fbfa0a37f3ed21171e0",
+    "bytes": 408677
+  },
+  {
+    "id": "saitama--tatsumaki",
+    "file": "one-punch-man/tatsumaki/tatsumaki.png",
+    "sha256": "d5750b014649f740263a135f35bb4afb90e1d39547050be813d8d9d4b4dd5e63",
+    "bytes": 7130872
+  },
+  {
+    "id": "saitama--tatsumaki-medium",
+    "file": "one-punch-man/tatsumaki/tatsumaki-medium.png",
+    "sha256": "07fda3300f0454120687e59bb17f2ba9aa42ca5e8977297031352365244c32a5",
+    "bytes": 1369987
+  },
+  {
+    "id": "saitama--tatsumaki-compact",
+    "file": "one-punch-man/tatsumaki/tatsumaki-compact.png",
+    "sha256": "fc0a51786f3ea4b5461a7b1b7fd950d0c8d7ed7f227b576cfc6b9f268bef4462",
+    "bytes": 515542
+  },
+  {
+    "id": "saitama--fubuki",
+    "file": "one-punch-man/fubuki/fubuki.png",
+    "sha256": "6db07d0b5d8bae0de6b1783fa10ab416c59ad1a84445249da2ed93f299a2e47a",
+    "bytes": 2102612
+  },
+  {
+    "id": "saitama--fubuki-medium",
+    "file": "one-punch-man/fubuki/fubuki-medium.png",
+    "sha256": "4c0c6c0ad87e403ecc076bd32c8e01ec9ba204bb30a6ab91000d7502c22e3003",
+    "bytes": 1235643
+  },
+  {
+    "id": "saitama--fubuki-compact",
+    "file": "one-punch-man/fubuki/fubuki-compact.png",
+    "sha256": "9e6c723ad292eec42de451e8ac58c7348c4762519707d8052853d877d4ba18bd",
+    "bytes": 432917
   }
 ]

@@ -1,6 +1,6 @@
 # Imagens de temas integrados
 
-`cyberpunk.png`: imagem fornecida pelo usuário para compor o tema pronto Cyberpunk. Copiada sem edição do arquivo indicado na conversa; SHA-256 `d7d46631cff7ff3333f2e2de661a0d463392e98c27650f23420b0510caf39631`.
+`cyberpunk-songbird.png`: imagem fornecida pelo usuário para compor o tema pronto Cyberpunk. Copiada sem edição do arquivo indicado na conversa; SHA-256 `51aff657d5884e9f5af2d62aa084f8e8f82e546afb2ff43e9f597d68b25f2c9c`.
 
 A atribuição não declara titularidade sobre marcas ou personagens presentes na imagem.
 

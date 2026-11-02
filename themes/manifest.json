@@ -1,9 +1,9 @@
 [
   {
     "id": "cyberpunk",
-    "file": "cyberpunk.png",
-    "sha256": "d7d46631cff7ff3333f2e2de661a0d463392e98c27650f23420b0510caf39631",
-    "bytes": 5834086
+    "file": "cyberpunk-songbird.png",
+    "sha256": "51aff657d5884e9f5af2d62aa084f8e8f82e546afb2ff43e9f597d68b25f2c9c",
+    "bytes": 5707762
   },
   {
     "id": "cs2",
@@ -25,15 +25,15 @@
   },
   {
     "id": "cyberpunk-compact",
-    "file": "cyberpunk-compact.png",
-    "sha256": "b2982972857425db6a93c12ea96171ee7a4be2ed9dc2dd40e77d179edf0ec92b",
-    "bytes": 344076
+    "file": "cyberpunk-songbird-compact.png",
+    "sha256": "19681f096afcfb71788f5de958f512cf4b17b2e6229b87172b9a30769008b0e2",
+    "bytes": 291680
   },
   {
     "id": "cyberpunk-medium",
-    "file": "cyberpunk-medium.png",
-    "sha256": "6d6681332afd41455441ff882ad48961222b5fcdf9689cec50ebec4ba118af67",
-    "bytes": 986542
+    "file": "cyberpunk-songbird-medium.png",
+    "sha256": "580b30709e574379edd2643a17ab9688942825de1c97a72248f88dc31bb756ae",
+    "bytes": 875308
   },
   {
     "id": "cs2-compact",

@@ -250,5 +250,23 @@
     "file": "saitama-compact.png",
     "sha256": "15ffe2eeb49a97ed6262ae81401d2d1c75c8731433dce26195f0c8f651918b03",
     "bytes": 378335
+  },
+  {
+    "id": "naruto-baryon",
+    "file": "naruto-baryon.png",
+    "sha256": "077ecaa34c2795f427cbe8c9b2804c1059ce471c6184999d78146bfb7e0483e7",
+    "bytes": 5400878
+  },
+  {
+    "id": "naruto-baryon-medium",
+    "file": "naruto-baryon-medium.png",
+    "sha256": "1d64796054a263e63230341e39e0a09957408da5023eb9643f7e0d978016b591",
+    "bytes": 915387
+  },
+  {
+    "id": "naruto-baryon-compact",
+    "file": "naruto-baryon-compact.png",
+    "sha256": "f053ca4cea108cc47f88d40525a1cf0bdd97d942140f8f27d833010512f1e43c",
+    "bytes": 339551
   }
 ]

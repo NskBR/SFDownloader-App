@@ -17,6 +17,8 @@
 
 ## O aplicativo
 
+**Temas da comunidade:** você também pode criar wallpapers e temas personalizados. Para propor inclusão no aplicativo oficial, faça um fork e abra um pull request. Veja o [guia de criação e contribuição de temas](docs/custom-themes.md).
+
 O SFDownloader reúne downloads HTTP/HTTPS e BitTorrent em uma interface desktop nativa. Ele organiza arquivos por categoria, permite pausar e retomar tarefas, mantém uma fila persistente, extrai arquivos compactados e captura downloads pelo navegador através de uma ponte local protegida.
 
 ![Tela principal do SFDownloader](docs/images/aplicativo.png)

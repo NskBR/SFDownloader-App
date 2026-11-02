@@ -232,5 +232,23 @@
     "file": "minecraft-compact.png",
     "sha256": "0253af71668b6a835c04e86ac21a75f6296ba5c8d140b740289cf5be7cb585cb",
     "bytes": 310903
+  },
+  {
+    "id": "saitama",
+    "file": "saitama.png",
+    "sha256": "315cf9e4050a04bafb03b42b0a609c82d7a6bf5ceef342d69b34ba704e1fd496",
+    "bytes": 5797501
+  },
+  {
+    "id": "saitama-medium",
+    "file": "saitama-medium.png",
+    "sha256": "728e016051ebe75a89888fd42de358342f6586ab153acfd995ef0345c87da141",
+    "bytes": 1010634
+  },
+  {
+    "id": "saitama-compact",
+    "file": "saitama-compact.png",
+    "sha256": "15ffe2eeb49a97ed6262ae81401d2d1c75c8731433dce26195f0c8f651918b03",
+    "bytes": 378335
   }
 ]

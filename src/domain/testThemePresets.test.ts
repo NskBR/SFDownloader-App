@@ -1,6 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {gameThemeIds} from "./settings";
 import manifest from "../../themes/manifest.json";
+import {selectedWallpaper,themeWallpapers} from "./themeWallpapers";
 import {cyberpunkTestCss,createCyberpunkTheme,createCS2Theme,createGameTheme,gameThemePresets} from "./testThemePresets";
 import {compileThemeCss} from "../services/testThemes";
 describe("Cyberpunk test preset",()=>{
@@ -25,13 +26,13 @@ it("provides a CS2 theme with the packaged upscaled wallpaper and restricted vis
 
 it.each(gameThemeIds)("provides the complete %s theme",id=>{
  const theme=createGameTheme(id);
- expect(theme.preset).toBe(id);expect(theme.imageId).toBe(`builtin:${id}`);
+ expect(theme.preset).toBe(selectedWallpaper(id).appearance?.preset??id);expect(theme.imageId).toBe(`builtin:${selectedWallpaper(id).id}`);
  expect(()=>compileThemeCss(theme.css,{})).not.toThrow();
 });
 
 it.each(gameThemeIds)("pins all three wallpaper variants for %s",id=>{
- for(const suffix of ["","-medium","-compact"]){
-  const asset=manifest.find(a=>a.id===id+suffix);
+ for(const wallpaper of themeWallpapers(id))for(const suffix of ["","-medium","-compact"]){
+  const asset=manifest.find(a=>a.id===wallpaper.id+suffix);
   expect(asset).toBeDefined();expect(asset?.sha256).toMatch(/^[a-f0-9]{64}$/);expect(asset?.bytes).toBeGreaterThan(0);
  }
 });

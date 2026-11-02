@@ -1,3 +1,4 @@
+import {resolveLocalTheme} from "./localThemes";
 import { createGameTheme } from "../domain/testThemePresets";
 import { applyTestTheme } from "./testThemes";
 import { defaultTestTheme } from "../domain/settings";
@@ -174,8 +175,11 @@ function stopCosmicFlow() {
   }
 }
 
+let localThemeRevision=0;
 export function applyThemeSettings(settings: AppSettings): void {
-  void applyTestTheme(settings.gameTheme && settings.gameTheme !== "none" ? createGameTheme(settings.gameTheme) : settings.testTheme ?? defaultTestTheme, settings.sidebarAnimation !== false);
+  const generation=++localThemeRevision;
+  if(settings.localThemeId){void resolveLocalTheme(settings.localThemeId).then(theme=>{if(generation===localThemeRevision)void applyTestTheme(theme,settings.sidebarAnimation!==false);}).catch(error=>{console.error(error);if(generation===localThemeRevision)void applyTestTheme(defaultTestTheme,false);});}
+  else void applyTestTheme(settings.gameTheme && settings.gameTheme !== "none" ? createGameTheme(settings.gameTheme,settings.themeWallpapers?.[settings.gameTheme]) : settings.testTheme ?? defaultTestTheme, settings.sidebarAnimation !== false);
   applyFontSettings(settings.fontFamily);
   const root = document.documentElement;
   root.dataset.appColor = settings.appColor;

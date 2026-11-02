@@ -1,0 +1,45 @@
+/* Built-in palettes apply to the main and auxiliary windows alike.
+   Status edges, selection, geometry and imported user CSS remain independent. */
+html[data-test-theme="true"][data-test-preset="saitama"] { --game-surface:#241e17; --game-raised:#3a2a20; }
+html[data-test-theme="true"][data-test-preset="cyberpunk"] { --game-surface:#281b2b; --game-raised:#402338; }
+html[data-test-theme="true"][data-test-preset="cs2"] { --game-surface:#26221d; --game-raised:#383027; }
+html[data-test-theme="true"][data-test-preset="star-citizen"] { --game-surface:#112633; --game-raised:#1d394b; }
+html[data-test-theme="true"][data-test-preset="god-of-war-ragnarok"] { --game-surface:#202d34; --game-raised:#30434d; }
+html[data-test-theme="true"][data-test-preset="valorant"] { --game-surface:#2c1c26; --game-raised:#402a36; }
+html[data-test-theme="true"][data-test-preset="league-of-legends"] { --game-surface:#152d33; --game-raised:#273c40; }
+html[data-test-theme="true"][data-test-preset="overwatch"] { --game-surface:#29313d; --game-raised:#3b4757; }
+html[data-test-theme="true"][data-test-preset="among-us"] { --game-surface:#232340; --game-raised:#35335a; }
+html[data-test-theme="true"][data-test-preset="gta-6"] { --game-surface:#32233b; --game-raised:#49324f; }
+html[data-test-theme="true"][data-test-preset="gta-san-andreas"] { --game-surface:#273025; --game-raised:#394532; }
+html[data-test-theme="true"][data-test-preset="the-last-of-us-2"] { --game-surface:#222e28; --game-raised:#334139; }
+html[data-test-theme="true"][data-test-preset="red-dead-redemption-2"] { --game-surface:#34221e; --game-raised:#4a3028; }
+html[data-test-theme="true"][data-test-preset="minecraft"] { --game-surface:#2b3522; --game-raised:#3f4b30; }
+
+html[data-test-theme="true"][data-test-preset] {
+  --surface:var(--game-surface) !important;
+  --surface-2:var(--game-raised) !important;
+  --bg-surface:var(--game-surface) !important;
+  --text:#f3f4f6 !important;
+  --text-2:#b9c1c8 !important;
+  --muted:#a0abb5 !important;
+}
+
+/* More specific than the fixed CSS saved by older presets. */
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .download-card:not(.selected) {
+  background:color-mix(in srgb,var(--game-surface) var(--test-theme-panel,85%),transparent) !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .download-card:not(.selected):hover {
+  background:color-mix(in srgb,var(--game-raised) 92%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .counter-badge {
+  background:color-mix(in srgb,var(--game-raised) 94%,transparent) !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .flux-footer {
+  background:var(--test-glass-fill) !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame :is(.search-input,.toolbar-search) {
+  background:color-mix(in srgb,var(--game-surface) 94%,transparent) !important;
+  color:var(--text);
+}
+/* Existing glass button rules use --surface/--surface-2, including hover states.
+   Window controls and the three footer icons keep their transparent hit areas. */

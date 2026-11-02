@@ -2,13 +2,48 @@ import {act,cleanup,fireEvent,render,screen,waitFor} from "@testing-library/reac
 import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
 vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn(async(command:string)=>command==="installed_game_themes"?[]:undefined)}));
 const mocks=vi.hoisted(()=>({validate:vi.fn()}));
-vi.mock("../../services/testThemes",()=>({validateTestTheme:mocks.validate}));
+vi.mock("../../services/testThemes",()=>({validateTestTheme:mocks.validate,invalidateGameThemeImages:vi.fn()}));
+import {invoke} from "@tauri-apps/api/core";
+vi.mock("../../services/themeCatalog",()=>({cachedThemeCatalog:()=>null,loadThemeCatalog:()=>invoke("installed_game_themes"),markThemeDownloaded:vi.fn()}));
 import {GameThemesCard} from "./GameThemesCard";
-beforeEach(()=>{vi.clearAllMocks();mocks.validate.mockResolvedValue(undefined);});afterEach(cleanup);
-describe("Game themes",()=>{
+beforeEach(()=>{vi.clearAllMocks();vi.mocked(invoke).mockImplementation(async(command:string)=>command==="installed_game_themes"?[]:undefined as any);mocks.validate.mockResolvedValue(undefined);});afterEach(cleanup);
+
+it("shows only four themes until expanded, and can collapse again",async()=>{
+ render(<GameThemesCard selected="none" onSelect={vi.fn()}/>);
+ expect(screen.queryByRole("button",{name:/Apply Minecraft|Aplicar Minecraft/})).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:/Mostrar todos|Show all/}));
+ expect(await screen.findByRole("button",{name:/Apply Minecraft|Aplicar Minecraft/})).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:/Mostrar menos|Show fewer/}));
+ expect(screen.queryByRole("button",{name:/Apply Minecraft|Aplicar Minecraft/})).toBeNull();
+});
+
+it("deletes a downloaded active theme and returns to normal appearance",async()=>{
+ vi.mocked(invoke).mockImplementation(async(command:string)=>command==="installed_game_themes"?["cs2"]:undefined as any);
+ const select=vi.fn();render(<GameThemesCard selected="cs2" onSelect={select}/>);
+ fireEvent.click(await screen.findByRole("button",{name:/Apagar tema Counter|Delete theme Counter/}));
+ await waitFor(()=>expect(invoke).toHaveBeenCalledWith("delete_game_theme",{id:"cs2"}));
+ await waitFor(()=>expect(select).toHaveBeenCalledWith("none"));
+ expect(screen.queryByRole("button",{name:/Apagar tema Counter|Delete theme Counter/})).toBeNull();
+});
+
+it("does not offer Sarah House in the official catalog",()=>{
+ render(<GameThemesCard selected="none" onSelect={vi.fn()}/>);
+ expect(screen.queryByText("Sarah's House")).toBeNull();
+});
+
+it("changes from Baryon to Hinata inside the single Naruto card",async()=>{
+ const select=vi.fn();render(<GameThemesCard selected="naruto" wallpapers={{naruto:"naruto-baryon"}} onSelect={select}/>);
+ fireEvent.click(screen.getByRole("button",{name:/Mostrar todos|Show all/}));
+ fireEvent.click(await screen.findByRole("button",{name:/Próximo wallpaper Naruto|Next wallpaper Naruto/}));
+ await waitFor(()=>expect(select).toHaveBeenCalledWith("naruto","hinata"));
+ expect(invoke).toHaveBeenCalledWith("download_game_theme",{id:"hinata"});
+ expect(mocks.validate).toHaveBeenCalledWith(expect.stringContaining("#c6b9f0"),"builtin:hinata");
+ expect(screen.queryByRole("button",{name:/^Aplicar Hinata|^Apply Hinata/})).toBeNull();
+});
+describe("Custom themes",()=>{
  it("applies CS2 by click without exposing a CSS editor",async()=>{
   const select=vi.fn();render(<GameThemesCard selected="none" onSelect={select}/>);
-  expect(screen.getByRole("heading",{name:/Temas de jogos|Game themes/})).toBeTruthy();expect(screen.queryByRole("textbox")).toBeNull();
+  expect(screen.getByRole("heading",{name:/Temas personalizados|Custom themes/})).toBeTruthy();expect(screen.queryByRole("textbox")).toBeNull();
   fireEvent.click(screen.getByRole("button",{name:/Aplicar CS2|Apply CS2/}));
   await waitFor(()=>expect(select).toHaveBeenCalledWith("cs2"));
   expect(mocks.validate).toHaveBeenCalledWith(expect.any(String),"builtin:cs2");
@@ -21,7 +56,7 @@ describe("Game themes",()=>{
  });
  it("disables the game theme without erasing the CSS editor settings",()=>{
   const select=vi.fn();render(<GameThemesCard selected="cs2" onSelect={select}/>);
-  fireEvent.click(screen.getByRole("button",{name:/Desativar tema|Disable game/}));expect(select).toHaveBeenCalledWith("none");
+  fireEvent.click(screen.getByRole("button",{name:/Desativar tema|Disable custom/}));expect(select).toHaveBeenCalledWith("none");
  });
 });
 

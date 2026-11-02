@@ -1,4 +1,4 @@
-import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X } from "lucide-react";
+import { Dices, Pipette, Palette, Plus, RotateCcw, Sparkles, Trash2, X } from "../icons";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { AppColor, GradientConfig } from "../../domain/settings";

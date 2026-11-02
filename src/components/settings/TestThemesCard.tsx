@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FlaskConical, Upload, RotateCcw, Image as ImageIcon } from "lucide-react";
+import { FlaskConical, Upload, RotateCcw, Image as ImageIcon } from "../icons";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { defaultTestTheme, type TestThemeSettings } from "../../domain/settings";

@@ -1,5 +1,13 @@
 
 /* Built-in collection: bounded silhouettes keep window controls inside the frame. */
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] { --game-window-shape:inset(0 round 16px 6px 16px 6px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame { clip-path:var(--game-window-shape); border-radius:16px 6px; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .sidebar .navigation__item { border-radius:13px 4px 13px 4px !important; border-right:3px solid rgb(223 74 56 / .65) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .download-card { position:relative; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .download-card::after {
+ content:""; position:absolute; right:10px; top:5px; width:54px; height:10px; pointer-events:none;
+ background:repeating-linear-gradient(120deg,transparent 0 7px,rgb(255 212 92 / .25) 7px 9px,transparent 9px 14px,rgb(223 74 56 / .3) 14px 16px);
+}
 html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] { --game-window-shape:polygon(16px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 16px); }
 html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame { clip-path:var(--game-window-shape); border-radius:0; }
 html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .window-frame .download-card { position:relative; }
@@ -50,3 +58,7 @@ html.window-type-main[data-test-theme="true"][data-test-preset="valorant"] .wind
 }
 html.window-type-main[data-test-theme="true"][data-test-preset="overwatch"] .window-frame .sidebar .navigation__item { border-right:3px solid color-mix(in srgb,var(--ember-solid) 45%,transparent) !important; }
 html.window-type-main[data-test-theme="true"][data-test-preset="minecraft"] .window-frame .sidebar .navigation__item { border-width:2px !important; border-bottom-color:rgb(0 0 0 / .45) !important; }
+
+.local-themes-card .cfg-card-header > div:first-child { flex:1;min-width:0; }
+.local-themes-card .game-themes-grid:empty { display:none; }
+.local-themes-card .theme-wallpaper-controls { justify-content:space-between; }

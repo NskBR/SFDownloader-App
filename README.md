@@ -13,7 +13,7 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.1.2.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 1.1.3.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
 ## O aplicativo
 
@@ -40,6 +40,8 @@ O progresso representa entrega funcional, cobertura de fluxos e estabilização.
 
 ### Progresso geral: **89%**
 
+Estimativa de maturidade do projeto, não uma medição de cobertura de testes. A 1.1.3 amplia a personalização; as pendências de validação dos motores e da distribuição continuam.
+
 O próximo marco é concluir a validação manual de rede, torrent e extensões em versões atuais de Windows e navegadores, antes de tratar o aplicativo como release pública estável.
 
 ## Recursos
@@ -48,15 +50,27 @@ O próximo marco é concluir a validação manual de rede, torrent e extensões 
 
 O novo fluxo abre uma janela independente ao colar um link de vídeo, Shorts ou YouTube Music na busca. Permite escolher MP4 na resolução disponível ou MP3 em 128/192/256/320 kbps, com capa e metadados. Os arquivos recebem o sufixo `-sfd` e seguem o destino e a organização por categoria configurados no aplicativo.
 
-A extensão 0.3.7 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.7 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
+A extensão 0.3.8 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.8 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
 
-Download e finalização aparecem como etapas separadas. As tarefas entram na fila geral, podem ser pausadas durante a transferência e retomadas usando os parciais, inclusive após reiniciar. A conclusão depende da validação do arquivo final com ffprobe. Links de playlist, incluindo vídeos com `list=`, abrem uma seleção de faixas com caixas de marcação, Ctrl+A e seleção por intervalo. Apenas as faixas escolhidas entram na fila e são salvas em uma pasta com o nome da playlist, com MP3 como padrão. A qualidade MP4 funciona como limite por vídeo, usando uma resolução nativa disponível sem ampliação. Playlists públicas de até 1.000 entradas são aceitas. Mixes oferecem até 50 faixas retornadas na consulta, mantendo a seleção fixa ao baixar. Lives e autenticação não são suportadas. Faixas indisponíveis identificadas na consulta são informadas; falhas posteriores aparecem individualmente na fila.
+A janela compacta mostra a transferência na barra de progresso e informa a conversão/capa e a conclusão pelo status. As tarefas entram na fila geral, podem ser pausadas durante a transferência e retomadas usando os parciais, inclusive após reiniciar. A conclusão depende da validação do arquivo final com ffprobe. Links de playlist, incluindo vídeos com `list=`, abrem uma seleção de faixas com caixas de marcação, Ctrl+A e seleção por intervalo. Apenas as faixas escolhidas entram na fila e são salvas em uma pasta com o nome da playlist, com MP3 como padrão. A qualidade MP4 funciona como limite por vídeo, usando uma resolução nativa disponível sem ampliação. Playlists públicas de até 1.000 entradas são aceitas. Mixes oferecem até 50 faixas retornadas na consulta, mantendo a seleção fixa ao baixar. Lives e autenticação não são suportadas. Faixas indisponíveis identificadas na consulta são informadas; falhas posteriores aparecem individualmente na fila.
 
 As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reutilizam metadados recentes. Após um bloqueio de requisições do YouTube, a janela mostra uma contagem regressiva antes de permitir nova tentativa, com espera crescente de 60 segundos até 5 minutos. Esse controle reduz as requisições; a liberação do acesso continua dependendo do YouTube.
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.2_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.2).
+Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.3_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.3).
+
+### Novidades da 1.1.3
+
+- **Temas personalizados com variações:** cada wallpaper pode ter paleta, fonte e formatos próprios. Cyberpunk, GTA San Andreas, Naruto e OnePunchMan reúnem suas variações no mesmo card.
+- **Temas locais por ZIP:** importe configuração e imagens na Personalização, aplique offline e alterne as variações. Pacotes locais não entram no catálogo oficial. Consulte o [formato do pacote](docs/custom-themes.md#importação-local-por-zip).
+- Miniaturas otimizadas, cache do catálogo preparado na abertura e imagens menores para janelas auxiliares.
+- Ícones animados ao passar o mouse, independentes da opção de transições do aplicativo e respeitando a preferência de movimento reduzido do sistema.
+- Confirmação de mídia compacta durante a consulta, com expansão suave para as opções disponíveis.
+- Botão e modais de atualização revisados; download com tamanho total, velocidade e estimativa de tempo restante.
+- Janela externa de instalação com ícone próprio do aplicativo e limpeza dos setups após instalação bem-sucedida.
+
+As funções de temas locais e instalação da atualização ainda exigem validação manual na versão instalada. Os motores HTTP e BitTorrent não foram substituídos nesta versão. [Notas completas](docs/releases/v1.1.3.md).
 
 ### Novidades da 1.1.2
 
@@ -90,7 +104,7 @@ Corrige o erro “CSS inválido” dos temas na versão instalada, mantendo a po
 
 ### Recursos da 1.0.7
 
-- Reconhecimento de vídeos públicos individuais do TikTok e Instagram/Reels e ícones de download na extensão 0.3.7. O suporte permanece em validação: Instagram foi testado com um Reel público; o teste real do TikTok encontrou bloqueio de IP.
+- Reconhecimento de vídeos públicos individuais do TikTok e Instagram/Reels e ícones de download na extensão 0.3.8. O suporte permanece em validação: Instagram foi testado com um Reel público; o teste real do TikTok encontrou bloqueio de IP.
 - Botão **Atualizar extensão** para usar o pacote do aplicativo instalado, com confirmação do XPI assinado no Firefox. No Chromium, a extensão deve estar carregada da pasta gerenciada pelo app.
 - Escolha da fonte dos textos em Personalização, incluindo importação local de TTF/OTF, e organização de pastas conforme os downloads.
 - Ajustes de dropdowns, modal Sobre, nomes completos ao passar o mouse e barras de rolagem sem setas.

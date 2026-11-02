@@ -1,4 +1,9 @@
 @import "./game-theme-collection.css";
+@import "./game-theme-surfaces.css";
+@import "./game-theme-window-contrast.css";
+@import "./naruto-theme.css";
+@import "./signature-themes.css";
+@import "./hinata-theme.css";
 /* Opt-in only: cosmetic overrides never touch child windows or settings controls. */
 html.window-type-main[data-test-theme="true"] .window-frame {
   background: linear-gradient(rgb(0 0 0 / var(--test-theme-darkness,.5)),rgb(0 0 0 / var(--test-theme-darkness,.5))),var(--test-theme-image,none),var(--bg) !important;
@@ -285,7 +290,8 @@ html.window-type-main[data-test-theme="true"][data-test-preset],
 html.window-type-main[data-test-theme="true"][data-test-preset] body,
 html.window-type-main[data-test-theme="true"][data-test-preset] #root {
   background:transparent !important;
-  clip-path:var(--game-window-shape,none);
+  /* Clip only the painted frame, not three nested compositor surfaces. */
+  clip-path:none;
 }
 html.window-type-main[data-window-maximized="true"] { --game-window-shape:none !important; }
 
@@ -337,3 +343,45 @@ html.window-type-main[data-test-theme="true"] .window-frame .help-close-action:h
 }
 
 .game-themes-resource-note { margin:0; padding:0 14px 14px; color:var(--text-2); font-size:11px; line-height:1.5; }
+.game-theme-entry { position:relative; min-width:0; }
+.game-theme-entry > .game-theme-tile { width:100%; height:100%; }
+.game-theme-delete { position:absolute; top:14px; left:14px; display:grid; place-items:center; width:25px; height:25px; border-radius:6px; color:var(--text); }
+.game-theme-delete:hover:not(:disabled) { color:var(--st-failed); }
+.game-themes-expand { display:flex; align-items:center; justify-content:center; gap:6px; margin:0 auto 14px; }
+
+/* Catalog thumbnails do not need independent backdrop-filter GPU surfaces. */
+.game-themes-card.cfg-card,
+html.window-type-main[data-test-theme="true"] .window-frame .game-themes-card.cfg-card {
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background:color-mix(in srgb,var(--surface) 94%,transparent) !important;
+}
+.game-theme-entry[hidden] { display:none !important; }
+.theme-wallpaper-controls { position:absolute;left:12px;right:12px;top:35px;display:flex;justify-content:space-between;align-items:center;pointer-events:none; }
+.theme-wallpaper-controls button { pointer-events:auto;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;color:var(--text);background:rgb(12 14 20 / .85) !important; }
+.theme-wallpaper-controls span { align-self:flex-end;transform:translateY(33px);padding:1px 5px;border-radius:4px;background:rgb(12 14 20 / .85);font-size:9px;color:var(--text); }
+/* Delete/expand controls also inherited the global glass blur. */
+html.window-type-main[data-test-theme="true"] .window-frame .game-themes-card button,
+html.window-type-main[data-test-theme="true"] .window-frame .game-themes-card button:hover {
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .game-theme-entry > .game-theme-tile,
+html.window-type-main[data-test-theme="true"] .window-frame .game-theme-entry > .game-theme-tile:hover {
+  background:var(--surface) !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  box-shadow:none !important;
+}
+.game-themes-card { overflow-anchor:none; }
+.game-themes-community { margin:0; padding:0 14px 12px; font-size:11px; color:var(--text-2); line-height:1.5; }
+.game-themes-community button { color:var(--ember-solid); text-decoration:underline; margin-left:5px; }
+/* Portal stays outside wallpaper clipping and has an opaque paint fallback. */
+.help-overlay { isolation:isolate; }
+.help-overlay .help-dialog { background-color:var(--panel,#161a1e); }
+html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog {
+  background:var(--game-surface,#161a1e);
+  color:var(--text);
+}
+html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog > footer { background:var(--game-surface,#161a1e); }
+html[data-test-theme="true"][data-test-preset] .help-overlay .help-close-action { color:#161a1e; background:var(--ember-solid); }

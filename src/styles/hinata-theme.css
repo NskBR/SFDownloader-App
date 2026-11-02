@@ -1,0 +1,21 @@
+html[data-test-theme="true"][data-test-preset="hinata"] {
+ --game-surface:#19192c;--game-raised:#2e2b47;
+ --ember:#c6b9f0 !important;--ember-solid:#c6b9f0 !important;--ember-strong:#eee8ff !important;
+ --ember-soft:rgba(198,185,240,.15) !important;--st-downloading:#c6b9f0 !important;
+ --font:"Segoe UI",sans-serif !important;--window-font:"Segoe UI",sans-serif !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] { --game-window-shape:inset(0 round 12px 5px 12px 5px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame { clip-path:var(--game-window-shape);border-radius:12px 5px; }
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame .download-card { position:relative;border-radius:12px 5px 12px 5px !important;border-top-color:rgb(198 185 240 / .32) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame .download-card::after {
+ content:"";position:absolute;pointer-events:none;right:14%;top:4px;bottom:4px;width:135px;
+ background:url("../assets/themes/hinata/gentle-fist.svg") center/contain no-repeat;opacity:.18;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame .sidebar .navigation__item { border-radius:12px 5px 12px 5px !important;border-right:2px solid rgb(198 185 240 / .3) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame .sidebar .navigation__item--active { background:linear-gradient(110deg,rgb(198 185 240 / .2),rgb(25 25 44 / .94)) !important;border-right-color:#eee8ff !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="hinata"] .window-frame :is(.search-input,.toolbar-search,.cfg-card,.flux-footer,.sidebar-footer-row) { border-radius:12px 5px 12px 5px;border-color:rgb(198 185 240 / .26); }
+html[data-test-theme="true"][data-test-preset="hinata"] :is(h1,h2,h3,.confirm-title) { letter-spacing:.025em;font-weight:600; }
+html[data-test-theme="true"][data-test-preset="hinata"] .help-dialog { border-radius:12px 5px;border-color:rgb(198 185 240 / .4); }
+html[data-test-theme="true"][data-test-preset="hinata"]:not(.window-type-main) #root > :is(.download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window) { border-radius:12px 5px !important;border:1px solid rgb(198 185 240 / .38) !important; }
+html[data-test-theme="true"][data-test-preset="hinata"] :is(.media-preview,.media-metrics,.media-destination,.help-meta,.tc-card) { border-radius:10px 4px;border-top-color:rgb(238 232 255 / .3); }
+html[data-test-theme="true"][data-test-preset="hinata"] .media-query-symbol { border-radius:50%;border-color:rgb(198 185 240 / .4); }

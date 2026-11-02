@@ -25,6 +25,8 @@ static PREVIEWS: LazyLock<Mutex<HashMap<String, MediaPreview>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static START_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 static WINDOW_LOCK: Mutex<()> = Mutex::new(());
+static RESIZES: LazyLock<Mutex<HashMap<String, tokio_util::sync::CancellationToken>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 static INSPECTIONS: LazyLock<Mutex<HashMap<String, tokio_util::sync::CancellationToken>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
@@ -89,6 +91,9 @@ pub fn open_window(
         let label = label.to_owned();
         window.on_window_event(move |event| {
             if matches!(event, tauri::WindowEvent::Destroyed) {
+                if let Ok(mut resizes) = RESIZES.lock() {
+                    if let Some(token) = resizes.remove(&label) { token.cancel(); }
+                }
                 if let Ok(mut sources) = SOURCES.lock() {
                     sources.remove(&label);
                 }
@@ -140,9 +145,55 @@ pub async fn open_media_confirmation(
         } else {
             "Baixar vídeo ou música"
         },
-        if playlist { 1020.0 } else { 620.0 },
-        if playlist { 590.0 } else { 480.0 },
+        440.0,
+        370.0,
     )
+}
+
+#[tauri::command]
+pub async fn resize_media_confirmation(window: WebviewWindow, ready: bool, animate: Option<bool>) -> Result<(), String> {
+    if !window.label().starts_with("media-confirm-") {
+        return Err("Janela de confirmação inválida.".into());
+    }
+    let token = tokio_util::sync::CancellationToken::new();
+    if let Some(previous) = RESIZES.lock().map_err(|_| "Falha ao ajustar a janela.")?.insert(window.label().into(),token.clone()) { previous.cancel(); }
+    let playlist = ready && PREVIEWS.lock().map_err(|_| "Falha ao ler a prévia.")?
+        .get(window.label()).is_some_and(|preview| preview.playlist.is_some());
+    let (mut width, mut height): (f64, f64) = if !ready { (440.0,370.0) } else if playlist { (1020.0,590.0) } else { (620.0,480.0) };
+    let position = window.outer_position().map_err(|e|e.to_string())?;
+    let monitor = window.current_monitor().map_err(|e|e.to_string())?;
+    window.set_resizable(playlist).map_err(|e|e.to_string())?;
+    if let Some(monitor) = monitor {
+        let scale = monitor.scale_factor();
+        let area = monitor.work_area();
+        width = width.min((area.size.width as f64 / scale - 32.0).max(1.0));
+        height = height.min((area.size.height as f64 / scale - 32.0).max(1.0));
+        let initial = window.inner_size().map_err(|e|e.to_string())?;
+        let left = area.position.x + (16.0*scale) as i32;
+        let top = area.position.y + (16.0*scale) as i32;
+        let right = area.position.x + area.size.width as i32 - (width*scale) as i32 - (16.0*scale) as i32;
+        let bottom = area.position.y + area.size.height as i32 - (height*scale) as i32 - (16.0*scale) as i32;
+        let target_x = position.x.clamp(left,right.max(left));
+        let target_y = position.y.clamp(top,bottom.max(top));
+        let started = std::time::Instant::now();
+        loop {
+            if token.is_cancelled() { return Ok(()); }
+            let progress = if ready && animate.unwrap_or(false) { (started.elapsed().as_secs_f64() / 0.26).min(1.0) } else { 1.0 };
+            let eased = progress * progress * (3.0 - 2.0 * progress);
+            let w = initial.width as f64 / scale + (width - initial.width as f64 / scale) * eased;
+            let h = initial.height as f64 / scale + (height - initial.height as f64 / scale) * eased;
+            window.set_size(tauri::LogicalSize::new(w,h)).map_err(|e|e.to_string())?;
+            window.set_position(tauri::PhysicalPosition::new(
+                (position.x as f64 + (target_x-position.x) as f64*eased).round() as i32,
+                (position.y as f64 + (target_y-position.y) as f64*eased).round() as i32,
+            )).map_err(|e|e.to_string())?;
+            if progress >= 1.0 { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(16)).await;
+        }
+    } else {
+        window.set_size(tauri::LogicalSize::new(width,height)).map_err(|e|e.to_string())?;
+    }
+    Ok(())
 }
 
 #[tauri::command]

@@ -1,10 +1,24 @@
 /* Rajdhani from Google Fonts, pinned in assets/fonts/rajdhani/source.json.
    SIL Open Font License 1.1 is bundled verbatim in the adjacent OFL.txt. */
+html[data-test-theme="true"][data-test-preset="saitama"] {
+  --ember:#ffd45c !important;
+  --ember-solid:#ffd45c !important;
+  --ember-soft:rgba(255,212,92,.16) !important;
+  --ember-strong:#ffe493 !important;
+  --st-downloading:#ffd45c !important;
+}
 @font-face { font-family:"SFRajdhani"; src:url("../assets/fonts/rajdhani/Rajdhani-Regular.ttf") format("truetype"); font-weight:400; font-style:normal; font-display:swap; }
 @font-face { font-family:"SFRajdhani"; src:url("../assets/fonts/rajdhani/Rajdhani-Medium.ttf") format("truetype"); font-weight:500; font-style:normal; font-display:swap; }
 @font-face { font-family:"SFRajdhani"; src:url("../assets/fonts/rajdhani/Rajdhani-SemiBold.ttf") format("truetype"); font-weight:600; font-style:normal; font-display:swap; }
 @font-face { font-family:"SFRajdhani"; src:url("../assets/fonts/rajdhani/Rajdhani-Bold.ttf") format("truetype"); font-weight:700; font-style:normal; font-display:swap; }
 html[data-test-theme="true"][data-test-preset="cyberpunk"] {
+  --ember:#ff416b !important;
+  --ember-solid:#ff416b !important;
+  --ember-soft:rgba(255,65,107,.16) !important;
+  --ember-strong:#ff7191 !important;
+  --ember-stop-1:#ff416b !important;
+  --ember-stop-2:#c75bd7 !important;
+  --st-downloading:#ff416b !important;
   --font:"SFRajdhani","Segoe UI",sans-serif !important;
   --window-font:"SFRajdhani","Segoe UI",sans-serif !important;
 }

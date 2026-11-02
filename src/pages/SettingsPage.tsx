@@ -1,3 +1,4 @@
+import {LocalThemes} from "../components/settings/LocalThemes";
 import {
   Plus,
   Tags,
@@ -22,7 +23,7 @@ import {
   HardDrive,
   Type,
   Upload,
-} from "lucide-react";
+} from "../components/icons";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
 import { GameThemesCard } from "../components/settings/GameThemesCard";
@@ -133,6 +134,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const next = {
       ...draft, [key]: value,
+      ...(key === "gameTheme" || key === "testTheme" ? {localThemeId:undefined}:{}),
       ...(key === "testTheme" && (value as AppSettings["testTheme"]).enabled ? { gameTheme: "none" as const } : {}),
       ...(key === "autoOrganizeEnabled" && value === true ? { organizeFoldersOnDemand: false } : {}),
       ...(key === "organizeFoldersOnDemand" && value === true ? { autoOrganizeEnabled: false } : {}),
@@ -599,7 +601,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                 <button type="button" className="cfg-theme-customize-button" onClick={() => {
                   const next = {...draft, appColor:defaultSettings.appColor, accentColor:"blue" as const,
                     fontFamily:defaultSettings.fontFamily, interfaceGradient:{...defaultSettings.interfaceGradient},
-                    gameTheme:"none" as const, testTheme:{...defaultTestTheme}, defaultThemeInitialized:true};
+                    localThemeId:undefined, gameTheme:"none" as const, testTheme:{...defaultTestTheme}, defaultThemeInitialized:true};
                   setDraft(next);onSave(next);
                 }}>Restaurar tema padrão</button>
                 <button type="button" className="cfg-theme-customize-button" onClick={() => setCustomizerModalOpen(true)}>
@@ -625,7 +627,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                               accentColor: draft.defaultThemeInitialized ? draft.accentColor : "blue" as const,
                               defaultThemeInitialized: true,
                               gameTheme: "none" as const,
-                              testTheme: { ...draft.testTheme, enabled: false },
+                              localThemeId:undefined, testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: { ...draft.interfaceGradient, enabled: false },
                             };
                             setDraft(next);
@@ -634,7 +636,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                             const next = {
                               ...draft,
                               gameTheme: "none" as const,
-                              testTheme: { ...draft.testTheme, enabled: false },
+                              localThemeId:undefined, testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: {
                                 enabled: true,
                                 type: "linear" as const,
@@ -698,10 +700,12 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
-            <GameThemesCard selected={draft.gameTheme} onSelect={gameTheme => {
-              const next = { ...draft, gameTheme, testTheme: { ...draft.testTheme, enabled: false } };
+            <GameThemesCard selected={draft.gameTheme} wallpapers={draft.themeWallpapers} onSelect={(gameTheme,wallpaperId) => {
+              const next = { ...draft, localThemeId:undefined, gameTheme, themeWallpapers:wallpaperId?{...draft.themeWallpapers,[gameTheme]:wallpaperId}:draft.themeWallpapers, testTheme: { ...draft.testTheme, enabled: false } };
               setDraft(next); void save(next);
             }} />
+
+            <LocalThemes selected={draft.localThemeId} onSelect={localThemeId=>{const next={...draft,localThemeId,gameTheme:"none" as const,testTheme:{...draft.testTheme,enabled:false}};setDraft(next);void save(next);}}/>
 
             {/* Card 2: Cor de destaque (Intacto) */}
             <div className="cfg-card">

@@ -15,3 +15,5 @@ pub mod windows;
 pub mod fonts;
 
 pub mod theme_images;
+
+pub mod local_themes;

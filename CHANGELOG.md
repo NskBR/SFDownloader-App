@@ -2,6 +2,15 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.1.3 — 02/11/2026
+
+- Temas personalizados com variações e importação local por ZIP.
+- Novos wallpapers e perfis visuais; catálogo e imagens otimizados.
+- Ícones animados ao passar o mouse e consulta de mídia com expansão suave.
+- Modais de atualização revisados, estatísticas do download e ícone próprio no splash externo.
+- Limpeza dos instaladores após atualização bem-sucedida.
+- README e documentação de temas atualizados. [Notas completas](docs/releases/v1.1.3.md).
+
 ## 1.0.9 — 30/10/2026
 
 - Janela de progresso de mídia compacta, com barra de transferência e status de finalização, sem linha de etapas.

@@ -1,4 +1,5 @@
 import {watchUpdates} from "../services/updatePolling";
+import {prepareThemeCatalog} from "../services/themeCatalog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
@@ -43,14 +44,18 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSplashFading(true);
-      const removeTimer = setTimeout(() => {
-        setSplashVisible(false);
-      }, 450);
-      return () => clearTimeout(removeTimer);
-    }, 1500);
-    return () => clearTimeout(timer);
+    let disposed=false;let fadeTimer:ReturnType<typeof setTimeout>|undefined;
+    let minimumTimer:ReturnType<typeof setTimeout>|undefined;
+    let fallbackTimer:ReturnType<typeof setTimeout>|undefined;
+    const minimum=new Promise<void>(resolve=>{minimumTimer=setTimeout(resolve,1500);});
+    // Never leave the app stuck behind the splash on a damaged disk/cache.
+    const fallback=new Promise<void>(resolve=>{fallbackTimer=setTimeout(resolve,8000);});
+    void Promise.race([Promise.all([minimum,prepareThemeCatalog(currentSettings.current.gameTheme,currentSettings.current.themeWallpapers?.[currentSettings.current.gameTheme])]),fallback]).then(()=>{
+      if(disposed)return;
+      clearTimeout(fallbackTimer);setSplashFading(true);
+      fadeTimer=setTimeout(()=>setSplashVisible(false),450);
+    });
+    return()=>{disposed=true;clearTimeout(minimumTimer);clearTimeout(fallbackTimer);clearTimeout(fadeTimer);};
   }, []);
 
   useEffect(() => watchUpdates(setUpdateInfo), []);

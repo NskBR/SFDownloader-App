@@ -1,3 +1,7 @@
+import hinataWallpaper from "../assets/themes/hinata/preview.jpg";
+import {selectedWallpaper} from "./themeWallpapers";
+import narutoWallpaper from "../assets/themes/naruto-baryon-preview.jpg";
+import saitamaWallpaper from "../assets/themes/saitama-preview.jpg";
 import valorantWallpaper from "../assets/themes/valorant-preview.jpg";
 import leagueOfLegendsWallpaper from "../assets/themes/league-of-legends-preview.jpg";
 import overwatchWallpaper from "../assets/themes/overwatch-preview.jpg";
@@ -14,36 +18,36 @@ import starCitizenWallpaper from "../assets/themes/star-citizen-preview.jpg";
 import ragnarokWallpaper from "../assets/themes/god-of-war-ragnarok-preview.jpg";
 export { cyberpunkWallpaper, cs2Wallpaper };
 export const builtinThemePreviews: Record<string,string> = {"builtin:cyberpunk":cyberpunkWallpaper,"builtin:cs2":cs2Wallpaper,"builtin:star-citizen":starCitizenWallpaper,"builtin:god-of-war-ragnarok":ragnarokWallpaper};
-Object.assign(builtinThemePreviews, {"builtin:valorant":valorantWallpaper,"builtin:league-of-legends":leagueOfLegendsWallpaper,"builtin:overwatch":overwatchWallpaper,"builtin:among-us":amongUsWallpaper,"builtin:gta-6":gta6Wallpaper,"builtin:gta-san-andreas":sanAndreasWallpaper,"builtin:the-last-of-us-2":lastOfUsWallpaper,"builtin:red-dead-redemption-2":rdr2Wallpaper,"builtin:minecraft":minecraftWallpaper});
+Object.assign(builtinThemePreviews, {"builtin:hinata":hinataWallpaper,"builtin:naruto-baryon":narutoWallpaper,"builtin:saitama":saitamaWallpaper,"builtin:valorant":valorantWallpaper,"builtin:league-of-legends":leagueOfLegendsWallpaper,"builtin:overwatch":overwatchWallpaper,"builtin:among-us":amongUsWallpaper,"builtin:gta-6":gta6Wallpaper,"builtin:gta-san-andreas":sanAndreasWallpaper,"builtin:the-last-of-us-2":lastOfUsWallpaper,"builtin:red-dead-redemption-2":rdr2Wallpaper,"builtin:minecraft":minecraftWallpaper});
 /** Cosmetic preset only; no dimensions, positioning or interaction overrides. */
 export const cyberpunkTestCss = `
 .sidebar {
   background-color: transparent;
 }
 .navigation__item {
-  background-color: rgba(8, 15, 20, 0.94);
-  border-color: #66713a;
+  background-color: var(--surface);
+  border-color: var(--line);
   border-radius: 4px 14px 4px 14px;
-  color: #f3f6ec;
+  color: #f6eef5;
 }
 .navigation__item--active {
-  background-color: #e6df00;
-  border-color: #fff500;
-  color: #f3f6ec;
-  box-shadow: 0 0 12px rgba(255, 232, 0, 0.18);
+  background-color: var(--ember-soft);
+  border-color: var(--ember-solid);
+  color: #f6eef5;
+  box-shadow: 0 0 12px var(--ember-soft);
 }
-.navigation__icon { color: #f2e500; }
-.navigation__item--active .navigation__icon { color: #f2e500; }
-.counter-badge { background-color: rgba(44, 53, 49, 0.95); color: #f4f4dc; }
+.navigation__icon { color: var(--ember-solid); }
+.navigation__item--active .navigation__icon { color: var(--ember-solid); }
+.counter-badge { background-color: var(--surface-2); color: #f6eef5; }
 .download-card {
-  background-color: rgba(7, 14, 18, 0.84);
+  background-color: var(--surface);
   border-color: var(--line);
   border-radius: 4px 16px 4px 16px;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.22);
   color: #f1f4f6;
 }
-.download-card:hover { border-color: var(--line); background-color: rgba(13, 24, 29, 0.92); }
-.flux-footer { background-color: rgba(6, 12, 18, 0.9); border-color: #dfd600; border-radius: 4px 14px 4px 14px; }
+.download-card:hover { border-color: var(--line); background-color: var(--surface-2); }
+.flux-footer { background-color: var(--surface); border-color: var(--ember-solid); border-radius: 4px 14px 4px 14px; }
 .titlebar { background-color: transparent; }
 `;
 
@@ -69,7 +73,7 @@ function createScenicTheme(preset: "star-citizen" | "god-of-war-ragnarok"): Test
   return {preset,enabled:true,imageId:`builtin:${preset}`,css:cs2ThemeCss.replace(/#ffac45|#ec9639/g,"var(--ember-solid)"),darkness:30,panelOpacity:80,position:"center"};
 }
 export const gameThemePresets = [
-  {id:"cyberpunk",name:"Cyberpunk",image:cyberpunkWallpaper,pt:"Night City · vidro fosco · Rajdhani",en:"Night City · frosted glass · Rajdhani"},
+  {id:"cyberpunk",name:"Cyberpunk",image:cyberpunkWallpaper,pt:"Phantom Liberty · vermelho neon · Rajdhani",en:"Phantom Liberty · neon red · Rajdhani"},
   {id:"cs2",name:"Counter-Strike 2",image:cs2Wallpaper,pt:"Laranja tático · vidro fosco · Segoe UI",en:"Tactical orange · frosted glass · Segoe UI"},
   {id:"star-citizen",name:"Star Citizen",image:starCitizenWallpaper,pt:"Azul espacial · vidro fosco",en:"Space blue · frosted glass"},
   {id:"god-of-war-ragnarok",name:"God of War Ragnarök",image:ragnarokWallpaper,pt:"Azul-gelo · vidro fosco",en:"Ice blue · frosted glass"},
@@ -82,16 +86,43 @@ export const gameThemePresets = [
   {id:"the-last-of-us-2",name:"The Last of Us Part II",image:lastOfUsWallpaper,pt:"Verde musgo e detalhes discretos",en:"Moss green and restrained details"},
   {id:"red-dead-redemption-2",name:"Red Dead Redemption 2",image:rdr2Wallpaper,pt:"Cobre do velho oeste e costuras",en:"Western copper and stitched edges"},
   {id:"minecraft",name:"Minecraft",image:minecraftWallpaper,pt:"Verde pixelado e contornos em degraus",en:"Pixel green and stepped outlines"},
+  {id:"saitama",name:"OnePunchMan",image:saitamaWallpaper,pt:"One Punch Man - amarelo e vermelho",en:"One Punch Man - yellow and red"},
+  {id:"naruto",name:"Naruto",image:narutoWallpaper,pt:"Bárion e Hinata · visuais por variação",en:"Baryon and Hinata · distinct variant styles"},
 ] as const;
-export function createGameTheme(id: Exclude<GameTheme,"none">): TestThemeSettings {
-  if (id in additionalThemes) {
-    const visual = additionalThemes[id as keyof typeof additionalThemes];
-    return {preset:id,enabled:true,imageId:`builtin:${id}`,css:visual.css,darkness:40,panelOpacity:80,position:"center"};
+export function createGameTheme(id: Exclude<GameTheme,"none">,wallpaperId?:string): TestThemeSettings {
+  const wallpaper=selectedWallpaper(id,wallpaperId);
+  const appearance=wallpaper.appearance;
+  const preset=appearance?.preset??id;
+  if (preset in additionalThemes) {
+    const visual = additionalThemes[preset as keyof typeof additionalThemes];
+    return {preset,appearance,enabled:true,imageId:`builtin:${wallpaper.id}`,css:appearance?.css??visual.css,darkness:appearance?.darkness??40,panelOpacity:appearance?.panelOpacity??80,position:appearance?.position??"center"};
   }
-  return id==="cs2"?createCS2Theme():id==="cyberpunk"?createCyberpunkTheme():createScenicTheme(id as "star-citizen" | "god-of-war-ragnarok");
+  const base=preset==="cs2"?createCS2Theme():preset==="cyberpunk"?createCyberpunkTheme():createScenicTheme(preset as "star-citizen" | "god-of-war-ragnarok");
+  return {...base,preset,appearance,imageId:`builtin:${wallpaper.id}`,css:appearance?.css??base.css,darkness:appearance?.darkness??base.darkness,panelOpacity:appearance?.panelOpacity??base.panelOpacity,position:appearance?.position??base.position};
 }
 
 const additionalThemes = {
+  "hinata": {css: `.sidebar { background-color: transparent; }
+.navigation__item { background-color: rgba(24,24,43,.92); border-radius: 12px 5px 12px 5px; color: #f2efff; }
+.navigation__icon, .navigation__item--active .navigation__icon { color: #c6b9f0; }
+.download-card { background-color: rgba(24,24,43,.92); border-radius: 12px 5px 12px 5px; color: #f2efff; }
+.download-card:hover { background-color: rgba(43,40,65,.95); }
+.flux-footer { background-color: rgba(24,24,43,.92); border-radius: 12px 5px; }
+.titlebar { background-color: transparent; }`},
+  "naruto-baryon": {css: `.sidebar { background-color: transparent; }
+.navigation__item { background-color: rgba(31,21,18,.92); border-radius: 4px 16px 4px 16px; color: #fff1df; }
+.navigation__icon, .navigation__item--active .navigation__icon { color: #ffae55; }
+.download-card { background-color: rgba(31,21,18,.92); border-radius: 5px 20px 5px 20px; color: #fff1df; }
+.download-card:hover { background-color: rgba(58,35,25,.95); }
+.flux-footer { background-color: rgba(31,21,18,.92); border-radius: 5px 18px; }
+.titlebar { background-color: transparent; }`},
+  "saitama": {css: `.sidebar { background-color: transparent; }
+.navigation__item { background-color: var(--surface); border-radius: 13px 4px 13px 4px; color: var(--text); }
+.navigation__icon, .navigation__item--active .navigation__icon { color: var(--ember-solid); }
+.download-card { background-color: var(--surface); border-radius: 16px 5px 16px 5px; color: var(--text); }
+.download-card:hover { background-color: var(--surface-2); }
+.flux-footer { background-color: var(--surface); border-radius: 13px 4px; }
+.titlebar { background-color: transparent; }`},
   "valorant": {css: `.sidebar { background-color: transparent; }
 .navigation__item { background-color: rgba(10,17,23,.82); border-radius: 2px; color: #edf2f5; }
 .navigation__item--active { color: #ff6070; }
@@ -138,10 +169,10 @@ const additionalThemes = {
 .flux-footer { background-color: rgba(8,15,21,.82); border-radius: 12px 5px; }
 .titlebar { background-color: transparent; }`},
   "gta-san-andreas": {css: `.sidebar { background-color: transparent; }
-.navigation__item { background-color: rgba(10,17,23,.82); border-radius: 2px 8px; color: #edf2f5; }
-.navigation__item--active { color: #a7ce89; }
-.navigation__icon, .navigation__item--active .navigation__icon { color: #a7ce89; }
-.counter-badge { background-color: rgba(25,34,41,.86); color: #edf2f5; }
+.navigation__item { background-color: var(--surface); border-radius: 2px 8px; color: #edf2f5; }
+.navigation__item--active { color: var(--ember-solid); }
+.navigation__icon, .navigation__item--active .navigation__icon { color: var(--ember-solid); }
+.counter-badge { background-color: var(--surface-2); color: #edf2f5; }
 .download-card { background-color: rgba(8,15,21,.84); border-radius: 2px; color: #edf2f5; }
 .download-card:hover { background-color: rgba(14,23,30,.92); }
 .flux-footer { background-color: rgba(8,15,21,.82); border-radius: 2px 8px; }

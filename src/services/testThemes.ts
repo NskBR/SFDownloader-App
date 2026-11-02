@@ -1,4 +1,5 @@
 import themeManifest from "../../themes/manifest.json";
+import {appearanceCss} from "./themeAppearance";
 import { invoke } from "@tauri-apps/api/core";
 import type { TestThemeSettings } from "../domain/settings";
 export interface ThemeImage { id: string; name: string; mime: string }
@@ -9,6 +10,12 @@ const properties = new Set(["color", "background", "background-color", "backgrou
 const scope = 'html.window-type-main[data-test-theme="true"]';
 const validId = /^[a-f0-9]{64}$/;
 const imageCache = new Map<string, Promise<string>>();
+export function invalidateGameThemeImages(id: string) {
+  for (const entry of themeManifest) {
+    if ([id,`${id}-medium`,`${id}-compact`].includes(entry.id)) imageCache.delete(entry.sha256);
+  }
+  activeKey = "";
+}
 const ownedImageUrls = new Set<string>();
 let appliedImageUrls: string[] = [];
 function releaseImageUrls() {
@@ -138,7 +145,7 @@ export async function applyTestTheme(settings: TestThemeSettings, animations = t
     // Large data URLs exceed Chromium's CSS custom-property size limit.
     // Keep rendered CSS short and revoke the owned blob URLs on reset/change.
     const renderedImages=Object.fromEntries(Object.entries(images).map(([id,source])=>[id,renderImageUrl(source)]));
-    const css = isMain ? compileThemeCss(settings.css,renderedImages) : "";
+    const css = (isMain ? compileThemeCss(settings.css,renderedImages) : "") + appearanceCss(settings.appearance);
     root.style.setProperty("--test-theme-image",settings.imageId ? `url("${renderedImages[settings.imageId]}")` : "none");
     root.style.setProperty("--test-theme-darkness",`${Math.min(85,Math.max(30,settings.darkness))/100}`);
     root.style.setProperty("--test-theme-panel",`${Math.min(100,Math.max(60,settings.panelOpacity))}%`);

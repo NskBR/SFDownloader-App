@@ -1,0 +1,27 @@
+/* Small windows prioritize labels over artwork. A black scrim also handles
+   white wallpapers, without another blur/compositor layer. Main UI is unchanged. */
+html[data-test-theme="true"][data-test-preset]:not(.window-type-main) {
+  --text:#f5f7fa !important;
+  --text-2:#d2d8e0 !important;
+  --text-3:#c2cbd5 !important;
+  --muted:#b8c3cf !important;
+  --test-glass-fill:color-mix(in srgb,var(--game-surface,#151b24) 94%,#080b10) !important;
+}
+html[data-test-theme="true"][data-test-preset]:not(.window-type-main) #root > :is(
+  .download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window
+) {
+  background:linear-gradient(
+    rgb(0 0 0 / max(.72,var(--test-theme-darkness,.5))),
+    rgb(0 0 0 / max(.72,var(--test-theme-darkness,.5)))
+  ),var(--test-theme-image,none),#10141b !important;
+  background-size:cover !important;
+  background-position:var(--test-theme-position,center) center !important;
+  background-repeat:no-repeat !important;
+}
+html[data-test-theme="true"][data-test-preset]:not(.window-type-main) :is(
+  .media-preview,.media-destination,.media-metrics,.media-playlist-list,
+  .confirm-field,.confirm-control-box,.confirm-meta-item,
+  .tc-field,.tc-card,.integr-bridge-status,.dbg-filters
+) {
+  background:color-mix(in srgb,var(--game-surface,#151b24) 94%,#080b10) !important;
+}

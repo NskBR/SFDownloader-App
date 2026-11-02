@@ -5,7 +5,7 @@ import type { MediaDetails, MediaPreview } from "../services/mediaService";
 
 const mocks = vi.hoisted(() => ({
   settings: {} as Partial<typeof defaultSettings>, close: vi.fn(async () => {}), minimize: vi.fn(async () => {}), maximize: vi.fn(async () => {}),
-  inspect: vi.fn(), start: vi.fn(), details: vi.fn(), openFile: vi.fn(), reveal: vi.fn(), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
+  inspect: vi.fn(), resize:vi.fn(async()=>{}), start: vi.fn(), details: vi.fn(), openFile: vi.fn(), reveal: vi.fn(), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn(),
 }));
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ close: mocks.close, minimize: mocks.minimize, toggleMaximize:mocks.maximize }) }));
 vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn(async () => "C:/Other") }));
@@ -13,7 +13,7 @@ vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) })
 vi.mock("../services/settingsStorage", () => ({ loadSettings: () => ({ ...defaultSettings, language: "pt-BR", rootDownloadFolder: "C:/Downloads", autoOrganizeEnabled: true, ...mocks.settings }) }));
 vi.mock("../services/mediaService", async importOriginal => ({
   ...await importOriginal<typeof import("../services/mediaService")>(),
-  inspectMedia: mocks.inspect, startMediaDownload: mocks.start, mediaDetails: mocks.details,
+  inspectMedia: mocks.inspect, resizeMediaConfirmation:mocks.resize, startMediaDownload: mocks.start, mediaDetails: mocks.details,
 }));
 vi.mock("../services/downloadService", () => ({
   openFile: mocks.openFile, revealInFolder: mocks.reveal, pauseDownload: mocks.pause,
@@ -134,12 +134,15 @@ describe("media confirmation", () => {
     mocks.inspect.mockImplementationOnce(callback => {notify=callback;return new Promise<MediaPreview>(done => {resolve=done;});});
     render(<MediaConfirmationWindow />);
     act(() => notify({seconds:5,reason:"cooldown"}));
+    expect(mocks.resize).toHaveBeenCalledWith(false,expect.any(Boolean));
+    expect(screen.queryByRole("button",{name:"Baixar vídeo"})).toBeNull();
     expect(screen.getByText("Nova consulta em 5s")).toBeTruthy();
     act(() => notify({seconds:0,reason:"queue"}));
     expect(screen.getByText("Aguardando outra consulta…")).toBeTruthy();
     act(() => notify({seconds:60,reason:"rate-limit"}));
     expect(screen.getByText("Nova consulta em 60s")).toBeTruthy();
     await act(async () => { resolve(preview); });
+    expect(mocks.resize).toHaveBeenLastCalledWith(true,expect.any(Boolean));
     expect(screen.getByText(preview.title)).toBeTruthy();
     expect(screen.queryByText(/Nova consulta em/)).toBeNull();
   });

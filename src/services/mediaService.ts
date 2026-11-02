@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { DownloadTask } from "../domain/download";
 import type { AppSettings } from "../domain/settings";
 import { downloadPriorityValue } from "./downloadService";
+export const resizeMediaConfirmation = (ready:boolean,animate=false) => invoke<void>("resize_media_confirmation",{ready,animate});
 
 export interface MediaPreview {
   url: string;

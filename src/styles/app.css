@@ -4977,3 +4977,8 @@ html .titlebar-integration .titlebar-extension-button:hover {
 @media (prefers-reduced-motion:reduce) {
   .titlebar-integration .titlebar-extension-button { transition:none; }
 }
+
+/* Animated icons retain the existing SVG footprint and never create another button surface. */
+.sf-animated-icon { display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex-shrink:0;line-height:0;background:transparent !important;border:0 !important;box-shadow:none !important; }
+.sf-animated-icon > span { display:inline-flex;align-items:center;justify-content:center;line-height:0; }
+.sf-animated-icon svg { display:block;flex-shrink:0;stroke-width:var(--sf-icon-stroke,2); }

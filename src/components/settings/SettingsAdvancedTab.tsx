@@ -1,5 +1,5 @@
 import {checkForUpdates} from "../../services/downloadService";
-import { Bug, Clock, Download, Globe, Settings2, Upload } from "lucide-react";
+import { Bug, Clock, Download, Globe, Settings2, Upload } from "../icons";
 import { useRef, useState } from "react";
 import type { Translations } from "../../i18n";
 import { Toggle } from "../ui/Toggle";

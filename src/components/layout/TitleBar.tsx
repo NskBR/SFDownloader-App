@@ -1,5 +1,6 @@
+import {UpdateDownloadStats} from "../UpdateDownloadStats";
 import {UpdateReleaseNotes} from "../UpdateReleaseNotes";
-import { Minus, Square, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "lucide-react";
+import { Minus, Square, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "../icons";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -101,8 +102,9 @@ export function TitleBar({
     });
   };
 
-  const percentage = updateProgress.total_bytes && updateProgress.total_bytes > 0
-    ? Math.min(100, Math.round((updateProgress.downloaded_bytes / updateProgress.total_bytes) * 100))
+  const updateTotal = updateProgress.total_bytes && updateProgress.total_bytes > 0 ? updateProgress.total_bytes : updateInfo?.installer_size && updateInfo.installer_size > 0 ? updateInfo.installer_size : null;
+  const percentage = updateTotal
+    ? Math.min(100, Math.round((updateProgress.downloaded_bytes / updateTotal) * 100))
     : null;
 
   return (
@@ -125,7 +127,7 @@ export function TitleBar({
             <h2>{updateProgress.status === "failed" ? "Não foi possível atualizar" : updateProgress.status === "downloading" ? "Baixando atualização…" : updateProgress.status === "cancelling" ? "Cancelando…" : "Preparando atualização…"}</h2>
             <p role="status">{updateProgress.status === "failed" ? updateProgress.message : updateProgress.status === "downloading" ? "A instalação começará automaticamente." : "Verificando o instalador e salvando seus downloads."}</p>
             <progress max={100} value={updateProgress.status === "downloading" ? percentage ?? undefined : undefined} aria-label="Progresso da atualização" />
-            {updateProgress.status === "downloading" && <small>{percentage === null ? formatBytes(updateProgress.downloaded_bytes) : `${percentage}% · ${formatBytes(updateProgress.downloaded_bytes)}`}</small>}
+            {updateProgress.status === "downloading" && <>{percentage!==null&&<small>{percentage}%</small>}<UpdateDownloadStats downloaded={updateProgress.downloaded_bytes} total={updateTotal} speed={updateProgress.bytes_per_second}/></>}
             {updateProgress.status === "downloading" && <button onClick={() => void downloadService.cancelUpdateDownload()}>Cancelar</button>}
             {updateProgress.status === "failed" && <button autoFocus onClick={() => setUpdateProgress(idleUpdateProgress)}>Fechar</button>}
           </section>

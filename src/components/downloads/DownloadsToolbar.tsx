@@ -1,4 +1,4 @@
-import { ArrowDown, LayoutGrid, List, Magnet, Search } from "lucide-react";
+import { ArrowDown, LayoutGrid, List, Magnet, Search } from "../icons";
 import type { KeyboardEvent, ClipboardEvent } from "react";
 import type { DownloadSort, DownloadSortKey, DownloadView } from "../../hooks/useDownloadViewPreferences";
 import { CustomSelect } from "../ui/CustomSelect";

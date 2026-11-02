@@ -54,7 +54,7 @@ fn folder(app: &AppHandle) -> Result<PathBuf, String> {
 
 }
 
-fn validate(bytes: &[u8]) -> Result<&'static str, String> {
+pub(super) fn validate(bytes: &[u8]) -> Result<&'static str, String> {
 
     if bytes.len() as u64 > MAX_BYTES {
 
@@ -330,7 +330,8 @@ fn game_wallpapers() -> Result<Vec<GameWallpaper>, String> {
 
 #[tauri::command]
 
-pub fn installed_game_themes(app: AppHandle) -> Result<Vec<String>, String> {
+pub async fn installed_game_themes(app: AppHandle) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<String>, String> {
 
     let root=folder(&app)?;
 
@@ -340,6 +341,7 @@ pub fn installed_game_themes(app: AppHandle) -> Result<Vec<String>, String> {
         entries.iter().find(|asset|asset.id==format!("{}{suffix}",entry.id)).is_some_and(|asset|
           read_bytes(&root.join(format!("{}.image",asset.sha256))).map(|bytes|format!("{:x}",Sha256::digest(&bytes))==asset.sha256).unwrap_or(false))
       })).map(|entry|entry.id.clone()).collect())
+    }).await.map_err(|error|error.to_string())?
 }
 
 #[tauri::command]
@@ -400,6 +402,27 @@ pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: Stri
     }
     for suffix in ["-compact","-medium",""] {
         download_wallpaper(app.clone(),format!("{id}{suffix}")).await?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
+    if window.label() != "main" { return Err("Gerencie temas pelas configurações.".into()); }
+    let entries = game_wallpapers()?;
+    if id.ends_with("-compact") || id.ends_with("-medium") || !entries.iter().any(|entry| entry.id == id) {
+        return Err("Tema desconhecido.".into());
+    }
+    let root = folder(&app)?;
+    for suffix in ["", "-compact", "-medium"] {
+        if let Some(entry) = entries.iter().find(|entry| entry.id == format!("{id}{suffix}")) {
+            let path = root.join(format!("{}.image", entry.sha256));
+            match std::fs::remove_file(path) {
+                Ok(()) => (),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                Err(error) => return Err(error.to_string()),
+            }
+        }
     }
     Ok(())
 }

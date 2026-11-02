@@ -1,3 +1,4 @@
+import {Pause as AnimatedPause,Play as AnimatedPlay} from "../components/icons";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
@@ -1037,7 +1038,7 @@ export function DownloadsPage({
                 .forEach((d) => void pause(d.id))
             }
           >
-            <Pause size={13} />
+            <AnimatedPause size={13} />
             <span>{t.downloads.pauseAll}</span>
           </button>
           <button
@@ -1050,7 +1051,7 @@ export function DownloadsPage({
                 .forEach((d) => void resume(d.id))
             }
           >
-            <Play size={13} />
+            <AnimatedPlay size={13} />
             <span>{t.downloads.resumeAll}</span>
           </button>
         </div>

@@ -1,6 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultSettings, gameThemeIds } from "../domain/settings";
 
+it.each(["naruto-baryon","hinata"])("migrates the previous %s theme into the Naruto collection",old=>{
+ const settings=normalizeSettings({gameTheme:old},"pt-BR");
+ expect(settings.gameTheme).toBe("naruto");expect(settings.themeWallpapers.naruto).toBe(old);
+ const backup=importSettingsBackup(exportSettingsBackup(settings));expect(backup.themeWallpapers.naruto).toBe(old);
+});
+
+it("preserves wallpaper choice per theme and rejects unregistered wallpaper IDs",()=>{
+ const settings=normalizeSettings({gameTheme:"cyberpunk",themeWallpapers:{"cyberpunk":"cyberpunk--v-sunset",unknown:"../../file"}},"pt-BR");
+ expect(importSettingsBackup(exportSettingsBackup(settings)).themeWallpapers).toEqual({"cyberpunk":"cyberpunk--v-sunset"});
+ expect(normalizeSettings({themeWallpapers:{"cyberpunk":"../../file"}},"pt-BR").themeWallpapers["cyberpunk"]).toBe("cyberpunk");
+});
+
+
 const invoke = vi.fn(() => Promise.resolve());
 const emit = vi.fn(() => Promise.resolve());
 
@@ -144,4 +157,11 @@ it.each(gameThemeIds.filter(id=>id!=="cyberpunk"))("persists and backs up %s",id
  expect(importSettingsBackup(exportSettingsBackup(settings)).gameTheme).toBe(id);
  const custom=normalizeSettings({testTheme:{enabled:true,preset:id,imageId:`builtin:${id}`}},"pt-BR");
  expect(custom.testTheme.preset).toBe(id);expect(custom.testTheme.imageId).toBe(`builtin:${id}`);
+});
+
+it("preserves an installed local package reference and retires the former official Sarah selection",()=>{
+ const id="a".repeat(64)+":0";
+ expect(normalizeSettings({localThemeId:id},"pt-BR").localThemeId).toBe(id);
+ expect(normalizeSettings({localThemeId:"../../outside"},"pt-BR").localThemeId).toBeUndefined();
+ expect(normalizeSettings({gameTheme:"sarah-house"},"pt-BR").gameTheme).toBe("none");
 });

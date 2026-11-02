@@ -17,8 +17,9 @@ import {
   MoreHorizontal,
   BarChart3,
   Magnet,
-} from "lucide-react";
+} from "../icons";
 import { useEffect, useLayoutEffect, useRef, useState, type PropsWithChildren } from "react";
+import { createPortal } from "react-dom";
 import type { PageId } from "../../app/navigation";
 import type { DownloadTask } from "../../domain/download";
 import * as downloadService from "../../services/downloadService";
@@ -362,10 +363,11 @@ export function AppShell({
         </main>
       </div>
 
-      {helpOpen && (
+      {helpOpen && createPortal(
         <div className="help-overlay" onMouseDown={() => setHelpOpen(false)}>
           <section
             className="help-dialog"
+            role="dialog" aria-modal="true" aria-labelledby="about-dialog-title"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <header>
@@ -373,7 +375,7 @@ export function AppShell({
                 <img className="help-logo" src={logo} alt="SF Downloader" />
                 <div>
                   <span>SF DOWNLOADER</span>
-                  <h2>{t.about.title}</h2>
+                  <h2 id="about-dialog-title">{t.about.title}</h2>
                 </div>
               </div>
               <button onClick={() => setHelpOpen(false)} aria-label={t.common.close}>
@@ -432,7 +434,7 @@ export function AppShell({
               <button className="help-close-action" onClick={() => setHelpOpen(false)}>{t.common.close}</button>
             </footer>
           </section>
-        </div>
+        </div>,document.body
       )}
     </div>
   );

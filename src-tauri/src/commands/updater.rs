@@ -486,6 +486,7 @@ pub async fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
     std::fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
     let script = folder.join("install.ps1");
     let logo = folder.join("logo.svg");
+    let icon = folder.join("sfdownloader.ico");
     let ready = folder.join("ready");
     let go = folder.join("go");
     let error_file = folder.join("error");
@@ -494,7 +495,8 @@ pub async fn install_downloaded_update(app: AppHandle) -> Result<(), String> {
     // Windows PowerShell 5.1 requires a BOM to decode UTF-8 script literals.
     std::fs::write(&script, format!("\u{feff}{}", include_str!("update-helper.ps1"))).map_err(|e| e.to_string())?;
     std::fs::write(&logo, include_str!("../../../src/assets/sf-logo.svg")).map_err(|e| e.to_string())?;
-    let payload = serde_json::json!({"installer": installer, "executable": executable, "destination": executable.parent(), "parent": std::process::id(), "sha256": digest, "logo": logo, "ready": ready, "go": go, "error": error_file, "background": theme[0], "foreground": theme[1], "accent": theme[2]});
+    std::fs::write(&icon, include_bytes!("../../icons/icon.ico")).map_err(|e| e.to_string())?;
+    let payload = serde_json::json!({"icon": icon, "installer": installer, "executable": executable, "destination": executable.parent(), "parent": std::process::id(), "sha256": digest, "logo": logo, "ready": ready, "go": go, "error": error_file, "background": theme[0], "foreground": theme[1], "accent": theme[2]});
     std::fs::write(&config, serde_json::to_vec(&payload).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     let mut command = std::process::Command::new("powershell.exe");
     command.args(["-NoProfile", "-STA", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass", "-File"]).arg(script).arg("-ConfigPath").arg(config);

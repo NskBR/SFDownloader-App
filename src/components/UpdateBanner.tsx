@@ -1,5 +1,5 @@
 import React from "react";
-import { Sparkles, ExternalLink, X } from "lucide-react";
+import { Sparkles, ExternalLink, X } from "./icons";
 import type { UpdateCheckResult } from "../services/downloadService";
 import { useTranslation } from "../i18n";
 

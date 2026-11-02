@@ -1,0 +1,40 @@
+/* Botanical: soft plum glass, botanical inlays and a porcelain edge. */
+html[data-test-theme="true"][data-test-preset="botanical"] {
+ --game-surface:#291d30;--game-raised:#432c48;
+ --ember:#efb4d5 !important;--ember-solid:#efb4d5 !important;--ember-strong:#ffdaed !important;
+ --ember-soft:rgba(239,180,213,.16) !important;--st-downloading:#efb4d5 !important;
+ --font:"Segoe UI",sans-serif !important;--window-font:"Segoe UI",sans-serif !important;
+}
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] { --game-window-shape:inset(0 round 17px 8px 17px 8px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame { clip-path:var(--game-window-shape);border-radius:17px 8px; }
+html[data-test-theme="true"][data-test-preset="botanical"] :is(h1,h2,h3,.media-heading,.confirm-title) { font-family:Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:.01em; }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame .download-card { position:relative;border-radius:18px 7px 18px 7px !important;border-top-color:rgb(239 180 213 / .38) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:14%;top:4px;bottom:4px;width:140px;background:url("../assets/themes/botanical-blossom.svg") center/contain no-repeat;opacity:.22; }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame .sidebar .navigation__item { border-radius:16px 7px 16px 7px !important;border-right-color:rgb(239 180 213 / .45) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame .sidebar .navigation__item--active { background:linear-gradient(110deg,rgb(239 180 213 / .22),rgb(41 29 48 / .94)) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="botanical"] .window-frame :is(.search-input,.toolbar-search,.flux-footer,.sidebar-footer-row,.cfg-card) { border-radius:17px 7px 17px 7px;border-color:rgb(239 180 213 / .25); }
+html[data-test-theme="true"][data-test-preset="botanical"] .help-dialog { border-radius:18px 8px;border-color:rgb(239 180 213 / .35); }
+html[data-test-theme="true"][data-test-preset="botanical"]:not(.window-type-main) #root > :is(.download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window) { border-radius:17px 8px !important;border:1px solid rgb(239 180 213 / .4) !important; }
+html[data-test-theme="true"][data-test-preset="botanical"] :is(.media-preview,.media-metrics,.media-destination,.help-meta) { border-radius:14px 6px;border-top-color:rgb(239 180 213 / .35); }
+
+/* Saitama: punch-panel outlines, cape-red tabs, restrained manga impact marks. */
+html[data-test-theme="true"][data-test-preset="saitama"] :is(h1,h2,h3,.download-card strong,.media-heading,.confirm-title) { font-family:"SFBarlowCondensed","Segoe UI",sans-serif;font-weight:600;letter-spacing:.025em; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .download-card { border-radius:17px 4px 17px 4px !important;border-top:2px solid color-mix(in srgb,var(--ember-solid) 40%,transparent) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:14%;top:7px;bottom:7px;width:115px;height:auto;background:var(--ember-solid);mask:url("../assets/themes/saitama-impact.svg") center/contain no-repeat;opacity:.16; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .sidebar .navigation__item { border-bottom:2px solid color-mix(in srgb,var(--ember-strong) 40%,transparent) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame .sidebar .navigation__item--active { background:linear-gradient(100deg,color-mix(in srgb,var(--ember-solid) 25%,transparent),var(--game-surface)) !important;border-right-color:var(--ember-strong) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="saitama"] .window-frame :is(.search-input,.toolbar-search,.cfg-card,.flux-footer,.sidebar-footer-row) { border-radius:13px 4px 13px 4px;border-top-color:color-mix(in srgb,var(--ember-solid) 38%,transparent); }
+html[data-test-theme="true"][data-test-preset="saitama"] .help-dialog { border-radius:17px 4px;border-color:color-mix(in srgb,var(--ember-solid) 40%,transparent); }
+html[data-test-theme="true"][data-test-preset="saitama"]:not(.window-type-main) #root > :is(.download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window) { border-radius:15px 4px !important;border-top:2px solid color-mix(in srgb,var(--ember-solid) 55%,transparent) !important; }
+html[data-test-theme="true"][data-test-preset="saitama"] :is(.media-preview,.media-metrics,.media-destination,.help-meta) { border-radius:12px 3px;border-right-color:color-mix(in srgb,var(--ember-strong) 40%,transparent); }
+
+/* Phantom Liberty: red circuitry, violet traces and asymmetric terminal panels. */
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame .download-card { position:relative;border-radius:3px 17px 3px 17px !important;border-top-color:color-mix(in srgb,var(--ember-solid) 42%,transparent) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame .download-card::after { content:"";position:absolute;pointer-events:none;right:13%;top:6px;bottom:6px;width:165px;background:var(--ember-solid);mask:url("../assets/themes/cyberpunk-circuit.svg") center/contain no-repeat;opacity:.23; }
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame .download-card::before { content:"";position:absolute;pointer-events:none;right:16px;top:7px;width:35px;height:5px;background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--ember-solid) 42%,transparent) 0 2px,transparent 2px 5px); }
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame .sidebar .navigation__item { border-radius:3px 14px 3px 14px !important;border-right:2px solid color-mix(in srgb,var(--ember-strong) 45%,transparent) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame .sidebar .navigation__item--active { background:linear-gradient(100deg,var(--ember-soft),var(--game-surface)) !important;border-right-color:var(--ember-solid) !important; }
+html.window-type-main[data-test-theme="true"][data-test-preset="cyberpunk"] .window-frame :is(.search-input,.toolbar-search,.cfg-card,.flux-footer,.sidebar-footer-row) { border-radius:3px 15px 3px 15px;border-color:color-mix(in srgb,var(--ember-solid) 35%,transparent); }
+html[data-test-theme="true"][data-test-preset="cyberpunk"] .help-dialog { border-radius:3px 17px;border-color:color-mix(in srgb,var(--ember-solid) 42%,transparent); }
+html[data-test-theme="true"][data-test-preset="cyberpunk"]:not(.window-type-main) #root > :is(.download-window,.dw-window,.media-window,.torrent-confirm-window,.torrent-live-window,.integr-layout,.dbg-window) { border-radius:4px 16px !important;border:1px solid color-mix(in srgb,var(--ember-solid) 45%,transparent) !important; }
+html[data-test-theme="true"][data-test-preset="cyberpunk"] :is(.media-preview,.media-metrics,.media-destination,.help-meta) { border-radius:3px 12px;border-right-color:color-mix(in srgb,var(--ember-strong) 40%,transparent); }

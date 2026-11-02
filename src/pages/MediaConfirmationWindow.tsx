@@ -1,4 +1,5 @@
-import { Video, Film, Music2, Minus, Square, X, Folder, Download, RotateCcw, LoaderCircle, Clock3, AlertCircle, Check, BadgeCheck, Search, Info, MonitorPlay } from "lucide-react";
+import { MediaQueryLoading } from "../components/MediaQueryLoading";
+import { Video, Film, Music2, Minus, Square, X, Folder, Download, RotateCcw, LoaderCircle, AlertCircle, Check, BadgeCheck, Search, Info, MonitorPlay } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -42,6 +43,10 @@ export function MediaConfirmationWindow() {
   const [queryWait, setQueryWait] = useState<media.MediaQueryWait | null>(null);
   const [retryDeadline, setRetryDeadline] = useState(0);
   const [retrySeconds, setRetrySeconds] = useState(0);
+  useEffect(()=>{
+    const animate=settings.sidebarAnimation!==false && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    void media.resizeMediaConfirmation(!loading && !!preview,animate).catch(error=>console.warn("[MEDIA] Window size",error));
+  },[loading,preview]);
 
   useEffect(() => {
     let disposed = false;
@@ -173,7 +178,7 @@ export function MediaConfirmationWindow() {
     <div className="media-playlist-shortcuts"><span>Ctrl+A {text("seleciona todas", "selects all")}</span><i>·</i><span>Shift+{text("clique seleciona intervalo", "click selects range")}</span><i>·</i><span>Ctrl+{text("clique alterna", "click toggles")}</span></div>
   </section>;
 
-  return <main className={`media-window media-confirmation ${expanded ? "is-playlist" : ""}`} onKeyDown={event => {
+  return <main className={`media-window media-confirmation ${!loading && preview && expanded ? "is-playlist" : ""} ${loading || !preview ? "is-querying" : ""}`} onKeyDown={event => {
     if (!playlist || busy || !(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "a") return;
     if (event.target instanceof HTMLElement && event.target.closest("input:not([type=checkbox]), textarea, [contenteditable=true]")) return;
     event.preventDefault(); selectAll();
@@ -181,10 +186,10 @@ export function MediaConfirmationWindow() {
     <header className="media-header" data-tauri-drag-region>
       <span className="media-header-icon">{playlist ? <Music2 size={19} /> : <Download size={19} />}</span>
       <div className="media-heading" data-tauri-drag-region><div className="media-title-line" data-tauri-drag-region><h1>{mix ? text("Baixar Mix", "Download Mix") : playlist ? text("Baixar playlist", "Download playlist") : text("Baixar vídeo ou música", "Download video or music")}</h1>{preview && <span className="media-quality-badge" data-tauri-drag-region>{mix ? `Mix · ${trackCount} ${text("faixas", "tracks")}` : playlist ? `${trackCount} ${text("faixas", "tracks")}` : largest >= 4320 ? "HD 8K" : largest >= 2160 ? "HD 4K" : largest >= 720 ? "HD" : largest > 0 ? "MP4 / MP3" : "MP3"}</span>}</div><p><span className="media-source-dot" />{media.mediaPlatform(preview?.url ?? "") ?? text("Mídia", "Media")} <span className="media-heading-separator">·</span> {text("Link detectado", "Link detected")}</p></div>
-      <MediaWindowControls expandable={expanded} />
+      <MediaWindowControls expandable={!loading && !!preview && expanded} />
     </header>
     <div className="media-body">
-      {loading ? <div className="media-placeholder" role="status">{queryWait ? <Clock3 size={26} /> : <LoaderCircle className="media-spinner" size={26} />}<strong>{queryWait ? queryWait.reason === "queue" ? text("Aguardando outra consulta…", "Waiting for another query…") : `${text("Nova consulta em", "Next query in")} ${queryWait.seconds}s` : text("Consultando o link…", "Loading link…")}</strong><span>{queryWait?.reason === "rate-limit" ? text("A plataforma limitou as consultas. Respeitando o intervalo de espera.", "The platform limited queries. Waiting before another request.") : queryWait ? text("Intervalo entre consultas para reduzir requisições à plataforma.", "Spacing queries to reduce requests to the platform.") : text("Buscando informações da mídia", "Checking media information")}</span></div> : preview ? playlist ? <>
+      {loading ? <MediaQueryLoading pt={pt} wait={queryWait}/> : preview ? playlist ? <>
         <div className="media-playlist-options"><div className="media-playlist-settings">{information}{failure}</div>{actions}</div>
         {trackList}
       </> : <>{information}{failure}</> : <>
@@ -192,6 +197,6 @@ export function MediaConfirmationWindow() {
         {failure}
       </>}
     </div>
-    {!playlist && actions}
+    {loading || !preview ? <footer className="media-footer media-query-footer"><button className="media-button media-quiet" onClick={()=>void getCurrentWindow().close()}>{text("Cancelar","Cancel")}</button></footer> : !playlist && actions}
   </main>;
 }

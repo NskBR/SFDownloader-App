@@ -40,11 +40,18 @@ export interface CustomCategory {
   extensions: string[];
 }
 
-export const gameThemeIds = ["cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok", "valorant", "league-of-legends", "overwatch", "among-us", "gta-6", "gta-san-andreas", "the-last-of-us-2", "red-dead-redemption-2", "minecraft"] as const;
+export const gameThemeIds = ["cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok", "valorant", "league-of-legends", "overwatch", "among-us", "gta-6", "gta-san-andreas", "the-last-of-us-2", "red-dead-redemption-2", "minecraft", "saitama", "naruto"] as const;
 export type GameTheme = "none" | typeof gameThemeIds[number];
+export type ThemeVisualPreset = Exclude<GameTheme,"none"> | "naruto-baryon" | "hinata" | "botanical" | "local";
+export interface ThemeAppearance {
+  palette?:{surface:string;raised:string;accent:string;strong:string};
+  geometry?:{window:string;cardRadius:string;navigationRadius:string};
+  font?:string;
+}
 
 export interface TestThemeSettings {
-  preset: "custom" | Exclude<GameTheme, "none">;
+  appearance?:ThemeAppearance;
+  preset: "custom" | ThemeVisualPreset;
   enabled: boolean;
   imageId: string | null;
   css: string;
@@ -58,6 +65,8 @@ export const defaultTestTheme: TestThemeSettings = {
 };
 
 export interface AppSettings {
+  localThemeId?:string;
+  themeWallpapers:Record<string,string>;
   rootDownloadFolder: string;
   autoOrganizeEnabled: boolean;
   organizeFoldersOnDemand: boolean;
@@ -108,6 +117,7 @@ export const defaultSettings: AppSettings = {
   fontFamily: "default",
   testTheme: { ...defaultTestTheme },
   gameTheme: "none",
+  themeWallpapers:{},
   cssThemesEnabled: false,
   defaultThemeInitialized: false,
   uiScale: 1.1,

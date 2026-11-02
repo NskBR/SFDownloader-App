@@ -1,0 +1,36 @@
+import {loadThemeImage} from "../../services/testThemes";
+import {cleanup,fireEvent,render,screen,waitFor} from "@testing-library/react";
+import {afterEach,beforeEach,expect,it,vi} from "vitest";
+import {invoke} from "@tauri-apps/api/core";
+import {open} from "@tauri-apps/plugin-dialog";
+import {LocalThemes} from "./LocalThemes";
+import {invalidateLocalThemes} from "../../services/localThemes";
+vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn()}));
+vi.mock("@tauri-apps/plugin-dialog",()=>({open:vi.fn()}));
+vi.mock("../../services/testThemes",()=>({loadThemeImage:vi.fn().mockResolvedValue("data:image/png;base64,AA==")}));
+beforeEach(()=>{vi.mocked(loadThemeImage).mockResolvedValue("data:image/png;base64,AA==");});
+const theme={id:"a".repeat(64),name:"Local example",variants:[{name:"First",preview:"image"},{name:"Second",preview:"other"}]};
+afterEach(()=>{cleanup();invalidateLocalThemes();vi.resetAllMocks();});
+it("imports a ZIP into the local catalog and applies it only on explicit selection",async()=>{
+ vi.mocked(open).mockResolvedValue("C:\\Themes\\example.zip");
+ vi.mocked(invoke).mockImplementation(async command=>command==="list_local_themes"?[]:theme as any);
+ const onSelect=vi.fn();render(<LocalThemes onSelect={onSelect}/>);
+ await waitFor(()=>expect(invoke).toHaveBeenCalledWith("list_local_themes"));
+ vi.mocked(invoke).mockImplementation(async command=>command==="list_local_themes"?[theme]:theme as any);
+ fireEvent.click(screen.getByRole("button",{name:/Adicionar tema local|Add local theme/}));
+ await screen.findByText("Local example");
+ expect(invoke).toHaveBeenCalledWith("import_local_theme",{path:"C:\\Themes\\example.zip"});
+ expect(onSelect).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole("button",{name:/Local example First/}));
+ expect(onSelect).toHaveBeenCalledWith(theme.id+":0");
+});
+it("changes a local wallpaper's full profile and disables it before removing the catalog entry",async()=>{
+ vi.mocked(invoke).mockImplementation(async command=>command==="list_local_themes"?[theme]:undefined as any);
+ const onSelect=vi.fn();render(<LocalThemes selected={theme.id+":0"} onSelect={onSelect}/>);
+ await screen.findByText("Local example");
+ fireEvent.click(screen.getByRole("button",{name:/Próximo|Next/}));
+ expect(onSelect).toHaveBeenCalledWith(theme.id+":1");
+ fireEvent.click(screen.getByRole("button",{name:/Apagar tema Local example|Delete theme Local example/}));
+ await waitFor(()=>expect(onSelect).toHaveBeenCalledWith(undefined));
+ expect(invoke).toHaveBeenCalledWith("delete_local_theme",{id:theme.id});
+});

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" fill="none" stroke="#efb4d5" stroke-width="1.4">
+ <path d="M12 88Q70 57 143 15M67 59l-9-26m41 7 28 7"/>
+ <g transform="translate(58 31)"><path d="M0 0C-16-4-14-18-4-11C-1-24 12-19 8-9C24-11 24 3 11 5C20 18 5 23 0 11C-9 23-21 10-9 4Z"/><circle r="2"/></g>
+ <g transform="translate(125 45) scale(.75)"><path d="M0 0C-16-4-14-18-4-11C-1-24 12-19 8-9C24-11 24 3 11 5C20 18 5 23 0 11C-9 23-21 10-9 4Z"/><circle r="2"/></g>
+</svg>

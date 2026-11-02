@@ -1,5 +1,6 @@
 import { gameThemeIds, defaultSettings, type AppSettings } from "../domain/settings";
 import { appFontIds, type AppFont } from "../domain/appFonts";
+import {selectedWallpaper} from "../domain/themeWallpapers";
 import { emit } from "@tauri-apps/api/event";
 
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -89,6 +90,11 @@ function freshDefaults(language: AppSettings["language"]): AppSettings {
 export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings["language"]): AppSettings {
   const base = freshDefaults(fallbackLanguage);
   if (!isRecord(value)) return base;
+  if(value.gameTheme==="naruto-baryon" || value.gameTheme==="hinata"){
+    const wallpaper=value.gameTheme;
+    value={...value,gameTheme:"naruto",themeWallpapers:{...(isRecord(value.themeWallpapers)?value.themeWallpapers:{}),naruto:wallpaper}};
+  }
+  if(!isRecord(value))return base;
 
   const testTheme = isRecord(value.testTheme) ? value.testTheme : {};
   const legacyGameTheme = value.gameTheme === undefined && testTheme.enabled === true && testTheme.preset === "cyberpunk";
@@ -142,12 +148,17 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
       panelOpacity: numberFrom(testTheme.panelOpacity, base.testTheme.panelOpacity, 60, 100),
       position: valueFrom(testTheme.position, ["center", "left", "right"], "center"),
     },
-    gameTheme: valueFrom(value.gameTheme, ["none", ...gameThemeIds], legacyGameTheme ? "cyberpunk" : "none"),
+    gameTheme: valueFrom(value.gameTheme === "sarah-house" ? "none" : value.gameTheme, ["none", ...gameThemeIds], legacyGameTheme ? "cyberpunk" : "none"),
     uiScale: numberFrom(value.uiScale, base.uiScale, 0.8, 1.5),
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),
     language: valueFrom(value.language, languages, base.language),
+    localThemeId:typeof value.localThemeId === "string" && /^[a-f0-9]{64}:[0-9]{1,2}$/.test(value.localThemeId)?value.localThemeId:undefined,
     cssThemesEnabled: value.cssThemesEnabled === true,
+    themeWallpapers:Object.fromEntries(gameThemeIds.flatMap(id=>{
+      const saved=isRecord(value.themeWallpapers)?value.themeWallpapers[id]:undefined;
+      return typeof saved==="string"?[[id,selectedWallpaper(id,saved).id]]:[];
+    })),
     defaultThemeInitialized: value.defaultThemeInitialized === true,
     accentColor: valueFrom(value.accentColor, accents, base.accentColor),
     appColor: valueFrom(value.appColor, appColors, base.appColor),

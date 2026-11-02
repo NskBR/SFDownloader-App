@@ -340,5 +340,41 @@
     "file": "naruto/hinata/compact.png",
     "sha256": "a9ea1f4d93151acf1fa25ccdb29e610a27b0d107cf93b56586926b2b8478cbd9",
     "bytes": 410774
+  },
+  {
+    "id": "cyberpunk--v-sunset",
+    "file": "cyberpunk/v-sunset/main.png",
+    "sha256": "c1517f5af3f1b9d9bf492dde5351ba49a896ad8bd91fb7c0ead7fad95eb11126",
+    "bytes": 5339971
+  },
+  {
+    "id": "cyberpunk--v-sunset-medium",
+    "file": "cyberpunk/v-sunset/medium.png",
+    "sha256": "53ad00f846368eed6c388d5b72350a74eee48419b3855151350d0088d6848a0f",
+    "bytes": 846754
+  },
+  {
+    "id": "cyberpunk--v-sunset-compact",
+    "file": "cyberpunk/v-sunset/compact.png",
+    "sha256": "816dafb25fda23338aac9d0210ef9abedac15e2adcf6b4f2f13bcd3879c42810",
+    "bytes": 297848
+  },
+  {
+    "id": "cyberpunk--v-inferno",
+    "file": "cyberpunk/v-inferno/main.png",
+    "sha256": "1a32b76195a1a46c703e04b6b10bafffb41c8dadcf52452958c7988427c6fe0d",
+    "bytes": 6888953
+  },
+  {
+    "id": "cyberpunk--v-inferno-medium",
+    "file": "cyberpunk/v-inferno/medium.png",
+    "sha256": "19d8e6d6421afb4744064267c35d7a07e4dace9826f6a983ceff486f167fd4d8",
+    "bytes": 1258013
+  },
+  {
+    "id": "cyberpunk--v-inferno-compact",
+    "file": "cyberpunk/v-inferno/compact.png",
+    "sha256": "2aee72579a214d4e633dfb4bb6713ed7135ae90e4961d9c167b66918b47c6c29",
+    "bytes": 445713
   }
 ]

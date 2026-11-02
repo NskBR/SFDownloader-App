@@ -164,20 +164,20 @@
   {
     "id": "gta-san-andreas",
     "file": "gta-san-andreas/main.png",
-    "sha256": "1d93c3618660c1cb3c4025f942b29f90f12e8e9d6669cc9643984b0180288f75",
-    "bytes": 6420540
+    "sha256": "161782ad24ba9e37572a991d7085000146ed6fc7980eb237443038713cc3cb0a",
+    "bytes": 1514438
   },
   {
     "id": "gta-san-andreas-medium",
     "file": "gta-san-andreas/medium.png",
-    "sha256": "5c82314f5d40c92076dbad618edad485fad51e072a255dddfa1281a8343307ef",
-    "bytes": 1087207
+    "sha256": "77ee197044bdc2321e28b35ede3c6c2334e8b20593da4d1eea57e88c79c2c8a0",
+    "bytes": 285324
   },
   {
     "id": "gta-san-andreas-compact",
     "file": "gta-san-andreas/compact.png",
-    "sha256": "63267485337d868e6295579d537bafdc24fe4a0e53c54b62de28d03856db798e",
-    "bytes": 369303
+    "sha256": "3bb303d5638405ad48cb77b5a4c5a31f463bc8678149b93bfa73a0e1ec0ceb2e",
+    "bytes": 120848
   },
   {
     "id": "the-last-of-us-2",

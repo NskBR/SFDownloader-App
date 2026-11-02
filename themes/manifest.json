@@ -1,290 +1,326 @@
 [
   {
     "id": "cyberpunk",
-    "file": "cyberpunk-songbird.png",
+    "file": "cyberpunk/main.png",
     "sha256": "51aff657d5884e9f5af2d62aa084f8e8f82e546afb2ff43e9f597d68b25f2c9c",
     "bytes": 5707762
   },
   {
     "id": "cs2",
-    "file": "cs2.png",
+    "file": "cs2/main.png",
     "sha256": "2397ad6fa459e5be7aff77ea78f6acc4ed2db95c8694e932992c9d3468e0dfa8",
     "bytes": 4798608
   },
   {
     "id": "star-citizen",
-    "file": "star-citizen.png",
+    "file": "star-citizen/main.png",
     "sha256": "c216353607e529a915e938c8e6b3202e34e136e430d6bf641695e8959ccebe83",
     "bytes": 3474392
   },
   {
     "id": "god-of-war-ragnarok",
-    "file": "god-of-war-ragnarok.png",
+    "file": "god-of-war-ragnarok/main.png",
     "sha256": "d9c65d0ab63b45b25e3f6238d37dc995477f55b69ec04e22a5a4afed831d728b",
     "bytes": 4472506
   },
   {
     "id": "cyberpunk-compact",
-    "file": "cyberpunk-songbird-compact.png",
+    "file": "cyberpunk/compact.png",
     "sha256": "19681f096afcfb71788f5de958f512cf4b17b2e6229b87172b9a30769008b0e2",
     "bytes": 291680
   },
   {
     "id": "cyberpunk-medium",
-    "file": "cyberpunk-songbird-medium.png",
+    "file": "cyberpunk/medium.png",
     "sha256": "580b30709e574379edd2643a17ab9688942825de1c97a72248f88dc31bb756ae",
     "bytes": 875308
   },
   {
     "id": "cs2-compact",
-    "file": "cs2-compact.png",
+    "file": "cs2/compact.png",
     "sha256": "de99d37d90a637d2579565792980439120ffbaafb93695ee4d794297bf28fe20",
     "bytes": 249935
   },
   {
     "id": "cs2-medium",
-    "file": "cs2-medium.png",
+    "file": "cs2/medium.png",
     "sha256": "d3d2688b40b6340103bb2f836169948f95fff281544977eb384469258052242c",
     "bytes": 760092
   },
   {
     "id": "star-citizen-compact",
-    "file": "star-citizen-compact.png",
+    "file": "star-citizen/compact.png",
     "sha256": "dc3230c952a24f13d172a15b0b505747966d4cea4e7d3f6e5f3e78527b309da0",
     "bytes": 194762
   },
   {
     "id": "star-citizen-medium",
-    "file": "star-citizen-medium.png",
+    "file": "star-citizen/medium.png",
     "sha256": "ce732b20417fcb3ae7df43480a94191cdc066a39add07bdc7a7ce89a80c3ec32",
     "bytes": 531981
   },
   {
     "id": "god-of-war-ragnarok-compact",
-    "file": "god-of-war-ragnarok-compact.png",
+    "file": "god-of-war-ragnarok/compact.png",
     "sha256": "04c0092a924c38b15efad15adb4e788f716697dbfd179e65bc1861816812c46a",
     "bytes": 270630
   },
   {
     "id": "god-of-war-ragnarok-medium",
-    "file": "god-of-war-ragnarok-medium.png",
+    "file": "god-of-war-ragnarok/medium.png",
     "sha256": "fd2a95d043be134a029d6c9b404f7f2aac1ad5d3373bf766a8d411fbe698bc7d",
     "bytes": 745948
   },
   {
     "id": "valorant",
-    "file": "valorant.png",
+    "file": "valorant/main.png",
     "sha256": "9f82df97acdd18d10ccae8ed2126be9e8d5686ceae4e758d89f842cc590ff9df",
     "bytes": 4408488
   },
   {
     "id": "valorant-medium",
-    "file": "valorant-medium.png",
+    "file": "valorant/medium.png",
     "sha256": "9662cb681ebfc9556521eb595ad94acdac0633ca5aaadab959d309ddde1b63ad",
     "bytes": 711119
   },
   {
     "id": "valorant-compact",
-    "file": "valorant-compact.png",
+    "file": "valorant/compact.png",
     "sha256": "fc9db1e5293086b5cd36391e4d32aeb9350a6ec375dcd7967f68b2809e4b2627",
     "bytes": 244097
   },
   {
     "id": "league-of-legends",
-    "file": "league-of-legends.png",
+    "file": "league-of-legends/main.png",
     "sha256": "86b58d34e7b66c09b1608c899e15bb446544cff85aa4e85e6e4c0b3e980ce795",
     "bytes": 5784477
   },
   {
     "id": "league-of-legends-medium",
-    "file": "league-of-legends-medium.png",
+    "file": "league-of-legends/medium.png",
     "sha256": "b59e881213989062a461867f195a2cc17d7b29b64e73dc3d4ce92a7467770d87",
     "bytes": 1038319
   },
   {
     "id": "league-of-legends-compact",
-    "file": "league-of-legends-compact.png",
+    "file": "league-of-legends/compact.png",
     "sha256": "68a393c72c97030de3b5e7f17333a73a51b37ed1e69b5f69892ba83adc874c33",
     "bytes": 372438
   },
   {
     "id": "overwatch",
-    "file": "overwatch.png",
+    "file": "overwatch/main.png",
     "sha256": "d5fe453a449e3790f89530a1aa949084f996f301002add5a3bb9f8436b402c8e",
     "bytes": 6366077
   },
   {
     "id": "overwatch-medium",
-    "file": "overwatch-medium.png",
+    "file": "overwatch/medium.png",
     "sha256": "eabfca41f7d6955eb5d705e929fd3b11600b81b6fe07409199a45b9743639fbf",
     "bytes": 1110243
   },
   {
     "id": "overwatch-compact",
-    "file": "overwatch-compact.png",
+    "file": "overwatch/compact.png",
     "sha256": "ed0267a4a95353320a13520530faaac7ccbf070f4ae0bdfdeb18d339037031ef",
     "bytes": 399167
   },
   {
     "id": "among-us",
-    "file": "among-us.png",
+    "file": "among-us/main.png",
     "sha256": "931014b39bcbf7fe610b4822a81cc584f15fd148e1b6db4572f874b1505fb862",
     "bytes": 5686329
   },
   {
     "id": "among-us-medium",
-    "file": "among-us-medium.png",
+    "file": "among-us/medium.png",
     "sha256": "17fe6adc4a209071849eba5ecaa5f0dbd111adc152f1036c2bdcaf4756728dfb",
     "bytes": 946886
   },
   {
     "id": "among-us-compact",
-    "file": "among-us-compact.png",
+    "file": "among-us/compact.png",
     "sha256": "3924458861efd8f353ea6e7a5cc24cd43fe87d34d89d4f6b899379cdf50a9f46",
     "bytes": 340881
   },
   {
     "id": "gta-6",
-    "file": "gta-6.png",
+    "file": "gta-6/main.png",
     "sha256": "b3892e4dd3a5cb49616f01238a37e93959b0de2cc657e53c813a2114d411d52c",
     "bytes": 5703711
   },
   {
     "id": "gta-6-medium",
-    "file": "gta-6-medium.png",
+    "file": "gta-6/medium.png",
     "sha256": "d2eecb868e103e69c877b98526edbe4b2583c8b7e04456f2b1bfb977d38127c9",
     "bytes": 874329
   },
   {
     "id": "gta-6-compact",
-    "file": "gta-6-compact.png",
+    "file": "gta-6/compact.png",
     "sha256": "ebe07a851fc3cfae35a19a27e83045ec32e6057724719e20fa8f5285bda77e4d",
     "bytes": 305045
   },
   {
     "id": "gta-san-andreas",
-    "file": "gta-san-andreas.png",
+    "file": "gta-san-andreas/main.png",
     "sha256": "1d93c3618660c1cb3c4025f942b29f90f12e8e9d6669cc9643984b0180288f75",
     "bytes": 6420540
   },
   {
     "id": "gta-san-andreas-medium",
-    "file": "gta-san-andreas-medium.png",
+    "file": "gta-san-andreas/medium.png",
     "sha256": "5c82314f5d40c92076dbad618edad485fad51e072a255dddfa1281a8343307ef",
     "bytes": 1087207
   },
   {
     "id": "gta-san-andreas-compact",
-    "file": "gta-san-andreas-compact.png",
+    "file": "gta-san-andreas/compact.png",
     "sha256": "63267485337d868e6295579d537bafdc24fe4a0e53c54b62de28d03856db798e",
     "bytes": 369303
   },
   {
     "id": "the-last-of-us-2",
-    "file": "the-last-of-us-2.png",
+    "file": "the-last-of-us-2/main.png",
     "sha256": "25ebcc8ce6cc1f13cae1d51819c938cb25f41cf4009eb9f01b95b7aa649cdbe0",
     "bytes": 6226139
   },
   {
     "id": "the-last-of-us-2-medium",
-    "file": "the-last-of-us-2-medium.png",
+    "file": "the-last-of-us-2/medium.png",
     "sha256": "2282c536a9639459331971c17bcdb5c0d02ba9a421b798c942242d30eef74d54",
     "bytes": 1133684
   },
   {
     "id": "the-last-of-us-2-compact",
-    "file": "the-last-of-us-2-compact.png",
+    "file": "the-last-of-us-2/compact.png",
     "sha256": "5f31e69310ed2a230bd5773aa1d36e683c82df671b318e1c61db265ad62b43c8",
     "bytes": 394655
   },
   {
     "id": "red-dead-redemption-2",
-    "file": "red-dead-redemption-2.png",
+    "file": "red-dead-redemption-2/main.png",
     "sha256": "967510e8bb87d85011ee33b4fb2eff1e4f4bb622541c1ad961811a87ac4a2d6d",
     "bytes": 5950882
   },
   {
     "id": "red-dead-redemption-2-medium",
-    "file": "red-dead-redemption-2-medium.png",
+    "file": "red-dead-redemption-2/medium.png",
     "sha256": "7cc50f964ba433979645638fbdfb850b1b995a33166855bc5f1c739cabad28d5",
     "bytes": 998943
   },
   {
     "id": "red-dead-redemption-2-compact",
-    "file": "red-dead-redemption-2-compact.png",
+    "file": "red-dead-redemption-2/compact.png",
     "sha256": "2a95ce8452642058133aca654c5132775ba3a858ec365eef0cda8547fc63d03b",
     "bytes": 334216
   },
   {
     "id": "minecraft",
-    "file": "minecraft.png",
+    "file": "minecraft/main.png",
     "sha256": "fe79e4036247dd36ca7014bc9d93fdefc94062bd05e8b568159425928129a7c6",
     "bytes": 5554397
   },
   {
     "id": "minecraft-medium",
-    "file": "minecraft-medium.png",
+    "file": "minecraft/medium.png",
     "sha256": "61daa7f5949ca73d3f903c5159856dcb2c1c07350307ad810ea222fb687d0668",
     "bytes": 828556
   },
   {
     "id": "minecraft-compact",
-    "file": "minecraft-compact.png",
+    "file": "minecraft/compact.png",
     "sha256": "0253af71668b6a835c04e86ac21a75f6296ba5c8d140b740289cf5be7cb585cb",
     "bytes": 310903
   },
   {
     "id": "saitama",
-    "file": "saitama.png",
+    "file": "saitama/main.png",
     "sha256": "315cf9e4050a04bafb03b42b0a609c82d7a6bf5ceef342d69b34ba704e1fd496",
     "bytes": 5797501
   },
   {
     "id": "saitama-medium",
-    "file": "saitama-medium.png",
+    "file": "saitama/medium.png",
     "sha256": "728e016051ebe75a89888fd42de358342f6586ab153acfd995ef0345c87da141",
     "bytes": 1010634
   },
   {
     "id": "saitama-compact",
-    "file": "saitama-compact.png",
+    "file": "saitama/compact.png",
     "sha256": "15ffe2eeb49a97ed6262ae81401d2d1c75c8731433dce26195f0c8f651918b03",
     "bytes": 378335
   },
   {
     "id": "naruto-baryon",
-    "file": "naruto-baryon.png",
+    "file": "naruto-baryon/main.png",
     "sha256": "077ecaa34c2795f427cbe8c9b2804c1059ce471c6184999d78146bfb7e0483e7",
     "bytes": 5400878
   },
   {
     "id": "naruto-baryon-medium",
-    "file": "naruto-baryon-medium.png",
+    "file": "naruto-baryon/medium.png",
     "sha256": "1d64796054a263e63230341e39e0a09957408da5023eb9643f7e0d978016b591",
     "bytes": 915387
   },
   {
     "id": "naruto-baryon-compact",
-    "file": "naruto-baryon-compact.png",
+    "file": "naruto-baryon/compact.png",
     "sha256": "f053ca4cea108cc47f88d40525a1cf0bdd97d942140f8f27d833010512f1e43c",
     "bytes": 339551
   },
   {
     "id": "sarah-house",
-    "file": "sarah-house.png",
+    "file": "sarah-house/main.png",
     "sha256": "f44064d758be371d5f42751cf948f716d03aa53ffbcbb5c3ca60c52b54bc30e3",
     "bytes": 5577673
   },
   {
     "id": "sarah-house-medium",
-    "file": "sarah-house-medium.png",
+    "file": "sarah-house/medium.png",
     "sha256": "b5753992273246bb73fe4f3bdec49f32e0da7c00213ad5d60038f24b64b091f6",
     "bytes": 858474
   },
   {
     "id": "sarah-house-compact",
-    "file": "sarah-house-compact.png",
+    "file": "sarah-house/compact.png",
     "sha256": "7bf84b09cfedcf7f6ce5229f55457896992bd2f65848a28a1afd35c1a9353624",
     "bytes": 295896
+  },
+  {
+    "id": "sarah-house--soft-light",
+    "file": "sarah-house/soft-light/main.png",
+    "sha256": "897df38f02225f60883b80717d86e2a267425eb1391cca8a50d245d9f19eb625",
+    "bytes": 6580955
+  },
+  {
+    "id": "sarah-house--soft-light-medium",
+    "file": "sarah-house/soft-light/medium.png",
+    "sha256": "2e641c3114824377228184c53bc18d3c3e6db1a125d75a89a4958271b8393ebd",
+    "bytes": 771951
+  },
+  {
+    "id": "sarah-house--soft-light-compact",
+    "file": "sarah-house/soft-light/compact.png",
+    "sha256": "d79f34719e8fc620c2701e80bf09f519ee031265976243ade464e6d158087b0c",
+    "bytes": 270511
+  },
+  {
+    "id": "sarah-house--night-blue",
+    "file": "sarah-house/night-blue/main.png",
+    "sha256": "1408b73c83e37a60604fb3bd53c47c6b807c570d41787bd85c19d4a0d5c83014",
+    "bytes": 11690674
+  },
+  {
+    "id": "sarah-house--night-blue-medium",
+    "file": "sarah-house/night-blue/medium.png",
+    "sha256": "488e7261da7439058c4e715a9fcfff4c93d0926730a8795792e55c13eaa1fb1d",
+    "bytes": 588150
+  },
+  {
+    "id": "sarah-house--night-blue-compact",
+    "file": "sarah-house/night-blue/compact.png",
+    "sha256": "f21725beeffb4c7a331a4d65dd5d6a69ee1c98bc485009c93739cab00d0e89d0",
+    "bytes": 200166
   }
 ]

@@ -1,3 +1,4 @@
+import { useTaskbarProgress } from "../hooks/useTaskbarProgress";
 import {
   AlertTriangle,
   Ban,
@@ -183,6 +184,7 @@ function TitleDownloadIcon({ status }: { status: DownloadStatus }) {
 }
 
 export function DownloadWindow({ downloadId }: { downloadId: string }) {
+  useTaskbarProgress();
   const { t } = useTranslation();
   const [task, setTask] = useState<DownloadTask | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

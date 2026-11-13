@@ -3,5 +3,5 @@
   "identifier": "media-windows",
   "description": "Janelas independentes de confirmação e progresso de mídia",
   "windows": ["media-confirm-*", "media-progress-*"],
-  "permissions": ["core:default", "core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-close", "core:window:allow-start-dragging", "dialog:allow-open"]
+  "permissions": ["core:default", "core:window:allow-set-size", "core:window:allow-set-progress-bar", "core:window:allow-minimize", "core:window:allow-toggle-maximize", "core:window:allow-close", "core:window:allow-start-dragging", "dialog:allow-open"]
 }

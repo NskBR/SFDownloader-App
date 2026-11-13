@@ -2,6 +2,13 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 1.1.4 — 13/11/2026
+
+- Progresso na taskbar do Windows e indicação amarela para downloads pausados.
+- Janela de mídia redesenhada, compactada e com miniatura, percentual circular e tempo restante.
+- Detalhes em tela própria e confirmação de cancelamento reorganizada.
+- [Notas completas](docs/releases/v1.1.4.md).
+
 ## 1.1.3 — 02/11/2026
 
 - Temas personalizados com variações e importação local por ZIP.

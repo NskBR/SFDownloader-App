@@ -4,7 +4,7 @@
   "description": "Permissões mínimas das janelas de download e progresso",
   "windows": ["download-*", "download-torrent-*", "torrent-progress-*", "torrent-file-selection-*"],
   "permissions": [
-    "core:default",
+    "core:default", "core:window:allow-set-progress-bar",
     "core:window:allow-minimize",
     "core:window:allow-close",
     "core:window:allow-start-dragging"

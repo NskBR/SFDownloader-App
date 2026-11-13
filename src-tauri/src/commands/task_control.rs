@@ -455,7 +455,7 @@ pub async fn resume_owned(
             &app,
             &format!("media-progress-{}", task.id),
             "Download de mídia",
-            440.0,
+            460.0,
             270.0,
         );
         let connection = database.connect()?;

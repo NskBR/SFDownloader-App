@@ -61,7 +61,7 @@ pub fn open_window(
     {
         (
             width.min((monitor.size().width as f64 / monitor.scale_factor() - 32.0).max(320.0)),
-            height.min((monitor.size().height as f64 / monitor.scale_factor() - 80.0).max(240.0)),
+            height.min((monitor.size().height as f64 / monitor.scale_factor() - 80.0).max(height.min(240.0))),
         )
     } else {
         (width, height)
@@ -258,6 +258,7 @@ pub async fn start_media_download(
         .cloned()
         .ok_or("Consulte o vídeo novamente antes de baixar.")?;
     let options = MediaOptions {
+        thumbnail: preview.thumbnail.clone(),
         format: input.format.clone(),
         quality: input.quality,
         video_id: preview.video_id.clone(),
@@ -306,8 +307,8 @@ pub async fn start_media_download(
         &app,
         &format!("media-progress-{}", task.id),
         "Download de mídia",
-        440.0,
-        254.0,
+        460.0,
+        270.0,
     );
     PREVIEWS
         .lock()
@@ -404,6 +405,7 @@ fn create_tasks(
         }
         let mut options = options.clone();
         options.video_id = entry.video_id;
+        if preview.playlist.is_some() { options.thumbnail = None; }
         options.playlist = preview.playlist.as_ref().map(|_| PlaylistContext {
             id: preview.video_id.clone(),
             title: preview.title.clone(),
@@ -467,13 +469,34 @@ fn create_tasks(
 }
 
 #[tauri::command]
-pub fn media_download_details(
+pub async fn media_download_details(
     window: WebviewWindow,
     database: State<'_, Database>,
     id: String,
 ) -> Result<MediaDetails, String> {
     authorize(&window, Some(&id))?;
-    media::details(&database, &id)
+    let mut detail = media::details(&database, &id)?;
+    let video_id = &detail.options.video_id;
+    let youtube = reqwest::Url::parse(&detail.task.original_url).is_ok_and(|url| {
+        matches!(url.host_str(), Some("youtube.com" | "www.youtube.com" | "m.youtube.com" | "music.youtube.com" | "youtu.be"))
+    });
+    if detail.options.thumbnail.is_none() && youtube && video_id.len() == 11
+        && video_id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
+    {
+        let url = format!("https://i.ytimg.com/vi/{video_id}/hqdefault.jpg");
+        if let Some(thumbnail) = media::thumbnail(&url).await {
+            // Re-read preferences so a concurrent state update is preserved.
+            let mut current = media::details(&database, &id)?;
+            current.options.thumbnail = Some(thumbnail);
+            let connection = database.connect()?;
+            connection.execute(
+                "UPDATE media_downloads SET options=?1 WHERE download_id=?2",
+                rusqlite::params![serde_json::to_string(&current.options).map_err(|e| e.to_string())?, id],
+            ).map_err(|e| e.to_string())?;
+            detail = current;
+        }
+    }
+    Ok(detail)
 }
 
 #[tauri::command]
@@ -489,8 +512,8 @@ pub async fn open_media_progress(
         &app,
         &format!("media-progress-{id}"),
         "Download de mídia",
-        440.0,
-        254.0,
+        460.0,
+        270.0,
     )
 }
 
@@ -504,6 +527,7 @@ mod tests {
         let url = "https://www.instagram.com/reel/ABC_123/";
         let preview=media::parse_preview(serde_json::json!({"id":"ABC_123","webpage_url":url,"title":"Reel","formats":[{"height":720,"ext":"mp4","vcodec":"h264","acodec":"aac"}]}),url.into(),"instagram-ABC_123".into(),false).unwrap();
         let options = MediaOptions {
+            thumbnail: None,
             format: "mp4".into(),
             quality: 720,
             video_id: preview.video_id.clone(),
@@ -546,6 +570,7 @@ mod tests {
             {"id":"BaW_jenozKc","title":"Same title"}, {"id":"jNQXAC9IVRw","title":"Same title"}
         ]}), "https://www.youtube.com/playlist?list=PL0123456789".into(), "PL0123456789".into()).unwrap();
         let options = MediaOptions {
+            thumbnail: None,
             format: "mp3".into(),
             quality: 192,
             video_id: preview.video_id.clone(),

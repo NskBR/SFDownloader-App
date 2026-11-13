@@ -74,6 +74,8 @@ pub struct PlaylistContext {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MediaOptions {
+    #[serde(default)]
+    pub thumbnail: Option<String>,
     pub format: String,
     pub quality: u32,
     pub video_id: String,
@@ -836,7 +838,7 @@ async fn inspect_uncached(
     Ok(preview)
 }
 
-async fn thumbnail(source: &str) -> Option<String> {
+pub(crate) async fn thumbnail(source: &str) -> Option<String> {
     use base64::Engine;
     let url = reqwest::Url::parse(source).ok()?;
     if url.scheme() != "https"
@@ -1604,6 +1606,7 @@ mod tests {
         assert!(validate_options(
             &preview,
             &MediaOptions {
+                thumbnail: None,
                 format: "mp4".into(),
                 quality: 1280,
                 video_id: preview.video_id.clone(),
@@ -1614,6 +1617,7 @@ mod tests {
         assert!(validate_options(
             &preview,
             &MediaOptions {
+                thumbnail: None,
                 format: "mp3".into(),
                 quality: 192,
                 video_id: preview.video_id.clone(),
@@ -1655,6 +1659,7 @@ mod tests {
         let root = std::env::temp_dir().join(format!("sf-media-resume-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&root).unwrap();
         let options = MediaOptions {
+            thumbnail: None,
             format: "mp3".into(),
             quality: 192,
             video_id: "jNQXAC9IVRw".into(),
@@ -1729,6 +1734,7 @@ mod tests {
             .await
             .unwrap();
         let options = MediaOptions {
+            thumbnail: None,
             format: "mp4".into(),
             quality: 240,
             video_id: options.video_id,
@@ -1993,6 +1999,7 @@ mod tests {
         assert!(validate_options(
             &p,
             &MediaOptions {
+                thumbnail: None,
                 format: "mp4".into(),
                 quality: 1080,
                 video_id: p.video_id.clone(),

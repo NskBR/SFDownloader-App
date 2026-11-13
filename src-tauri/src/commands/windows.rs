@@ -138,7 +138,7 @@ pub async fn open_progress_window(app: AppHandle, id: String) -> Result<(), Stri
             &app,
             &format!("media-progress-{id}"),
             "Download de mídia",
-            440.0,
+            460.0,
             270.0,
         );
     }
@@ -359,7 +359,7 @@ pub async fn open_complete_window(app: AppHandle, id: String) -> Result<(), Stri
             &app,
             &format!("media-progress-{id}"),
             "Download de mídia",
-            440.0,
+            460.0,
             270.0,
         );
     }

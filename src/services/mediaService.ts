@@ -24,7 +24,7 @@ export interface MediaPreview {
 export type MediaFormat = "mp4" | "mp3";
 export interface MediaDetails {
   task: DownloadTask;
-  options: { format: MediaFormat; quality: number; videoId: string; playlist?: { id: string; title: string; index: number; count: number } | null };
+  options: { thumbnail?: string | null; format: MediaFormat; quality: number; videoId: string; playlist?: { id: string; title: string; index: number; count: number } | null };
   phase: string;
   error: string | null;
 }

@@ -10,6 +10,7 @@ import { SettingsPage } from "../pages/SettingsPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { DownloadsPage } from "../pages/DownloadsPage";
 import { ProfilePage } from "../pages/ProfilePage";
+import { useTaskbarProgress } from "../hooks/useTaskbarProgress";
 import { useSettings } from "../hooks/useSettings";
 import { isPageId, type PageId } from "./navigation";
 import * as downloadService from "../services/downloadService";
@@ -24,6 +25,7 @@ const categoryPages:PageId[]=["downloads","active","completed","documents","musi
 const normalizePage=(page:PageId):PageId=>({home:"downloads",organization:"settings",active:"downloads",completed:"downloads"} as Partial<Record<PageId,PageId>>)[page]??page;
 const pageFromHash = (): PageId => { const hash = location.hash.slice(1); if(isPageId(hash))return normalizePage(hash); const saved=localStorage.getItem("sf-downloader.last-page")??""; return isPageId(saved)?normalizePage(saved):"active"; };
 export function App() {
+  useTaskbarProgress();
   const [activePage, setActivePage] = useState<PageId>(pageFromHash);
   const previousPage=useRef<PageId>("active");
   const { settings, persist, saved } = useSettings();

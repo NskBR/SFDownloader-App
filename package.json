@@ -1,7 +1,7 @@
 {
   "name": "SFDownloader",
   "private": true,
-  "version": "1.1.4",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner",
@@ -15,7 +15,9 @@
     "extension:lint": "node browser-extension/lint.mjs",
     "versions:sync": "node scripts/sync-versions.mjs",
     "versions:check": "node scripts/sync-versions.mjs --check",
-    "media:prepare": "node scripts/prepare-media-tools.mjs"
+    "media:prepare": "node scripts/prepare-media-tools.mjs",
+    "prebuild": "node scripts/sync-versions.mjs && node scripts/sync-versions.mjs --check",
+    "pretauri": "node scripts/sync-versions.mjs && node scripts/sync-versions.mjs --check"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

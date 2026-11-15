@@ -51,11 +51,9 @@ function synchronizeText(relativePath, pattern, replacement, description) {
 
 const packageJson = readJson("package.json");
 const appVersion = packageJson.version;
-const chromiumManifest = readJson("browser-extension/manifest.chromium.json");
-const extensionVersion = chromiumManifest.version;
 
-if (!/^\d+\.\d+\.\d+$/.test(appVersion) || !/^\d+\.\d+\.\d+$/.test(extensionVersion)) {
-  console.error("As versões do aplicativo e da extensão devem usar SemVer simples (X.Y.Z).");
+if (!/^\d+\.\d+\.\d+$/.test(appVersion)) {
+  console.error("A versão do aplicativo deve usar SemVer estável (X.Y.Z).");
   process.exit(1);
 }
 
@@ -76,11 +74,6 @@ if (lock.packages?.[""]?.version !== appVersion) {
 
 synchronizeText("src-tauri/Cargo.toml", /^version = "\d+\.\d+\.\d+"$/m, `version = "${appVersion}"`, "versão Rust");
 synchronizeText("src-tauri/Cargo.lock", /(\[\[package\]\]\r?\nname = "SFDownloader"\r?\nversion = ")\d+\.\d+\.\d+("\r?\n)/, `$1${appVersion}$2`, "versão Rust no lockfile");
-synchronizeJsonVersion("browser-extension/manifest.firefox.json", extensionVersion);
-synchronizeText("browser-extension/src/popup.html", /(<span id="version-badge" class="version-badge">)v\d+\.\d+\.\d+(<\/span>)/, `$1v${extensionVersion}$2`, "badge da extensão");
-synchronizeText("browser-extension/README.md", /Versão atual: \*\*\d+\.\d+\.\d+\*\*\./, `Versão atual: **${extensionVersion}**.`, "README da extensão");
-synchronizeText("browser-extension/AMO_SUBMISSION.md", /^# SF Downloader Integration \d+\.\d+\.\d+/m, `# SF Downloader Integration ${extensionVersion}`, "título AMO");
-synchronizeText("browser-extension/AMO_SUBMISSION.md", /^## Alterações da versão \d+\.\d+\.\d+/m, `## Alterações da versão ${extensionVersion}`, "seção AMO");
 
 if (failed) process.exit(1);
 console.log(checkOnly ? "Versões sincronizadas." : changed ? "Versões sincronizadas e arquivos atualizados." : "Versões já estavam sincronizadas.");

@@ -270,9 +270,12 @@ describe("media progress", () => {
   });
   it("shows verified completion and opens the final file and folder", async () => {
     render(<MediaProgressWindow id="test" />);
-    await screen.findByText("Embutidas no MP3");
+    await screen.findByRole("button", { name: "Abrir arquivo" });
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
     expect(screen.getByText("2.0 MB/s")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Mais detalhes" }));
+    expect(screen.getByText("Embutidas no MP3")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar" }));
     fireEvent.click(screen.getByRole("button", { name: "Abrir arquivo" }));
     await waitFor(() => expect(mocks.openFile).toHaveBeenCalledWith("C:/Downloads/Título-sfd.mp3"));
     await waitFor(() => expect((screen.getByRole("button", { name: "Abrir pasta" }) as HTMLButtonElement).disabled).toBe(false));

@@ -11,6 +11,9 @@ src-tauri/resources/media-tools/
 release/
 Release/
 
+# Publicador local com credenciais Filebase
+/enviar-filebase.bat
+
 # Build artifacts da extensão (gerados pelo web-ext / build.mjs).
 browser-extension/dist-chromium/
 browser-extension/dist-firefox/

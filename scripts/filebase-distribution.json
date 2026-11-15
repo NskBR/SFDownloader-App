@@ -1,0 +1,8 @@
+{
+  "endpoint": "https://s3.filebase.io",
+  "region": "auto",
+  "bucket": "sfs",
+  "publicBaseUrl": "https://sfdownloader-updates.nskbr.workers.dev",
+  "prefix": "sfdownloader-updates",
+  "publicPrefix": "sfdownloader/desktop"
+}

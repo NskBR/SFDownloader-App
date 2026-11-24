@@ -674,6 +674,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             <span className="dw-details-header-title">
               {t.downloadWindow.detailsTitle}
             </span>
+            <button type="button" className="dw-details-close nodrag" aria-label={t.common.close} title={t.common.close} onClick={() => void appWindow.close()}><X size={16}/></button>
           </div>
 
           <div className="dw-details-compact-body">

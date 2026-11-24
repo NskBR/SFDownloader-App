@@ -13,7 +13,17 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 1.1.4.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 2.0.1.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+
+## Novidades da 2.0.1
+
+- Novos temas, fundo RGB e destaque RGB independentes, com editores em glass fosco, prévia ao vivo e perfis salvos.
+- Skeletons com as cores do tema, ícones animados preenchidos e histórico de atualizações nas configurações.
+- Extensão 0.3.9 com Reddit, Reels do Facebook e botão **Baixar desta página** no popup; XPI Firefox assinado incluído.
+- Verificação parcial de senha em ZIP/RAR, opção **Fornecer novo link** em downloads HTTP com erro e sons de conclusão simultâneos.
+- Atualizações distribuídas pelo Filebase; o instalador também é disponibilizado nas releases do GitHub.
+
+[Notas completas da 2.0.1](docs/release-notes/2.0.1.txt).
 
 ## O aplicativo
 

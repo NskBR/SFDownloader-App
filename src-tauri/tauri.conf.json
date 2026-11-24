@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SFDownloader",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "identifier": "com.sfdownloader.app",
   "build": {
     "beforeDevCommand": "npm run media:prepare && npm run extension:build && npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run media:prepare && npm run build",
+    "beforeBuildCommand": "npm run media:prepare && npm run extension:build && npm run build",
     "frontendDist": "../dist"
   },
   "app": {

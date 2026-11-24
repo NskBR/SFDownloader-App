@@ -13,7 +13,7 @@
       <div class="header-titles">
         <div class="title-row">
           <strong>SF Downloader</strong>
-          <span id="version-badge" class="version-badge">v0.3.8</span>
+          <span id="version-badge" class="version-badge">v0.3.9</span>
         </div>
       </div>
     </div>
@@ -23,6 +23,10 @@
   </header>
 
   <main class="popup-main">
+    <section class="page-download-card">
+      <button type="button" id="download-page" disabled>Baixar desta página</button>
+      <span id="download-page-hint" class="exclusion-hint" role="status" aria-live="polite">Verificando a página atual…</span>
+    </section>
     <!-- Card Principal: Ativar/Desativar Captura -->
     <div class="setting-card">
       <div class="setting-info">
@@ -51,6 +55,7 @@
       <span id="status" class="status-text">Verificando conexão...</span>
     </footer>
   </main>
+  <script src="youtube-url.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

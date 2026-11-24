@@ -22,6 +22,73 @@ function fixture(url,html,prefs={}) {
   };
   return {window,shadows,messages,flush,close:()=>window.close(),change:changes=>change(changes,'local')};
 }
+test('Facebook Reel buttons identify each card and strip tracking parameters',async()=>{
+  const first='https://www.facebook.com/reel/1368202691917922/';
+  const second='https://www.facebook.com/reel/1234567890123456/';
+  const f=fixture('https://www.facebook.com/reels/',card(first+'?locale=nb_NO')+card(second));
+  try {
+    await f.flush();assert.equal(f.window.document.querySelectorAll('[data-sf-social-action="facebook"]').length,2);
+    f.shadows[1].querySelector('button').click();await f.flush();assert.equal(f.messages[0].url,second);
+    assert.equal(f.window.sfSocialMediaSource('https://m.facebook.com/watch/?v=1368202691917922&_rdr'),first);
+    assert.equal(f.window.sfSocialMediaSource('https://facebook.com.evil.test/reel/1368202691917922/'),null);
+    assert.equal(f.window.sfSocialMediaSource('https://www.facebook.com/profile.php?id=123456'),null);
+    f.change({captureEnabled:{newValue:false}});await f.flush();assert.equal(f.window.document.querySelector('[data-sf-social-action]'),null);
+  }finally{f.close();}
+});
+test('Facebook direct Reel follows navigation when there is only one visible player',async()=>{
+  const f=fixture('https://www.facebook.com/reel/1368202691917922/', '<main><video></video><aside><div role="button" aria-label="Compartilhar"></div></aside></main>');
+  try {
+    await f.flush();assert.equal(f.shadows.length,1);
+    f.window.history.pushState({},'', '/reel/1234567890123456/');
+    f.shadows[0].querySelector('button').click();await f.flush();assert.equal(f.messages[0].url,'https://www.facebook.com/reel/1234567890123456/');
+  }finally{f.close();}
+});
+test('Facebook shows a video overlay when its share controls cannot be recognized',async()=>{
+  const url='https://www.facebook.com/reel/1368202691917922/';
+  const f=fixture(url,'<main><div id="player"><video></video></div><div role="button" aria-label="Enviar para amigos"></div></main>');
+  try {
+    await f.flush();
+    const host=f.window.document.querySelector('[data-sf-facebook-overlay]');
+    assert.equal(host.parentElement.id,'player');
+    assert.equal(host.parentElement.style.position,'relative');
+    f.shadows[0].querySelector('button').click();await f.flush();assert.equal(f.messages[0].url,url);
+    f.change({captureEnabled:{newValue:false}});await f.flush();
+    assert.equal(f.window.document.querySelector('[data-sf-social-action]'),null);
+    assert.equal(f.window.document.querySelector('#player').style.position,'');
+  }finally{f.close();}
+});
+test('Reddit feed buttons send the permalink of each video post', async () => {
+  const html = id => `<shreddit-post post-type="video" permalink="/r/test/comments/${id}/video/"><div slot="post-actions"></div></shreddit-post>`;
+  const f = fixture('https://www.reddit.com/', html('abc123') + html('def456'));
+  try {
+    await f.flush();
+    assert.equal(f.shadows.length, 2);
+    f.shadows[1].querySelector('button').click();
+    await f.flush();
+    assert.equal(f.messages[0].url, 'https://www.reddit.com/comments/def456/');
+    assert.equal(f.window.sfSocialMediaSource('https://reddit.com.evil.test/comments/abc123/'), null);
+    assert.equal(f.window.sfSocialMediaSource('https://www.reddit.com/r/test/'), null);
+  } finally { f.close(); }
+});
+test('Reddit uses the public video manifest beside share in the action shadow root',async()=>{
+  const f=fixture('https://www.reddit.com/comments/1y3s259/', '<shreddit-post post-type="video" content-href="https://v.redd.it/97tokfai1f3i1" permalink="/comments/1y3s259/"></shreddit-post>');
+  try {
+    const post=f.window.document.querySelector('shreddit-post');
+    const root=post.attachShadow({mode:'open'});
+    root.innerHTML='<div id="actions"><shreddit-post-share-button></shreddit-post-share-button></div>';
+    await f.flush();
+    const host=root.querySelector('[data-sf-social-action]');
+    assert.equal(host.parentElement.id,'actions');
+    const action=f.shadows.find(shadow=>shadow.host===host);
+    action.querySelector('button').click(); await f.flush();
+    assert.equal(f.messages[0].url,'https://v.redd.it/97tokfai1f3i1/DASHPlaylist.mpd');
+    assert.equal(f.window.sfSocialMediaSource('https://v.redd.it.evil.test/97tokfai1f3i1'),null);
+    root.querySelector('shreddit-post-share-button').remove();
+    await f.flush();
+    assert.equal(root.querySelector('[data-sf-social-action]'),null);
+  } finally { f.close(); }
+});
+
 test('validates social URL structure, strips tracking and refuses unsupported content', async () => {
   const f=fixture(instagram,card(instagram));
   try {

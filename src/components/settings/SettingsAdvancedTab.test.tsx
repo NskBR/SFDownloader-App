@@ -2,7 +2,7 @@ import {cleanup,fireEvent,render,screen} from "@testing-library/react";
 import {afterEach,expect,it,vi} from "vitest";
 const mocks=vi.hoisted(()=>({check:vi.fn()}));
 vi.mock("../../services/downloadService",()=>({checkForUpdates:mocks.check}));
-import {SettingsAdvancedTab} from "./SettingsAdvancedTab";
+import {SettingsUpdatesTab as SettingsAdvancedTab} from "./SettingsUpdatesTab";
 import {ptBR} from "../../i18n/locales/pt-BR";
 afterEach(cleanup);
 const props={t:ptBR,cssThemesEnabled:false,onCssThemesEnabledChange:vi.fn(),launchOnStartup:false,onLaunchOnStartupChange:vi.fn(),onOpenBrowserIntegration:vi.fn(),onOpenDebugWindow:vi.fn(),onExportPreferences:vi.fn(),onImportPreferences:vi.fn(),onConfigureGlobalSchedule:vi.fn()};

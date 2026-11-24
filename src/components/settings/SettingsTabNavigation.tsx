@@ -1,6 +1,6 @@
 import type { ReactNode, Ref } from "react";
 
-export type SettingsTab = "personalizacao" | "downloads" | "arquivos" | "idioma" | "avancado";
+export type SettingsTab = "personalizacao" | "downloads" | "arquivos" | "idioma" | "avancado" | "atualizacao";
 
 export interface TabIndicator {
   left: number;

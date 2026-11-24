@@ -173,7 +173,7 @@ html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation
 
 .game-themes-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .game-themes-header > div:nth-child(2) { flex:1; min-width:180px; }
-.game-themes-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(145px,1fr)); gap:10px; padding:0 14px 14px; }
+.game-themes-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:10px; padding:0 14px 14px; }
 .game-theme-tile { min-width:0; overflow:hidden; border:1px solid transparent; border-radius:12px; padding:10px; background:var(--surface); color:var(--text); display:flex; flex-direction:column; align-items:stretch; cursor:pointer; }
 html.window-type-main[data-test-theme="true"] .window-frame .game-theme-tile.is-selected,
 .game-theme-tile.is-selected { border-color:var(--ember-solid) !important; }
@@ -376,12 +376,19 @@ html.window-type-main[data-test-theme="true"] .window-frame .game-theme-entry > 
 .game-themes-card { overflow-anchor:none; }
 .game-themes-community { margin:0; padding:0 14px 12px; font-size:11px; color:var(--text-2); line-height:1.5; }
 .game-themes-community button { color:var(--ember-solid); text-decoration:underline; margin-left:5px; }
-/* Portal stays outside wallpaper clipping and has an opaque paint fallback. */
+/* Portal stays outside wallpaper clipping; translucent surfaces follow the theme. */
 .help-overlay { isolation:isolate; }
-.help-overlay .help-dialog { background-color:var(--panel,#161a1e); }
+.help-overlay .help-dialog {
+  background:color-mix(in srgb,var(--panel,#161a1e) 78%,transparent);
+  backdrop-filter:blur(22px) saturate(120%);
+  -webkit-backdrop-filter:blur(22px) saturate(120%);
+  border-color:color-mix(in srgb,var(--text,#fff) 16%,transparent);
+  box-shadow:0 20px 70px #0007,inset 0 1px 0 #ffffff0d;
+}
 html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog {
-  background:var(--game-surface,#161a1e);
+  background:color-mix(in srgb,var(--game-surface,#161a1e) 78%,transparent);
   color:var(--text);
 }
-html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog > footer { background:var(--game-surface,#161a1e); }
+.help-overlay .help-dialog > header,.help-overlay .help-dialog > footer { background:color-mix(in srgb,var(--panel,#161a1e) 35%,transparent); }
+html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog > footer { background:color-mix(in srgb,var(--game-surface,#161a1e) 35%,transparent); }
 html[data-test-theme="true"][data-test-preset] .help-overlay .help-close-action { color:#161a1e; background:var(--ember-solid); }

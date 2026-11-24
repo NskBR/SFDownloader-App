@@ -35,6 +35,16 @@ const {
 
 const persistedEnvelope = () => JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "{}");
 
+it('backs up independent RGB accent and background profiles plus custom theme profiles',()=>{
+ const background={colors:['#ff0000','#00ff00'],duration:36,angle:90,reverse:false};
+ const accent={colors:['#00ffff','#ff00ff'],duration:6,angle:180,reverse:true};
+ const value=normalizeSettings({...defaultSettings,rgbConfig:background,rgbProfiles:[{name:'Fundo',config:background}],accentRgbConfig:accent,accentRgbProfiles:[{name:'Destaque',config:accent}],customThemeProfiles:[{name:'Meu tema',config:{...defaultSettings.interfaceGradient,type:'radial'}}]},'pt-BR');
+ const restored=importSettingsBackup(exportSettingsBackup(value));
+ expect(restored.rgbConfig).toEqual(background);expect(restored.accentRgbConfig).toEqual(accent);
+ expect(restored.rgbProfiles?.[0].name).toBe('Fundo');expect(restored.accentRgbProfiles?.[0].name).toBe('Destaque');
+ expect(restored.customThemeProfiles?.[0]).toMatchObject({name:'Meu tema',config:{type:'radial'}});
+});
+
 describe("settings storage", () => {
   it("keeps the text font in backups and window synchronization, with a safe default for older settings", () => {
     const settings = { ...defaultSettings, fontFamily: "verdana" as const };

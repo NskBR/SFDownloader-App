@@ -14,10 +14,32 @@ pub struct DownloadPreview {
     pub file_size: Option<u64>,
     pub mime_type: Option<String>,
     pub extension: Option<String>,
+    pub archive_protection: &'static str,
 }
 
 #[tauri::command]
 pub async fn inspect_download(
+    browser_bridge: State<'_, BrowserBridge>,
+    url: String,
+    request_id: Option<String>,
+) -> Result<DownloadPreview, String> {
+    let mut headers=browser_bridge.get_headers(request_id.as_deref());
+    let original=Url::parse(&url).ok();
+    let mut preview=inspect_download_metadata(browser_bridge,url,request_id).await?;
+    if matches!(preview.extension.as_deref(),Some("zip"|"rar")) {
+        let target=Url::parse(&preview.url).ok();
+        if !original.as_ref().zip(target.as_ref()).is_some_and(|(a,b)|a.origin()==b.origin()){headers.clear();}
+        headers.remove(header::RANGE);headers.remove(header::CONTENT_LENGTH);
+        if let Ok(client)=reqwest::Client::builder().default_headers(headers).redirect(reqwest::redirect::Policy::none()).timeout(Duration::from_secs(3)).build(){
+            if crate::download::archive_probe::probe(&client,&preview.url,preview.extension.as_deref().unwrap(),preview.file_size).await {
+                preview.archive_protection="protected";
+            }
+        }
+    }
+    Ok(preview)
+}
+
+async fn inspect_download_metadata(
     browser_bridge: State<'_, BrowserBridge>,
     url: String,
     request_id: Option<String>,
@@ -36,7 +58,7 @@ pub async fn inspect_download(
             .map(|v| v.to_lowercase())
             .or_else(|| Some("torrent".into()));
         let total_size = meta.as_ref().and_then(|m| m.total_size());
-        return Ok(DownloadPreview {
+        return Ok(DownloadPreview { archive_protection: "unverified",
             url,
             file_name,
             file_size: total_size,
@@ -87,7 +109,7 @@ pub async fn inspect_download(
                                             .extension()
                                             .and_then(|v| v.to_str())
                                             .map(|v| v.to_lowercase());
-                                        return Ok(DownloadPreview {
+                                        return Ok(DownloadPreview { archive_protection: "unverified",
                                             url: direct_link,
                                             file_name: name,
                                             file_size: size,
@@ -126,7 +148,7 @@ pub async fn inspect_download(
                                     .and_then(|v| v.to_str())
                                     .map(|v| v.to_lowercase());
                                 let direct_link = format!("https://pixeldrain.com/api/file/{file_id}");
-                                return Ok(DownloadPreview {
+                                return Ok(DownloadPreview { archive_protection: "unverified",
                                     url: direct_link,
                                     file_name: name,
                                     file_size: size,
@@ -320,7 +342,7 @@ pub async fn inspect_download(
         }
     }
 
-    Ok(DownloadPreview {
+    Ok(DownloadPreview { archive_protection: "unverified",
         url,
         file_name,
         file_size,

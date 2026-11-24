@@ -5,6 +5,7 @@ import type { ProfileStatistics } from "../domain/profile";
 import type { MetricsSnapshot } from "../domain/metrics";
 
 export interface DownloadPreview {
+  archiveProtection?: "protected" | "unverified";
   url: string;
   fileName: string;
   fileSize: number | null;

@@ -2,7 +2,7 @@ use crate::{
     browser_bridge::BrowserBridge,
     commands::windows,
     database::{
-        models::DownloadTask,
+        models::{DownloadTask, DownloadStatus},
         repositories::{downloads, statistics},
         Database,
     },
@@ -349,12 +349,16 @@ pub async fn replace_download_url(
     if task.download_type == "media" {
         return Err("Links de mídia são renovados automaticamente ao retomar o download.".into());
     }
+    if task.download_type == "torrent" || !matches!(task.status,DownloadStatus::Failed|DownloadStatus::Paused|DownloadStatus::Cancelled) {
+        return Err("O link só pode ser substituído em downloads HTTP parados.".into());
+    }
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err(DownloadError::UnsupportedUrlScheme.to_string());
     }
-    let response = reqwest::Client::builder()
+    let mut response = reqwest::Client::builder()
         .user_agent("SF Downloader/0.1")
         .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|error| error.to_string())?
         .get(parsed)
@@ -398,7 +402,12 @@ pub async fn replace_download_url(
     ) {
         if expected != received {}
     }
-    let remote = response.bytes().await.map_err(|error| error.to_string())?;
+    let mut remote=Vec::new();
+    while let Some(chunk)=response.chunk().await.map_err(|error|error.to_string())? {
+        if remote.len()+chunk.len()>4096 { return Err("O servidor enviou uma amostra maior que a solicitada.".into()); }
+        remote.extend_from_slice(&chunk);
+    }
+    if remote.is_empty(){return Err("O servidor não retornou bytes para validar o arquivo.".into());}
     let chunk_zero = format!("{}.chunk-0", task.temp_path);
     let local_path = if Path::new(&chunk_zero).exists() {
         chunk_zero

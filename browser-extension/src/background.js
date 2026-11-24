@@ -586,12 +586,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     })().then(sendResponse).catch(error=>sendResponse({ok:false,error:error.message}));
     return true;
   }
-  if (message?.type === "youtube-download" || message?.type === "social-download") {
+  if (message?.type === "youtube-download" || message?.type === "social-download" || message?.type === "popup-download-media") {
+    const popup=message.type==='popup-download-media';
     const social = message.type === "social-download";
-    const url = social ? globalThis.sfSocialMediaSource(message.url) : globalThis.sfYouTubeSource(message.url);
+    const url = popup ? (globalThis.sfYouTubeSource(message.url) || globalThis.sfSocialMediaSource(message.url)) : social ? globalThis.sfSocialMediaSource(message.url) : globalThis.sfYouTubeSource(message.url);
     const senderUrl = _sender.url || _sender.tab?.url;
     // Only our top-frame content script on an actual YouTube video may invoke this.
-    const validSender = social
+    const validSender = popup ? !_sender.tab && _sender.url===chrome.runtime.getURL('popup.html') : social
       ? url && globalThis.sfMediaPlatform(senderUrl) === globalThis.sfMediaPlatform(url)
       : globalThis.sfIsYouTubePage(senderUrl);
     if (!url || !validSender || (_sender.frameId || 0) !== 0) {
@@ -599,7 +600,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return true;
     }
     void syncBridge().then(async () => {
-      if (!captureEnabledState || isBlockedHost(url)) throw new Error("Media integration disabled");
+      if ((!popup && !captureEnabledState) || isBlockedHost(url)) throw new Error("Media integration disabled");
       // This feature needs only the video URL, never browser cookies or captured headers.
       if (bridge.connected) {
         try {

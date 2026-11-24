@@ -164,7 +164,7 @@ export function TorrentFileSelectionWindow({ taskId }: { taskId: string }) {
           <p>Remova arquivos que ainda não começaram. Arquivos em andamento ou concluídos ficam protegidos.</p>
         </div>
 
-        {loading && <div className="torrent-file-editor-loading">Carregando arquivos…</div>}
+        {loading && <WindowSkeleton label="Carregando arquivos…"/>}
         {error && !loading && (
           <div className="torrent-file-editor-error" role="alert">
             <span>{error}</span>
@@ -230,3 +230,4 @@ export function TorrentFileSelectionWindow({ taskId }: { taskId: string }) {
     </main>
   );
 }
+import { WindowSkeleton } from "../components/WindowSkeleton";

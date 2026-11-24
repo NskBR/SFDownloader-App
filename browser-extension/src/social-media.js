@@ -2,14 +2,41 @@
   if (window.top !== window || globalThis.sfSocialButtonsMounted) return;
   globalThis.sfSocialButtonsMounted = true;
   const platform = globalThis.sfMediaPlatform(location.href);
-  if (!['instagram', 'tiktok'].includes(platform)) return;
+  if (!['instagram', 'tiktok', 'reddit', 'facebook'].includes(platform)) return;
   document.querySelectorAll('[data-sf-social-action]').forEach(node => node.remove());
   const actions = new Map();
+  const observedRoots = new WeakSet();
   let enabled = true;
   let language = document.documentElement.lang || 'pt-BR';
   let scheduled = false;
   const english = () => language.toLowerCase().startsWith('en');
+  const facebookVideo = () => {
+    const videos=[...document.querySelectorAll('video')].filter(video=>!video.closest('[hidden],[aria-hidden="true"]') && getComputedStyle(video).display!=='none' && getComputedStyle(video).visibility!=='hidden');
+    const visible=videos.map(video=>{const r=video.getBoundingClientRect();return {video,area:Math.max(0,Math.min(r.right,innerWidth)-Math.max(0,r.left))*Math.max(0,Math.min(r.bottom,innerHeight)-Math.max(0,r.top))};}).filter(item=>item.area>0).sort((a,b)=>b.area-a.area);
+    return visible[0]?.video || (videos.length===1?videos[0]:null);
+  };
   const sourceFor = scope => {
+    if(platform === 'facebook') {
+      const direct=/^\/reel\/\d+\/?$/.test(location.pathname) && globalThis.sfSocialMediaSource(location.href);
+      const active=facebookVideo();
+      if(direct && active && scope.contains(active))return direct;
+      const candidates=[...scope.querySelectorAll('a[href]')].map(a=>a.href).map(globalThis.sfSocialMediaSource).filter(Boolean);
+      if(candidates.length)return candidates[0];
+      const visible=[...document.querySelectorAll('video')].filter(video=>!video.closest('[hidden],[aria-hidden="true"]'));
+      return visible.length===1 && scope.contains(visible[0]) ? globalThis.sfSocialMediaSource(location.href) : null;
+    }
+    if (platform === 'reddit') {
+      const mediaLinks = [scope.getAttribute('content-href'),
+        ...[...scope.querySelectorAll('shreddit-player,video,source')].flatMap(node => [node.getAttribute('src'),node.getAttribute('src-url')])];
+      for (const candidate of mediaLinks.filter(Boolean)) {
+        const direct = globalThis.sfSocialMediaSource(candidate);
+        if (direct && new URL(direct).hostname === 'v.redd.it') return direct;
+      }
+      const permalink = scope.getAttribute('permalink');
+      const links = [permalink && new URL(permalink, location.origin).href,
+        ...[...scope.querySelectorAll('a[href*="/comments/"]')].map(a => a.href)].filter(Boolean);
+      return links.map(globalThis.sfSocialMediaSource).find(Boolean) || null;
+    }
     // A feed contains several posts. Never use the page URL for a different card.
     if (scope === document.body) return globalThis.sfSocialMediaSource(location.href);
     const candidates = [...scope.querySelectorAll('a[href]')].map(a => a.href);
@@ -17,7 +44,7 @@
     return candidates.map(globalThis.sfSocialMediaSource).find(Boolean) || null;
   };
   function matchActionLayout(action, target, after) {
-    if (platform !== 'instagram' || !after || after.parentElement !== target) return;
+    if (!['instagram','facebook'].includes(platform) || !after || after.parentElement !== target) return;
     const vertical = getComputedStyle(target).flexDirection === 'column';
     const style = getComputedStyle(after);
     const rect = after.getBoundingClientRect();
@@ -56,7 +83,18 @@
       button:disabled { opacity:.55; cursor:wait; }
       svg { width:23px; height:23px; flex:none; }
       .label { display:none; }
+      :host([data-sf-social-action="reddit"]) .label { display:inline; }
+      :host([data-sf-social-action="reddit"]) button { font:600 12px/1 var(--font-sans,Arial,sans-serif); height:32px; padding:0 12px; gap:6px; border-radius:999px; color:var(--color-neutral-content-strong,inherit); background:var(--color-secondary-background,rgba(128,128,128,.16)); margin:0; }
+      :host([data-sf-social-action="reddit"]) button:hover { background:var(--color-secondary-background-hover,rgba(128,128,128,.26)); }
+      :host([data-sf-social-action="reddit"]) svg { width:20px; height:20px; }
       :host([data-sf-social-action="instagram"]) button { box-sizing:border-box; width:40px; height:40px; padding:8px; flex-shrink:0; }
+      :host([data-sf-social-action="facebook"]) { color:#fff; opacity:1; }
+      :host([data-sf-social-action="facebook"]) button { box-sizing:border-box; width:40px; height:40px; padding:9px; border-radius:50%; background:rgba(24,27,31,.85); color:#fff; border:1px solid rgba(255,255,255,.18); }
+      :host([data-sf-social-action="facebook"]) button:hover { background:rgba(58,62,68,.95); }
+      :host([data-sf-social-action="facebook"]) svg { color:#fff; stroke:#fff; }
+      :host([data-sf-facebook-overlay]) { position:absolute !important; right:14px; bottom:58px; z-index:100; }
+      :host([data-sf-facebook-overlay]) button { width:auto; height:36px; padding:0 12px; border-radius:20px; background:rgba(20,23,27,.85); color:white; box-shadow:0 2px 8px #0005; }
+      :host([data-sf-facebook-overlay]) .label { display:inline; }
       :host([data-sf-social-action="tiktok"]) button { flex-direction:column; gap:6px; border-radius:24px; padding:8px 6px; }
       :host([data-sf-social-action="tiktok"]) svg { box-sizing:content-box; width:24px; height:24px; padding:12px; border-radius:50%; background:rgba(128,128,128,.18); }
       output { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:2147483647;
@@ -110,6 +148,40 @@
   function reconcile() {
     scheduled = false;
     const targets = new Map();
+    if(enabled && platform==='facebook') {
+      for(const share of document.querySelectorAll('button,[role="button"]')) {
+        if(share.closest('[hidden],[aria-hidden="true"]'))continue;
+        const label=(share.getAttribute('aria-label') || share.querySelector('[aria-label]')?.getAttribute('aria-label') || share.getAttribute('title') || share.textContent || '').trim();
+        if(!/^(Compartilhar|Share|Del)(?:\b|$)/i.test(label))continue;
+        let scope=share.parentElement;
+        while(scope && scope!==document.body && !scope.querySelector('video'))scope=scope.parentElement;
+        if(!scope || scope===document.body || !sourceFor(scope))continue;
+        const target=share.parentElement;
+        if(target)targets.set(target,{scope,after:share});
+      }
+      const active=facebookVideo();
+      if(![...targets.values()].some(item=>active && item.scope.contains(active)) && /^\/reel\/\d+\/?$/.test(location.pathname)) {
+        const video=active;const target=video?.parentElement;
+        if(target && sourceFor(target))targets.set(target,{scope:target,overlay:true});
+      }
+    }
+    if (enabled && platform === 'reddit') {
+      for (const scope of document.querySelectorAll('shreddit-post, article, .thing.link')) {
+        if (!scope.querySelector('video,shreddit-player,shreddit-async-loader[bundlename*="video"]')
+          && scope.getAttribute('post-type') !== 'video') continue;
+        if (!sourceFor(scope)) continue;
+        const root = scope.shadowRoot || scope;
+        if (root !== scope && !observedRoots.has(root)) {
+          new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+          observedRoots.add(root);
+        }
+        const share = root.querySelector('shreddit-post-share-button, [slot="share-button"], button[aria-label="Share"], button[aria-label="Compartilhar"]') || scope.querySelector('shreddit-post-share-button');
+        const target = share?.parentElement || root.querySelector('[slot="post-actions"], .flat-list.buttons, [part="post-actions"]') || scope.querySelector('[slot="post-actions"], .flat-list.buttons');
+        // Wait for the real action row rather than placing a separate button below the video.
+        if (!target) continue;
+        targets.set(target, {scope});
+      }
+    }
     if (enabled && platform === 'tiktok') {
       for (const share of document.querySelectorAll('[data-e2e="share-icon"], [data-e2e="browse-share"], [data-e2e="share-button"]')) {
         const target = share.closest('button')?.parentElement || share.parentElement;
@@ -148,9 +220,16 @@
       }
     }
     for (const [target,action] of actions) {
-      if (!target.isConnected || !targets.has(target)) { clearTimeout(action.timer); action.host.remove(); actions.delete(target); }
+      if (!target.isConnected || !targets.has(target)) { clearTimeout(action.timer); action.host.remove(); if(action.restorePosition!==undefined)target.style.position=action.restorePosition; actions.delete(target); }
     }
-    for (const [target,{scope,after}] of targets) { mount(target,scope,after); refreshLabel(actions.get(target)); }
+    for (const [target,{scope,after,overlay}] of targets) {
+      mount(target,scope,after);const action=actions.get(target);
+      if(overlay){
+        if(!action.host.hasAttribute('data-sf-facebook-overlay'))action.host.setAttribute('data-sf-facebook-overlay','');
+        if(getComputedStyle(target).position==='static' || getComputedStyle(target).position==='') {action.restorePosition=target.style.position;target.style.position='relative';}
+      } else if(action.host.hasAttribute('data-sf-facebook-overlay')) {action.host.removeAttribute('data-sf-facebook-overlay');if(action.restorePosition!==undefined){target.style.position=action.restorePosition;delete action.restorePosition;}}
+      refreshLabel(action);
+    }
   }
   function schedule() {
     if (scheduled) return;
@@ -165,8 +244,14 @@
     if (changes.language) language = changes.language.newValue || document.documentElement.lang || 'pt-BR';
     schedule();
   });
-  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['href','data-e2e','aria-label']});
+  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['href','data-e2e','aria-label','permalink','post-type','content-href','src','src-url']});
   window.addEventListener('popstate',schedule);
+  if(platform==='facebook') {
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('resize',schedule);
+    document.addEventListener('loadedmetadata',schedule,true);
+    document.addEventListener('play',schedule,true);
+  }
   // pushState has no native event; polling only the URL also covers reused Reel cards.
   let previous = location.href;
   const timer = setInterval(() => { if (location.href !== previous) { previous = location.href; schedule(); } },500);

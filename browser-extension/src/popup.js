@@ -271,3 +271,42 @@ void storageGet(["pendingExtensionUpdate","language"]).then(({pendingExtensionUp
   updateResult.textContent = version === pending.version ? dict.updateDone : dict.updateFolder + pending.path;
   chrome.storage.local.remove("pendingExtensionUpdate");
 });
+
+// Manual fallback uses the active tab, without relying on injected page controls.
+const downloadPageButton=document.querySelector('#download-page');
+const downloadPageHint=document.querySelector('#download-page-hint');
+let pageDownloadBusy=false;
+const pageText=(pt,en)=>currentLanguage==='en-US'?en:pt;
+const activeMediaTab=()=>new Promise(resolve=>{
+  if(!chrome.tabs?.query){resolve(null);return;}
+  chrome.tabs.query({active:true,currentWindow:true},tabs=>{
+    if(chrome.runtime.lastError){resolve(null);return;}
+    const tab=tabs?.[0];
+    const url=tab?.url && (globalThis.sfYouTubeSource(tab.url) || globalThis.sfSocialMediaSource(tab.url));
+    resolve(url?{url,platform:globalThis.sfMediaPlatform(url)}:null);
+  });
+});
+async function refreshDownloadPage(){
+  const media=await activeMediaTab();
+  downloadPageButton.textContent=pageText('Baixar desta página','Download from this page');
+  downloadPageButton.disabled=!media;
+  downloadPageHint.textContent=media
+    ?pageText('Vídeo detectado em ','Video detected on ')+({youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok',reddit:'Reddit',facebook:'Facebook'}[media.platform] || '')
+    :pageText('Abra um vídeo ou Reel do YouTube, Instagram, TikTok, Reddit ou Facebook.','Open a video or Reel on YouTube, Instagram, TikTok, Reddit or Facebook.');
+}
+downloadPageButton?.addEventListener('click',async()=>{
+  if(pageDownloadBusy)return;
+  pageDownloadBusy=true;downloadPageButton.disabled=true;
+  downloadPageButton.textContent=pageText('Abrindo…','Opening…');
+  try{
+    // Query again on click: never reuse a URL cached before tab navigation.
+    const media=await activeMediaTab();
+    if(!media){await refreshDownloadPage();return;}
+    const result=await new Promise(resolve=>chrome.runtime.sendMessage({type:'popup-download-media',url:media.url},response=>resolve(chrome.runtime.lastError?null:response)));
+    downloadPageHint.textContent=result?.ok
+      ?result.delivery==='protocol'?pageText('Confirme a abertura do SFDownloader no navegador.','Confirm opening SFDownloader in your browser.'):pageText('Escolha vídeo ou áudio no SFDownloader.','Choose video or audio in SFDownloader.')
+      :pageText('Não foi possível abrir. Inicie o SFDownloader e tente novamente.','Could not open. Start SFDownloader and try again.');
+  }catch{downloadPageHint.textContent=pageText('Não foi possível consultar a aba atual.','Could not check the current tab.');}
+  finally{pageDownloadBusy=false;downloadPageButton.disabled=!(await activeMediaTab());downloadPageButton.textContent=pageText('Baixar desta página','Download from this page');}
+});
+if(downloadPageButton)void storageGet(['language']).then(({language})=>{applyLanguage(language);return refreshDownloadPage();});

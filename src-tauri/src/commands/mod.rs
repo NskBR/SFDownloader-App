@@ -1,4 +1,5 @@
 pub mod browser_extension;
+mod completion_sound;
 pub mod context_menu;
 pub mod debug;
 pub mod downloads;

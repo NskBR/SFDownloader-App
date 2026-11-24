@@ -37,13 +37,15 @@ export function isYouTubeUrl(value: string): boolean {
     return ["http:", "https:"].includes(url.protocol) && ["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname);
   } catch { return false; }
 }
-export function mediaPlatform(value: string): "YouTube" | "TikTok" | "Instagram" | null {
+export function mediaPlatform(value: string): "YouTube" | "TikTok" | "Instagram" | "Reddit" | "Facebook" | null {
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.port) return null;
     if (isYouTubeUrl(value)) return "YouTube";
+    if (["facebook.com", "www.facebook.com", "m.facebook.com", "web.facebook.com"].includes(url.hostname)) return "Facebook";
     if (["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return "TikTok";
     if (["instagram.com", "www.instagram.com"].includes(url.hostname)) return "Instagram";
+    if (["reddit.com", "www.reddit.com", "old.reddit.com", "sh.reddit.com", "redd.it", "v.redd.it"].includes(url.hostname)) return "Reddit";
     return null;
   } catch { return null; }
 }

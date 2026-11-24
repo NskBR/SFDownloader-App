@@ -17,6 +17,10 @@ const base: DownloadPreview = {
 };
 
 describe("confirmation preview", () => {
+  it("keeps confirmed archive protection and never assumes an unverified file is safe",()=>{
+    expect(mergeHttpPreview({...base,archiveProtection:'protected'},null,base.url).archiveProtection).toBe('protected');
+    expect(mergeHttpPreview(base,null,base.url).archiveProtection).toBe('unverified');
+  });
   it("recognizes a complete preview and rejects placeholder data", () => {
     expect(hasCompletePreview(base)).toBe(true);
     expect(hasCompletePreview({ ...base, fileName: "download.bin" })).toBe(

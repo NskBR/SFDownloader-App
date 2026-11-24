@@ -1,6 +1,8 @@
 import { gameThemeIds, defaultSettings, type AppSettings } from "../domain/settings";
 import { appFontIds, type AppFont } from "../domain/appFonts";
 import {selectedWallpaper} from "../domain/themeWallpapers";
+import {normalizeRgbConfig,normalizeRgbProfiles} from "../domain/rgbTheme";
+import {normalizeThemeProfiles} from "../domain/themeProfiles";
 import { emit } from "@tauri-apps/api/event";
 
 export const SETTINGS_SCHEMA_VERSION = 2;
@@ -17,7 +19,7 @@ type UnknownRecord = Record<string, unknown>;
 
 const themes = ["system", "midnight", "graphite", "light"] as const;
 const languages = ["pt-BR", "en-US"] as const;
-const accents = ["cyan", "emerald", "amber", "red", "blue", "violet", "pink", "coral", "gradient_sunset", "gradient_cyberpunk", "gradient_ocean", "gradient_aurora", "gradient_flow", "ember", "green"] as const;
+const accents = ["lime", "teal", "indigo", "lavender", "rose", "silver", "cyan", "emerald", "amber", "red", "blue", "violet", "pink", "coral", "gradient_sunset", "gradient_cyberpunk", "gradient_ocean", "gradient_aurora", "gradient_flow", "ember", "green"] as const;
 const appColors = ["slate", "graphite", "obsidian", "mint", "ocean", "rose"] as const;
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -161,9 +163,15 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
     })),
     defaultThemeInitialized: value.defaultThemeInitialized === true,
     accentColor: valueFrom(value.accentColor, accents, base.accentColor),
+    rgbConfig: normalizeRgbConfig(value.rgbConfig),
+    rgbProfiles: normalizeRgbProfiles(value.rgbProfiles),
+    accentRgbConfig: normalizeRgbConfig(value.accentRgbConfig),
+    accentRgbProfiles: normalizeRgbProfiles(value.accentRgbProfiles),
+    customThemeProfiles: normalizeThemeProfiles(value.customThemeProfiles),
     appColor: valueFrom(value.appColor, appColors, base.appColor),
     interfaceGradient: {
       enabled: booleanFrom(gradient.enabled, base.interfaceGradient.enabled),
+      ...(typeof gradient.rgb==='boolean'?{rgb:gradient.rgb}:{}),
       type: valueFrom(gradient.type, ["linear", "radial"], base.interfaceGradient.type),
       angle: numberFrom(gradient.angle, base.interfaceGradient.angle, 0, 360),
       intensity: numberFrom(gradient.intensity, base.interfaceGradient.intensity, 0, 100),

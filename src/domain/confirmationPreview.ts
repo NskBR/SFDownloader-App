@@ -52,6 +52,7 @@ export function mergeHttpPreview(
 ): DownloadPreview {
   return {
     url: result.url || fallbackUrl,
+    archiveProtection: result.archiveProtection ?? "unverified",
     fileName:
       result.fileName && result.fileName !== "download.bin"
         ? result.fileName

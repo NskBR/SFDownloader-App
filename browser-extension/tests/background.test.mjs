@@ -149,6 +149,19 @@ test("social actions require matching trusted origins and never forward cookies"
   assert.deepEqual(cookieUrls,[]);
   for (const sender of [{url:"https://evil.test/"},{url:"https://www.instagram.com.evil.test/"},{url:"https://www.tiktok.com/"},{url:"https://www.instagram.com/",frameId:2}]) assert.equal((await send(url,sender)).ok,false);
   assert.equal((await send("https://www.instagram.com/stories/user/123/",{url:"https://www.instagram.com/"})).ok,false);
+  const facebook='https://www.facebook.com/reel/1368202691917922/';
+  assert.equal((await send(facebook+'?locale=nb_NO',{url:facebook,frameId:0})).ok,true);
+  assert.deepEqual(JSON.parse(posted.at(-1).options.body),{token:'token',url:facebook,requestHeaders:{}});
+  assert.equal((await send(facebook,{url:'https://www.instagram.com/',frameId:0})).ok,false);
+  assert.deepEqual(cookieUrls,[]);
+});
+test('popup manual media works with automatic capture disabled and rejects page senders',async()=>{
+  const {listeners,posted,cookieUrls}=await loadBackground({captureEnabled:false,disabledExtensions:[],language:'pt-BR'});
+  const url='https://www.facebook.com/reel/1368202691917922/';
+  const message={type:'popup-download-media',url};
+  assert.equal((await sendMessage(listeners.message.first(),message,{url:'https://www.facebook.com/'})).ok,false);
+  assert.equal((await sendMessage(listeners.message.first(),message,{url:'chrome-extension://sf-test/popup.html'})).ok,true);
+  assert.deepEqual(cookieUrls,[]);
 });
 
 test("forwards only cookies belonging to the download host", async () => {

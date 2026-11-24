@@ -169,7 +169,7 @@ export function ConfirmationPage({ token }: { token: string }) {
   useEffect(() => {
     if (!payload) return;
     // If preview already has a valid fileSize (> 0) and valid extension, skip re-inspection
-    if (hasCompletePreview(preview)) {
+    if (hasCompletePreview(preview) && (!isArchivePreview(preview) || preview?.archiveProtection !== undefined)) {
       setLoading(false);
       return;
     }
@@ -305,6 +305,7 @@ export function ConfirmationPage({ token }: { token: string }) {
       {/* 1. Header (Barra de título com nome do arquivo) */}
       <ConfirmationWindowHeader
         title={fileNameText}
+        archiveProtected={preview?.archiveProtection === "protected"}
         onMinimize={() => void appWindow.minimize()}
         onClose={close}
       />
@@ -552,6 +553,7 @@ export function ConfirmationPage({ token }: { token: string }) {
             <span className="dw-details-header-title">
               {t.downloadWindow.detailsTitle}
             </span>
+            <button type="button" className="dw-details-close nodrag" onClick={close} title={t.common.close} aria-label={t.common.close}><X size={16}/></button>
           </div>
 
           <div className="dw-details-compact-body">

@@ -38,6 +38,8 @@ globalThis.sfMediaPlatform = function (value) {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
     if (["instagram.com", "www.instagram.com"].includes(url.hostname)) return "instagram";
+    if (["facebook.com", "www.facebook.com", "m.facebook.com", "web.facebook.com"].includes(url.hostname)) return "facebook";
+    if (["reddit.com", "www.reddit.com", "old.reddit.com", "sh.reddit.com", "redd.it", "v.redd.it"].includes(url.hostname)) return "reddit";
     if (["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return "tiktok";
     return globalThis.sfIsYouTubePage(value) ? "youtube" : null;
   } catch { return null; }
@@ -48,6 +50,22 @@ globalThis.sfSocialMediaSource = function (value) {
     const platform = globalThis.sfMediaPlatform(value);
     const url = new URL(value);
     const path = url.pathname;
+    if(platform === 'facebook') {
+      const reel=/^\/reel\/(\d{5,30})\/?$/.exec(path);
+      const watch=/^\/(?:watch\/?|video\.php)$/.test(path) && url.searchParams.get('v');
+      const id=reel?.[1] || watch;
+      return /^\d{5,30}$/.test(id || '') ? `https://www.facebook.com/reel/${id}/` : null;
+    }
+    if (platform === "reddit") {
+      if (url.hostname === 'v.redd.it') {
+        const video = /^\/([a-z0-9]{1,32})(?:\/(?:DASHPlaylist\.mpd|HLSPlaylist\.m3u8|(?:CMAF|DASH)_\d+\.mp4))?\/?$/i.exec(path);
+        return video ? `https://v.redd.it/${video[1]}/DASHPlaylist.mpd` : null;
+      }
+      const match = /^(?:\/r\/[A-Za-z0-9_]+)?\/comments\/([a-z0-9]+)(?:\/[^/]+)?\/?$/i.exec(path);
+      const short = url.hostname === "redd.it" && /^\/([a-z0-9]+)\/?$/i.exec(path);
+      const id = match?.[1] || short?.[1];
+      return id ? `https://www.reddit.com/comments/${id.toLowerCase()}/` : null;
+    }
     if (platform === "instagram") {
       const match = /^\/(?:[A-Za-z0-9_.]{1,128}\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]{1,128})\/?$/.exec(path);
       return match ? `https://www.instagram.com/${match[1] === "reels" ? "reel" : match[1]}/${match[2]}/` : null;

@@ -1,4 +1,5 @@
 pub mod completion;
+pub mod archive_probe;
 pub mod engine;
 pub mod error;
 pub mod extraction;

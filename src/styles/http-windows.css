@@ -28,6 +28,8 @@
 }
 .confirm-header-left, .confirm-header-left * { pointer-events: none; }
 .confirm-header-left .confirm-title { pointer-events: auto; }
+.confirm-header-left .archive-password-indicator { pointer-events:auto; color:#ef4444; }
+.confirm-header-left .archive-password-indicator > svg { color:#ef4444; }
 .confirm-header-icon { color: var(--st-completed, var(--accent-primary)); flex-shrink: 0; }
 .confirm-title {
   font-size: 15px;
@@ -247,6 +249,14 @@
 .confirm-control-box.box-password.is-disabled {
   opacity: 0.45;
   pointer-events: none;
+}
+.confirm-control-box.box-password .confirm-input-text:focus,
+.confirm-control-box.box-password .confirm-input-text:focus-visible {
+  outline:none;
+  box-shadow:none;
+}
+.confirm-control-box.box-password:focus-within {
+  border-color:var(--ember-solid);
 }
 
 /* Ocultar o ícone de olho nativo do Edge / WebView2 no input de senha */

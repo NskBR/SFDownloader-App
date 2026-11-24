@@ -1,0 +1,65 @@
+Novidades
+
+• Suporte a Reels públicos do Facebook, com botão Baixar na extensão 0.3.9 próximo à ação de compartilhar e escolha de vídeo ou áudio no aplicativo. Conteúdos que exigem login podem não estar disponíveis.
+
+• Opção Fornecer novo link no menu de contexto dos downloads HTTP com erro. O painel permite colar um novo endereço direto, valida o suporte à retomada, compara o tamanho e os bytes iniciais disponíveis e tenta retomar o download após salvar. Links incompatíveis exibem o erro sem iniciar a retomada.
+
+• Verificação parcial de proteção por senha em arquivos ZIP e RAR antes do download. Quando há confirmação nos cabeçalhos, a janela de confirmação mostra um cadeado vermelho com a dica “Esse arquivo é protegido por senha”. Casos inconclusivos permanecem não verificados, sem ícone; a verificação não baixa o arquivo inteiro.
+
+• Nova aba Atualização nas configurações, reunindo a verificação de atualizações, as notas da versão instalada e o histórico de versões.
+• Suporte a vídeos nativos do Reddit, com botão Baixar na extensão 0.3.9 tanto no feed quanto dentro dos posts.
+• Oito novos temas: Ártico, Quartzo Rosa, Âmbar Noturno, Vulcânico, Oceano Profundo, Aurora Boreal, Horizonte Solar e Espectro RGB. A galeria agora reúne 14 temas e pode ser expandida ou recolhida, mantendo o tema atual visível.
+
+Personalização e RGB
+
+• Engrenagem no destaque RGB com editor de direção, velocidade, sequência de cores e perfis próprios, independentes do tema RGB. Os dois editores ficam à direita, mostram as alterações no aplicativo em tempo real e salvam somente ao aplicar. Cancelar, fechar ou pressionar Esc restaura a configuração anterior.
+• O botão Personalizar do cabeçalho foi substituído por uma engrenagem no tema Padrão. O editor inclui até 12 perfis de fundo para salvar, carregar, substituir e excluir, com preservação no backup das preferências.
+• Cores de destaque reposicionadas entre os temas do aplicativo e os temas personalizados. Novas opções: Verde Lima, Turquesa, Índigo, Lavanda, Rosa Suave e Prata.
+• Cores de destaque centralizadas em cada linha, incluindo a última quando as opções quebram para uma nova linha.
+• Galeria recolhida de temas personalizados ocupa a largura disponível sem reservar uma coluna vazia. Valorant continua disponível ao expandir a galeria.
+• Correção do recorte arredondado da prévia e da borda quadrada ao redor do destaque RGB: o gradiente animado agora é desenhado em uma camada circular própria, com a engrenagem posicionada por fora da amostra.
+
+• Espectro RGB com fundo animado e cor de destaque independente, mantendo o fundo escuro para preservar a leitura.
+• Engrenagem no tema RGB para configurar direção, inversão da sequência, de 2 a 8 cores e velocidade nas opções Lento, Médio e Rápido.
+• Até 12 perfis RGB, com opções para salvar, carregar, substituir e excluir configurações. Os perfis também acompanham o backup das preferências.
+• Editor RGB posicionado à direita, com alterações exibidas no aplicativo em tempo real. Aplicar e salvar confirma as mudanças; Cancelar, fechar ou pressionar Esc restaura o tema anterior.
+• Faixa contínua de gradiente para editar as cores RGB, com seletores sobre a própria faixa e ações para adicionar ou remover cores.
+• Prévia RGB com uma mini interface que utiliza a mesma transição de cores do tema.
+• Modal Personalizar tema reformulado com faixa de cores, edição hexadecimal validada, captura de cor da tela quando disponível, fundos Linear/Radial, direção, intensidade, Surpreenda-me e Redefinir.
+• Personalizar tema permanece à direita e mostra as mudanças no aplicativo em tempo real, salvando somente ao aplicar e restaurando o tema anterior ao cancelar ou fechar.
+• Efeito glass fosco nos painéis Personalizar tema e RGB e no modal de informações do aplicativo, acompanhando as cores do tema.
+
+Interface e carregamento
+
+• Skeletons na lista de downloads, na janela de progresso dos torrents e na seleção de arquivos de torrent, usando as cores do tema ativo.
+• O splash de inicialização e a animação de carregamento da consulta de mídia foram preservados.
+• Ícones animados preenchidos da biblioteca Kineticons nos principais controles da interface.
+• Histórico de atualizações em lista, com notas abertas em um modal próprio. Ajustes de espaçamento, rolagem e cores para acompanhar o tema.
+• Cabeçalho dos detalhes do download com título alinhado à esquerda e botão X para fechar. Ajustes na área de arraste da barra de título.
+
+Correções
+
+• Botão X nos detalhes da janela de confirmação de download para fechar a janela diretamente, mantendo o botão Voltar para retornar à confirmação.
+• Campo de senha da confirmação usa apenas o foco na borda externa, sem o contorno quadrado interno.
+
+• Tema e cor de destaque independentes: escolher ou editar o tema RGB altera somente o fundo, preservando o destaque selecionado. O destaque RGB também pode ser usado com outros fundos.
+
+• Sons de conclusão agora podem tocar simultaneamente, sem colocar um aviso na fila para esperar o anterior terminar.
+• Melhorias na aplicação das cores dos temas em superfícies, indicadores, botões, contadores e controles, incluindo o acabamento translúcido dos contadores da barra lateral.
+• Correções no fluxo do destaque RGB, evitando efeitos indevidos sobre os ícones e mantendo o foco de teclado visível.
+• Ajuste na composição dos cards das configurações durante a animação RGB para evitar linhas piscando relacionadas ao desfoque do fundo.
+• Controles de direção e intensidade com trilho próprio, evitando a faixa branca do controle nativo durante as mudanças de cor RGB.
+• Correção do layout de erro da consulta de mídia para evitar rolagem desnecessária na janela.
+• Botão do Reddit integrado à barra de ações, com formato e cores da plataforma, preservando a identificação do vídeo escolhido em feeds com vários posts.
+• Vídeos nativos do Reddit usam o manifesto público quando disponível na página, evitando a consulta ao post que pode exigir login mesmo para conteúdo público. A disponibilidade continua sujeita às restrições da plataforma.
+• Animações RGB respeitam a preferência de movimento reduzido do sistema; a animação do tema também respeita a opção de animações do aplicativo.
+
+Extensão 0.3.9
+
+• Botão Baixar desta página no popup da extensão como alternativa aos botões dentro dos sites. Detecta a aba ativa nas plataformas suportadas, abre a escolha de vídeo ou áudio no aplicativo e funciona mesmo com a captura automática desativada.
+
+• Botão de download nos Reels do Facebook, com identificação do vídeo por publicação e suporte à navegação entre Reels.
+• Detecção ampliada dos controles de compartilhamento do Facebook e botão alternativo sobre o vídeo quando a barra de ações não puder ser identificada no Reel aberto.
+
+• Integração com vídeos do Reddit e pacote atualizado para Chrome e navegadores Chromium.
+• XPI Firefox 0.3.9 com assinatura Mozilla integrado ao aplicativo e conferido contra os arquivos da extensão atual.

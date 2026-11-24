@@ -1,4 +1,5 @@
 import {Pause as AnimatedPause,Play as AnimatedPlay} from "../components/icons";
+import {ReplaceDownloadLinkDialog} from "../components/downloads/ReplaceDownloadLinkDialog";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
@@ -173,6 +174,7 @@ export function DownloadsPage({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [starting, setStarting] = useState(false);
+  const [replaceLinkTask,setReplaceLinkTask] = useState<DownloadTask|null>(null);
   const [copiedSourceId, setCopiedSourceId] = useState<string | null>(null);
   const [speedLimitDialog, setSpeedLimitDialog] = useState<DownloadTask | null>(null);
   const [speedLimitValue, setSpeedLimitValue] = useState("0");
@@ -671,14 +673,14 @@ export function DownloadsPage({
         )}
 
         {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              color: "var(--muted)",
-              padding: "40px",
-            }}
-          >
-            {t.common.loading}
+          <div className={`cards-scroll-container view-${view} downloads-skeleton`} role="status" aria-busy="true" aria-label={t.common.loading}>
+            {Array.from({ length: 6 }, (_, index) => (
+              <div className="downloads-skeleton-item" key={index} aria-hidden="true">
+                <span className="downloads-skeleton-icon"/>
+                <div className="downloads-skeleton-copy"><span/><span/></div>
+                <span className="downloads-skeleton-action"/>
+              </div>
+            ))}
           </div>
         ) : visible.length === 0 ? (
           <div className="empty-downloads-state">
@@ -1187,6 +1189,7 @@ export function DownloadsPage({
               </button>
             </>
           )}
+          {ctxMenu.item.status==='failed' && (!ctxMenu.item.downloadType || ctxMenu.item.downloadType==='http') && <button className="ctx-item" onClick={()=>{setReplaceLinkTask(ctxMenu.item);setCtxMenu(null);}}><Link2 size={15}/> Fornecer novo link</button>}
           {["paused", "failed", "cancelled"].includes(ctxMenu.item.status) && (
             <button
               className="ctx-item"
@@ -1231,6 +1234,7 @@ export function DownloadsPage({
         </div>,
         document.body,
       )}
+      {replaceLinkTask && <ReplaceDownloadLinkDialog task={replaceLinkTask} onClose={()=>setReplaceLinkTask(null)} onSaved={()=>void resume(replaceLinkTask.id)}/>}
     </>
   );
 }

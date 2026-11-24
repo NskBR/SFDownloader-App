@@ -17,6 +17,7 @@ import {
   Users,
   Globe,
   Upload,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -372,7 +373,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
             <TorrentWindowCloseButton title={t.common.close} onClose={() => void appWindow.close()} />
           </div>
         </header>
-        <div className="dw-loading" role="status">{t.torrentWindow.loading}</div>
+        <WindowSkeleton label={t.torrentWindow.loading}/>
       </main>
     );
 
@@ -575,6 +576,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               {t.common.back}
             </button>
             <span className="dw-details-header-title">{t.torrentWindow.detailsTitle}</span>
+            <button type="button" className="dw-details-close nodrag" aria-label={t.common.close} title={t.common.close} onClick={() => void appWindow.close()}><X size={16}/></button>
           </div>
 
           <div className="dw-details-compact-body">
@@ -634,3 +636,4 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
 
 
 
+import { WindowSkeleton } from "../components/WindowSkeleton";

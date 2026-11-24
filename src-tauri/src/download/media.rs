@@ -115,6 +115,8 @@ pub fn source_platform(source: &str) -> &'static str {
         .as_deref()
     {
         Some("instagram.com" | "www.instagram.com") => "Instagram",
+        Some("facebook.com" | "www.facebook.com" | "m.facebook.com" | "web.facebook.com") => "Facebook",
+        Some("reddit.com" | "www.reddit.com" | "old.reddit.com" | "sh.reddit.com" | "redd.it" | "v.redd.it") => "Reddit",
         Some(
             "tiktok.com" | "www.tiktok.com" | "m.tiktok.com" | "vm.tiktok.com" | "vt.tiktok.com",
         ) => "TikTok",
@@ -134,6 +136,37 @@ pub fn media_source(input: &str) -> Result<(String, String, bool), String> {
         || url.port().is_some()
     {
         return Err("Link de mídia inválido.".into());
+    }
+    if matches!(url.host_str(),Some("facebook.com"|"www.facebook.com"|"m.facebook.com"|"web.facebook.com")) {
+        let parts:Vec<_>=url.path().trim_matches('/').split('/').collect();
+        let id=match parts.as_slice(){["reel",id]=>Some((*id).to_owned()),["watch"]|["video.php"]=>url.query_pairs().find(|(key,_)|key=="v").map(|(_,value)|value.into_owned()),_=>None};
+        if let Some(id)=id.filter(|id|(5..=30).contains(&id.len()) && id.bytes().all(|c|c.is_ascii_digit())) {
+            return Ok((format!("https://www.facebook.com/reel/{id}/"),format!("facebook-{id}"),false));
+        }
+        return Err("Use o link de um Reel individual do Facebook.".into());
+    }
+    if url.host_str() == Some("v.redd.it") {
+        let parts: Vec<_> = url.path().trim_matches('/').split('/').collect();
+        if let [id, "DASHPlaylist.mpd"] = parts.as_slice() {
+            if !id.is_empty() && id.len() <= 32 && id.bytes().all(|c| c.is_ascii_alphanumeric()) {
+                return Ok((format!("https://v.redd.it/{id}/DASHPlaylist.mpd"), format!("reddit-video-{id}"), false));
+            }
+        }
+        return Err("Link de vídeo Reddit inválido.".into());
+    }
+    if matches!(url.host_str(), Some("reddit.com" | "www.reddit.com" | "old.reddit.com" | "sh.reddit.com" | "redd.it")) {
+        let parts: Vec<_> = url.path().trim_matches('/').split('/').collect();
+        let id = match parts.as_slice() {
+            [id] if url.host_str() == Some("redd.it") => Some(*id),
+            ["comments", id] | ["comments", id, _] => Some(*id),
+            ["r", _, "comments", id] | ["r", _, "comments", id, _] => Some(*id),
+            _ => None,
+        }.filter(|id| !id.is_empty() && id.len() <= 16 && id.bytes().all(|c| c.is_ascii_alphanumeric()));
+        if let Some(id) = id {
+            let id = id.to_ascii_lowercase();
+            return Ok((format!("https://www.reddit.com/comments/{id}/"), format!("reddit-{id}"), false));
+        }
+        return Err("Use o link de uma publicação com vídeo do Reddit.".into());
     }
     let all_parts: Vec<_> = url
         .path_segments()
@@ -213,7 +246,7 @@ pub fn media_source(input: &str) -> Result<(String, String, bool), String> {
         }
         _ => {}
     }
-    Err("Use um link de vídeo do YouTube, TikTok ou Reel/post com vídeo do Instagram. Perfis, Stories e lives não são aceitos.".into())
+    Err("Use um link de vídeo do YouTube, TikTok, Instagram, Reddit ou de um Reel do Facebook. Perfis, Stories e lives não são aceitos.".into())
 }
 
 pub fn is_mix_id(id: &str) -> bool {
@@ -780,12 +813,40 @@ pub async fn inspect_with_wait(
         .await
 }
 
+// Public Reddit metadata is also served by old.reddit.com. The www API can
+// return a login page for public posts; do not forward browser credentials.
+async fn reddit_video_source(source: &str) -> Result<(String, Value), String> {
+    let (_, id, _) = media_source(source)?;
+    if id.starts_with("reddit-video-") { return Ok((source.to_owned(), Value::Null)); }
+    let post_id = id.strip_prefix("reddit-").ok_or("Post inválido.")?;
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(20)).build().map_err(|e| e.to_string())?;
+    let response = client.get(format!("https://old.reddit.com/comments/{post_id}/.json?raw_json=1"))
+        .send().await.map_err(|_| "Não foi possível consultar o Reddit.")?;
+    if !response.status().is_success() {
+        return Err("O Reddit bloqueou a consulta deste post. Ele pode exigir login ou estar temporariamente indisponível.".into());
+    }
+    let bytes = response.bytes().await.map_err(|_| "Resposta inválida do Reddit.")?;
+    let json: Value = serde_json::from_slice(&bytes).map_err(|_| "Resposta inválida do Reddit.")?;
+    let post = &json[0]["data"]["children"][0]["data"];
+    if post["id"].as_str() != Some(post_id) { return Err("O Reddit retornou outro post.".into()); }
+    let video = &post["secure_media"]["reddit_video"];
+    let manifest = video["dash_url"].as_str().ok_or("Este post não contém um vídeo nativo público do Reddit.")?;
+    let parsed = reqwest::Url::parse(manifest).map_err(|_| "Manifesto inválido.")?;
+    if parsed.scheme() != "https" || parsed.host_str() != Some("v.redd.it") || parsed.port().is_some() || !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err("Origem do vídeo Reddit inválida.".into());
+    }
+    Ok((manifest.to_owned(), post.clone()))
+}
+
 async fn inspect_uncached(
     app: &AppHandle,
     source: &str,
 ) -> Result<MediaPreview, super::media_query::QueryError> {
     let (mut url, mut id, music) = media_source(source)?;
     let tools = Tools::load(app)?;
+    let reddit = if id.starts_with("reddit-") { Some(reddit_video_source(&url).await?) } else { None };
     let mut command = tools.downloader();
     let playlist = is_playlist_source(&url);
     if playlist {
@@ -800,7 +861,7 @@ async fn inspect_uncached(
     }
     command
         .args(["--dump-single-json", "--skip-download", "--"])
-        .arg(&url);
+        .arg(reddit.as_ref().map(|(manifest, _)| manifest.as_str()).unwrap_or(&url));
     let (ok, output, error) = capture(
         command,
         Duration::from_secs(if playlist { 150 } else { 75 }),
@@ -812,8 +873,17 @@ async fn inspect_uncached(
             friendly_error(&error),
         ));
     }
-    let raw: Value = serde_json::from_slice(&output)
+    let mut raw: Value = serde_json::from_slice(&output)
         .map_err(|_| "A plataforma retornou uma resposta inválida.")?;
+    if let Some((_, post)) = reddit {
+        raw["webpage_url"] = Value::String(url.clone());
+        if !post.is_null() {
+        raw["title"] = post["title"].clone();
+        raw["uploader"] = post["author"].clone();
+        raw["duration"] = post["secure_media"]["reddit_video"]["duration"].clone();
+        raw["thumbnail"] = post["preview"]["images"][0]["source"]["url"].clone();
+        }
+    }
     if id.starts_with("tiktok-short-") {
         let (resolved, resolved_id, _) = media_source(
             raw["webpage_url"]
@@ -846,6 +916,8 @@ pub(crate) async fn thumbnail(source: &str) -> Option<String> {
             matches!(host, "i.ytimg.com" | "img.youtube.com" | "i9.ytimg.com")
                 || [
                     "cdninstagram.com",
+                    "redd.it",
+                    "redditmedia.com",
                     "fbcdn.net",
                     "tiktokcdn.com",
                     "tiktokcdn-us.com",
@@ -1235,7 +1307,10 @@ async fn run(
     let mut downloaded = task.total_downloaded;
     loop {
         let rate = control.speed_limit();
-        let mut command = transfer_command(&tools, &preview.url, &work, &saved.options, rate);
+        let transfer_url = if source_platform(&preview.url) == "Reddit" {
+            reddit_video_source(&preview.url).await?.0
+        } else { preview.url.clone() };
+        let mut command = transfer_command(&tools, &transfer_url, &work, &saved.options, rate);
         let mut child = command
             .spawn()
             .map_err(|_| "Não foi possível iniciar o download de mídia.")?;
@@ -1549,6 +1624,17 @@ mod tests {
     use super::*;
     #[test]
     fn social_sources_are_scoped_to_individual_media_and_namespaced() {
+        for url in ["https://www.facebook.com/reel/1368202691917922?locale=nb_NO","https://m.facebook.com/watch/?v=1368202691917922&_rdr"] {
+            assert_eq!(media_source(url).unwrap(),("https://www.facebook.com/reel/1368202691917922/".into(),"facebook-1368202691917922".into(),false));
+        }
+        assert!(media_source("https://facebook.com.evil.test/reel/1368202691917922/").is_err());
+        assert_eq!(
+            media_source("https://v.redd.it/97tokfai1f3i1/DASHPlaylist.mpd?tracking=1").unwrap(),
+            ("https://v.redd.it/97tokfai1f3i1/DASHPlaylist.mpd".into(), "reddit-video-97tokfai1f3i1".into(), false)
+        );
+        for invalid in ["https://v.redd.it.evil.test/a/DASHPlaylist.mpd", "https://v.redd.it/a/arbitrary", "https://v.redd.it/a/b/DASHPlaylist.mpd"] {
+            assert!(media_source(invalid).is_err());
+        }
         let video = "https://www.tiktok.com/@user.test/video/1234567890123456789";
         assert_eq!(
             media_source(&format!("{video}?list=tracking")).unwrap(),

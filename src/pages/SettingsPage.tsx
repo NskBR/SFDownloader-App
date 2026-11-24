@@ -1,4 +1,6 @@
 import {LocalThemes} from "../components/settings/LocalThemes";
+import {RgbThemeDialog} from "../components/settings/RgbThemeDialog";
+import {applyThemeSettings} from "../services/theme";
 import {
   Plus,
   Tags,
@@ -23,6 +25,7 @@ import {
   HardDrive,
   Type,
   Upload,
+  ChevronDown,
 } from "../components/icons";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
@@ -30,6 +33,7 @@ import { GameThemesCard } from "../components/settings/GameThemesCard";
 import { TestThemesCard } from "../components/settings/TestThemesCard";
 import { SettingsHeader } from "../components/settings/SettingsHeader";
 import { SettingsAdvancedTab } from "../components/settings/SettingsAdvancedTab";
+import { SettingsUpdatesTab } from "../components/settings/SettingsUpdatesTab";
 import { invoke } from "@tauri-apps/api/core";
 import { defaultSettings, defaultTestTheme } from "../domain/settings";
 import type { AppLanguage, AppSettings, AccentColor, AppColor } from "../domain/settings";
@@ -107,6 +111,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
   const [editName, setEditName] = useState("");
   const [editExts, setEditExts] = useState("");
   const [customizerModalOpen, setCustomizerModalOpen] = useState(false);
+  const [themesExpanded, setThemesExpanded] = useState(false);
+  const [rgbDialogOpen,setRgbDialogOpen] = useState(false);
+  const [accentRgbDialogOpen,setAccentRgbDialogOpen] = useState(false);
   const [customFonts, setCustomFonts] = useState<ImportedFont[]>([]);
   const [importingFont, setImportingFont] = useState(false);
   useEffect(() => { void invoke<ImportedFont[]>("list_custom_fonts").then(setCustomFonts).catch(console.error); }, []);
@@ -339,6 +346,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     { id: "arquivos", label: t.settings.tabs.files, icon: <Folder size={16} /> },
     { id: "idioma", label: t.settings.tabs.language, icon: <Globe size={16} /> },
     { id: "avancado", label: t.settings.tabs.advanced, icon: <Settings2 size={16} /> },
+    { id: "atualizacao", label: settings.language === "pt-BR" ? "Atualização" : "Updates", icon: <Download size={16} /> },
   ];
 
   return (
@@ -591,7 +599,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: PERSONALIZAÇÃO */}
         {activeTab === "personalizacao" && (
           <div className="cfg-tab-view">
-            {/* Card 1: Tema do aplicativo (6 Temas) */}
+            {/* Galeria de temas do aplicativo */}
             <div className="cfg-card">
               <div className="cfg-card-header cfg-theme-header">
                 <div>
@@ -604,19 +612,15 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                     localThemeId:undefined, gameTheme:"none" as const, testTheme:{...defaultTestTheme}, defaultThemeInitialized:true};
                   setDraft(next);onSave(next);
                 }}>Restaurar tema padrão</button>
-                <button type="button" className="cfg-theme-customize-button" onClick={() => setCustomizerModalOpen(true)}>
-                  <Palette size={15} /> Personalizar
-                </button>
               </div>
 
               <div className="cfg-card-content">
-                <div className="cfg-themes-grid">
-                  {settingsThemePresets.map((theme) => {
-                    const isSelected = draft.gameTheme === "none" && !draft.testTheme.enabled && selectedThemeId === theme.id;
+                <div className="cfg-themes-grid" id="app-theme-gallery">
+                  {settingsThemePresets.filter((theme, index) => themesExpanded || index < 6 || theme.id === selectedThemeId).map((theme) => {
+                    const isSelected = !draft.localThemeId && draft.gameTheme === "none" && !draft.testTheme.enabled && selectedThemeId === theme.id;
 
                     return (
-                      <button
-                        key={theme.id}
+                      <div key={theme.id} className="cfg-theme-tile-wrapper"><button
                         type="button"
                         className={`cfg-theme-tile ${isSelected ? "is-selected" : ""}`}
                         onClick={() => {
@@ -638,6 +642,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                               gameTheme: "none" as const,
                               localThemeId:undefined, testTheme: { ...draft.testTheme, enabled: false },
                               interfaceGradient: {
+                                rgb: theme.id === 'rgb-spectrum',
                                 enabled: true,
                                 type: "linear" as const,
                                 angle: 135,
@@ -661,7 +666,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
                         {/* Mini UI Mockup Graphic */}
                         <div
-                          className="cfg-theme-preview"
+                          className={`cfg-theme-preview ${theme.id === "rgb-spectrum" ? "cfg-theme-preview-rgb" : ""}`}
                           style={{
                             background:
                               theme.bg,
@@ -669,7 +674,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         >
                           <>
                               <div className="cfg-mini-sidebar">
-                                <div className="cfg-mini-logo" style={{ color: theme.accent }} />
+                                <div className="cfg-mini-logo" style={{ background: theme.accent }} />
                                 <div className="cfg-mini-icon" />
                                 <div className="cfg-mini-icon" />
                                 <div className="cfg-mini-icon" />
@@ -693,19 +698,16 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                           <span className="cfg-theme-name">{theme.name}</span>
                           {isSelected && <span className="cfg-theme-status">{t.settings.personalization.customCurrent}</span>}
                         </div>
-                      </button>
+                      </button>{(theme.id==='rgb-spectrum' || theme.id==='slate') && <button type="button" className="cfg-rgb-gear" aria-label={theme.id==='slate'?'Personalizar tema padrão':'Configurar tema RGB'} title={theme.id==='slate'?'Personalizar tema padrão':'Configurar RGB'} onClick={()=>theme.id==='slate'?setCustomizerModalOpen(true):setRgbDialogOpen(true)}><Settings2 size={15}/></button>}</div>
                     );
                   })}
                 </div>
+                <button type="button" className="cfg-theme-gallery-toggle" aria-expanded={themesExpanded} aria-controls="app-theme-gallery" onClick={() => setThemesExpanded(expanded => !expanded)}>
+                  <ChevronDown size={16} aria-hidden="true" />
+                  {themesExpanded ? "Recolher temas" : `Ver todos os ${settingsThemePresets.length} temas`}
+                </button>
               </div>
             </div>
-
-            <GameThemesCard selected={draft.gameTheme} wallpapers={draft.themeWallpapers} onSelect={(gameTheme,wallpaperId) => {
-              const next = { ...draft, localThemeId:undefined, gameTheme, themeWallpapers:wallpaperId?{...draft.themeWallpapers,[gameTheme]:wallpaperId}:draft.themeWallpapers, testTheme: { ...draft.testTheme, enabled: false } };
-              setDraft(next); void save(next);
-            }} />
-
-            <LocalThemes selected={draft.localThemeId} onSelect={localThemeId=>{const next={...draft,localThemeId,gameTheme:"none" as const,testTheme:{...draft.testTheme,enabled:false}};setDraft(next);void save(next);}}/>
 
             {/* Card 2: Cor de destaque (Intacto) */}
             <div className="cfg-card">
@@ -729,25 +731,37 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                     { id: "violet", name: "Violeta Ametista", bg: "#8b5cf6" },
                     { id: "pink", name: "Pink Neon", bg: "#ec4899" },
                     { id: "coral", name: "Coral Laranja", bg: "#f97316" },
+                    { id: "lime", name: "Verde Lima", bg: "#a3e635" },
+                    { id: "teal", name: "Turquesa", bg: "#2dd4bf" },
+                    { id: "indigo", name: "Índigo", bg: "#6366f1" },
+                    { id: "lavender", name: "Lavanda", bg: "#c084fc" },
+                    { id: "rose", name: "Rosa Suave", bg: "#fb7185" },
+                    { id: "silver", name: "Prata", bg: "#cbd5e1" },
                     { id: "gradient_sunset", name: "Gradiente Fogo Sunset", bg: "linear-gradient(135deg, #ff4500, #ff8c00)" },
                     { id: "gradient_cyberpunk", name: "Gradiente Cyberpunk Pink/Roxo", bg: "linear-gradient(135deg, #ec4899, #8b5cf6)" },
                     { id: "gradient_ocean", name: "Gradiente Oceano Ciano/Azul", bg: "linear-gradient(135deg, #06b6d4, #3b82f6)" },
                     { id: "gradient_aurora", name: "Gradiente Aurora Esmeralda/Ciano", bg: "linear-gradient(135deg, #10b981, #06b6d4)" },
                     { id: "gradient_flow", name: "✨ Cosmic Flow (Gradiente Animado)", bg: "linear-gradient(135deg, #00f2fe, #7928ca, #ff007a)" },
                   ].map((item) => (
-                    <button
-                      key={item.id}
+                    <span key={item.id} className="accent-swatch-wrapper"><button
                       type="button"
                       className={`accent-swatch ${draft.accentColor === item.id ? "active" : ""}`}
-                      style={{ background: item.bg }}
+                      style={{ background: "transparent" }}
                       onClick={() => update("accentColor", item.id as AccentColor)}
                       aria-label={item.name}
                       title={item.name}
-                    />
+                    ><span className="accent-swatch-fill" aria-hidden="true" style={{background:item.bg}}/></button>{item.id==='gradient_flow' && <button type="button" className="accent-rgb-gear" aria-label="Configurar destaque RGB" title="Configurar destaque RGB" onClick={()=>setAccentRgbDialogOpen(true)}><Settings2 size={11}/></button>}</span>
                   ))}
                 </div>
               </div>
             </div>
+
+            <GameThemesCard selected={draft.gameTheme} wallpapers={draft.themeWallpapers} onSelect={(gameTheme,wallpaperId) => {
+              const next = { ...draft, localThemeId:undefined, gameTheme, themeWallpapers:wallpaperId?{...draft.themeWallpapers,[gameTheme]:wallpaperId}:draft.themeWallpapers, testTheme: { ...draft.testTheme, enabled: false } };
+              setDraft(next); void save(next);
+            }} />
+
+            <LocalThemes selected={draft.localThemeId} onSelect={localThemeId=>{const next={...draft,localThemeId,gameTheme:"none" as const,testTheme:{...draft.testTheme,enabled:false}};setDraft(next);void save(next);}}/>
 
             <div className="cfg-card">
               <div className="cfg-card-header">
@@ -804,8 +818,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             {customizerModalOpen && (
               <ThemeCustomizerModal
                 config={draft.interfaceGradient}
-                onChangeGradient={(val) => {
-                  const next = { ...draft, interfaceGradient: val };
+                profiles={draft.customThemeProfiles??[]}
+                onPreview={value=>applyThemeSettings({...draft,localThemeId:undefined,gameTheme:'none',testTheme:{...draft.testTheme,enabled:false},interfaceGradient:{...value,rgb:false}})}
+                onCancelPreview={()=>applyThemeSettings(draft)}
+                onChangeGradient={(val,customThemeProfiles) => {
+                  const next = { ...draft, customThemeProfiles:customThemeProfiles??draft.customThemeProfiles,localThemeId:undefined,gameTheme:'none' as const,testTheme:{...draft.testTheme,enabled:false},interfaceGradient: {...val,rgb:false} };
                   setDraft(next);
                   onSave(next);
                 }}
@@ -1087,6 +1104,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         )}
 
         {/* ABA: AVANÇADO */}
+        {activeTab === "atualizacao" && <SettingsUpdatesTab t={t}/>}
         {activeTab === "avancado" && (
           <SettingsAdvancedTab
             t={t}
@@ -1107,6 +1125,17 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             onConfigureGlobalSchedule={() => void configureGlobalSchedule()}
           />
         )}      </div>
+      {rgbDialogOpen && <RgbThemeDialog config={draft.rgbConfig} profiles={draft.rgbProfiles??[]} onClose={()=>setRgbDialogOpen(false)}
+      onPreview={rgbConfig=>applyThemeSettings({...draft,rgbConfig,gameTheme:'none',localThemeId:undefined,testTheme:{...draft.testTheme,enabled:false},interfaceGradient:{...draft.interfaceGradient,rgb:true,enabled:true,stops:[{color:'#161125',position:0},{color:'#080e16',position:100}]}})}
+      onCancelPreview={()=>applyThemeSettings(draft)} onApply={(rgbConfig,rgbProfiles)=>{
+        const next={...draft,rgbConfig,rgbProfiles,gameTheme:'none' as const,localThemeId:undefined,testTheme:{...draft.testTheme,enabled:false},interfaceGradient:{...draft.interfaceGradient,rgb:true,enabled:true,stops:[{color:'#161125',position:0},{color:'#080e16',position:100}]}};
+        setDraft(next);onSave(next);
+      }}/>}
+      {accentRgbDialogOpen && <RgbThemeDialog title="Destaque RGB" config={draft.accentRgbConfig} profiles={draft.accentRgbProfiles??[]} onClose={()=>setAccentRgbDialogOpen(false)}
+      onPreview={accentRgbConfig=>applyThemeSettings({...draft,accentRgbConfig,accentColor:'gradient_flow'})}
+      onCancelPreview={()=>applyThemeSettings(draft)} onApply={(accentRgbConfig,accentRgbProfiles)=>{
+        const next={...draft,accentRgbConfig,accentRgbProfiles,accentColor:'gradient_flow' as const};setDraft(next);onSave(next);
+      }}/>}
     </section>
   );
 }

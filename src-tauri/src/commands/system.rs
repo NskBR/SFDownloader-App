@@ -1,33 +1,10 @@
 use reqwest::Url;
 
-#[cfg(windows)]
-static COMPLETION_SOUND_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-
 #[tauri::command]
 pub async fn play_completion_sound() -> Result<(), String> {
     #[cfg(windows)]
     {
-        // PlaySound is process-wide: overlapping calls can interrupt each other.
-        let _guard = COMPLETION_SOUND_LOCK.lock().await;
-        return tokio::task::spawn_blocking(|| {
-            use windows_sys::Win32::Media::Audio::{
-                PlaySoundW, SND_MEMORY, SND_NODEFAULT, SND_SYNC,
-            };
-            static SOUND: &[u8] = include_bytes!("../../assets/download-complete.wav");
-            // SND_MEMORY is synchronous: keep the embedded WAV alive until playback ends.
-            let played = unsafe {
-                PlaySoundW(
-                    SOUND.as_ptr().cast::<u16>(),
-                    std::ptr::null_mut(),
-                    SND_MEMORY | SND_NODEFAULT | SND_SYNC,
-                )
-            };
-            if played == 0 {
-                Err("Não foi possível reproduzir o som de conclusão.".into())
-            } else {
-                Ok(())
-            }
-        })
+        return tokio::task::spawn_blocking(super::completion_sound::play)
         .await
         .map_err(|error| error.to_string())?;
     }

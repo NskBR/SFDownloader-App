@@ -917,7 +917,9 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   color: var(--accent-amber); background: rgba(240, 178, 50, 0.14);
   border: 1px solid rgba(240, 178, 50, 0.4);
 }
-.accent-swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.archive-password-indicator { display:inline-flex; align-items:center; color:#ef4444; flex-shrink:0; cursor:help; }
+.archive-password-indicator:focus-visible { outline:2px solid #ef4444; outline-offset:3px; border-radius:3px; }
+.accent-swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; }
 .accent-swatches.swatches-locked { opacity: 0.4; pointer-events: none; filter: saturate(0.6); }
 .accent-swatch {
   width: 32px; height: 32px; border-radius: 50%;
@@ -962,159 +964,23 @@ input, textarea, [contenteditable="true"], .path-display, .path-row {
   }
 }
 
-.accent-swatch[title*="Cosmic Flow"] {
+.accent-swatch[title*="Cosmic Flow"] .accent-swatch-fill {
   background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
   background-size: 300% 300% !important;
   animation: sf-cosmic-gradient-shift 4s ease infinite !important;
 }
 
 /* 1. Indicador das abas das configurações */
+/* RGB uses the same animated tokens everywhere; SVG geometry stays untouched. */
+[data-accent="gradient_flow"] .sidebar-indicator,
 [data-accent="gradient_flow"] .cfg-tabs-indicator {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(121, 40, 202, 0.28), rgba(255, 0, 122, 0.22), rgba(0, 242, 254, 0.22)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  box-shadow: 0 4px 18px rgba(121, 40, 202, 0.4) !important;
+  background:var(--ember-soft);
+  border-color:var(--ember-solid);
 }
-
-[data-accent="gradient_flow"] .cfg-tabs-indicator::before {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-}
-
-/* 2. Indicador deslizante da Sidebar */
-[data-accent="gradient_flow"] .sidebar-indicator {
-  border: 1px solid transparent !important;
-  background:
-    linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(121, 40, 202, 0.28), rgba(255, 0, 122, 0.22), rgba(0, 242, 254, 0.22)) padding-box,
-    linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) border-box !important;
-  background-size: 300% 300% !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  box-shadow: 0 4px 18px rgba(121, 40, 202, 0.4) !important;
-}
-
-[data-accent="gradient_flow"] .sidebar-indicator::before {
-  background: transparent !important;
-  animation: none !important;
-}
-
-/* 3. Chaves de alternância (Toggles/Seletores) */
-[data-accent="gradient_flow"] .toggle.toggle--on,
-[data-accent="gradient_flow"] button.toggle--on,
-[data-accent="gradient_flow"] .toggle[aria-checked="true"] {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  box-shadow: 0 0 14px rgba(121, 40, 202, 0.5) !important;
-}
-
-/* 4. Botão de tema da Titlebar */
-[data-accent="gradient_flow"] .titlebar-theme-btn.active {
-  color: var(--white) !important;
-  border: 1px solid transparent !important;
-  background:
-    linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(121, 40, 202, 0.3), rgba(255, 0, 122, 0.25), rgba(0, 242, 254, 0.25)) padding-box,
-    linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) border-box !important;
-  background-size: 300% 300% !important;
-  background-origin: border-box !important;
-  background-clip: padding-box, border-box !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  box-shadow: 0 0 14px rgba(121, 40, 202, 0.45) !important;
-}
-
-/* O indicador móvel desenha o destaque do rodapé inteiro. */
-[data-accent="gradient_flow"] .sidebar-footer-btn.active {
-  color: var(--white) !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  animation: none !important;
-}
-
 [data-accent="gradient_flow"] .sidebar-footer-btn.active svg,
-[data-accent="gradient_flow"] .titlebar-theme-btn.active svg {
-  animation: sf-cosmic-icon-shift 4s ease infinite alternate !important;
-}
-
-/* 5. Badges de versão e contadores ativos */
-[data-accent="gradient_flow"] .badge-version,
-[data-accent="gradient_flow"] .version-badge,
-[data-accent="gradient_flow"] .navigation__item--active .counter-badge {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  color: var(--white) !important;
-}
-
-/* 6. Ícones do aplicativo e navegação */
-[data-accent="gradient_flow"] .navigation__item--active div svg,
-[data-accent="gradient_flow"] .navigation__item--active span {
-  color: var(--white) !important;
-}
-
-[data-accent="gradient_flow"] .navigation__item--active div svg,
-[data-accent="gradient_flow"] .cfg-card-icon-box svg,
-[data-accent="gradient_flow"] .dw-icon-btn svg,
-[data-accent="gradient_flow"] .sidebar-nav-item.active .navigation__icon {
-  animation: sf-cosmic-icon-shift 4s ease infinite alternate !important;
-}
-
-[data-accent="gradient_flow"] .brand__logo {
-  animation: sf-cosmic-logo-glow 4s ease-in-out infinite alternate !important;
-}
-
-/* 7. Caixas de ícones de cartões de configurações */
-[data-accent="gradient_flow"] .cfg-card-icon-box {
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(121, 40, 202, 0.24), rgba(255, 0, 122, 0.18), rgba(0, 242, 254, 0.18)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  border: 1px solid rgba(168, 85, 247, 0.35) !important;
-}
-
-/* 8. Botões de ação primária em todo o app */
-[data-accent="gradient_flow"] .btn-primary,
-[data-accent="gradient_flow"] .cfg-btn-primary,
-[data-accent="gradient_flow"] .confirm-btn-start,
-[data-accent="gradient_flow"] .dw-btn-primary,
-[data-accent="gradient_flow"] .action-btn--primary,
-[data-accent="gradient_flow"] .confirm-v2-btn-start,
-[data-accent="gradient_flow"] .add-download-btn,
-[data-accent="gradient_flow"] .dialog-btn-primary {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-  border-color: transparent !important;
-}
-
-/* 9. Barras de progresso ativas (Horizontal / Janelas / Lista) */
-[data-accent="gradient_flow"] .dw-bar i,
-[data-accent="gradient_flow"] .dw-bar--active i,
-[data-accent="gradient_flow"] .item-progress-fill,
-[data-accent="gradient_flow"] .progress-bar-fill,
-[data-accent="gradient_flow"] .progress-fill,
-[data-accent="gradient_flow"] .download-card-progress-bar i,
-[data-accent="gradient_flow"] .torrent-bar-fill {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 3s ease infinite !important;
-}
-
-/* 10. Checkmark e card do tema selecionado */
-[data-accent="gradient_flow"] .theme-preset-card.active {
-  box-shadow: 0 0 0 2px #a855f7, 0 4px 18px rgba(168, 85, 247, 0.45) !important;
-}
-
-[data-accent="gradient_flow"] .theme-check {
-  background: linear-gradient(135deg, var(--cyan-bright), #7928ca, #ff007a, var(--cyan-bright)) !important;
-  background-size: 300% 300% !important;
-  animation: sf-cosmic-gradient-shift 4s ease infinite !important;
-}
-
-/* Desativação caso a opção esteja desligada */
-body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
-  animation: none !important;
+[data-accent="gradient_flow"] .navigation__item--active svg,
+[data-accent="gradient_flow"] .cfg-card-icon-box svg {
+  color:var(--ember-solid);
 }
 
 .appcolor-swatch {
@@ -1984,7 +1850,8 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
 .dw-details-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 12px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--white-08);
   flex-shrink: 0;
@@ -2011,10 +1878,16 @@ body.sidebar-anim-disabled [data-accent="gradient_flow"] * {
 }
 
 .dw-details-header-title {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
   font-size: 12px;
   font-weight: 700;
   color: var(--text, var(--text-strong));
 }
+.dw-details-close { display:grid; place-items:center; flex-shrink:0; width:28px; height:28px; padding:0; background:transparent; color:var(--text-2); border:0; border-radius:6px; cursor:pointer; }
+.dw-details-close:hover { color:var(--text); background:var(--surface-2); }
+.dw-details-close:focus-visible { outline:2px solid var(--ember-solid); outline-offset:2px; }
 
 .dw-details-compact-body {
   flex: 1;
@@ -4982,3 +4855,76 @@ html .titlebar-integration .titlebar-extension-button:hover {
 .sf-animated-icon { display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;flex-shrink:0;line-height:0;background:transparent !important;border:0 !important;box-shadow:none !important; }
 .sf-animated-icon > span { display:inline-flex;align-items:center;justify-content:center;line-height:0; }
 .sf-animated-icon svg { display:block;flex-shrink:0;stroke-width:var(--sf-icon-stroke,2); }
+.window-skeleton { width:100%; box-sizing:border-box; padding:20px; display:grid; gap:14px; align-content:center; min-height:140px; }
+.window-skeleton-heading { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+.window-skeleton-heading > div { flex:1; display:grid; gap:10px; }
+.window-skeleton-heading span,.window-skeleton-fields span { display:block; border-radius:6px; background:color-mix(in srgb,var(--text-2) 16%,transparent); animation:window-skeleton-pulse 1.6s ease-in-out infinite; }
+.window-skeleton-thumb { width:56px; height:48px; flex-shrink:0; }
+.window-skeleton-heading > div span { width:85%; height:14px; }
+.window-skeleton-heading > div span + span { width:55%; height:10px; }
+.window-skeleton-fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.window-skeleton-fields span { height:32px; }
+.window-skeleton-label { color:var(--text-2); font-size:12px; }
+@keyframes window-skeleton-pulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .window-skeleton-heading span,.window-skeleton-fields span { animation:none; } }
+.downloads-skeleton-item { display:flex; align-items:center; gap:16px; padding:20px; min-width:0; box-sizing:border-box; }
+.downloads-skeleton-icon,.downloads-skeleton-copy span,.downloads-skeleton-action { display:block; border-radius:6px; background:color-mix(in srgb,var(--text-2) 16%,transparent); animation:window-skeleton-pulse 1.6s ease-in-out infinite; }
+.downloads-skeleton-icon { width:40px; height:40px; flex-shrink:0; }
+.downloads-skeleton-copy { flex:1; min-width:0; display:grid; gap:12px; }
+.downloads-skeleton-copy span { height:12px; width:70%; }
+.downloads-skeleton-copy span + span { height:9px; width:38%; }
+.downloads-skeleton-action { width:28px; height:28px; flex-shrink:0; }
+.downloads-skeleton.view-grid .downloads-skeleton-item { flex-wrap:wrap; align-content:start; min-height:140px; }
+.downloads-skeleton.view-grid .downloads-skeleton-copy { flex-basis:calc(100% - 56px); }
+@media (prefers-reduced-motion:reduce) { .downloads-skeleton span { animation:none; } }
+.cfg-patch-versions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.cfg-patch-versions button[aria-pressed="true"] { background:var(--ember); color:var(--text); }
+.cfg-patch-notes { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.65; color:var(--text); margin:0; }
+.cfg-patch-list { border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:260px; margin-top:14px; }
+.cfg-patch-list button { display:flex; justify-content:space-between; align-items:center; width:100%; padding:14px; background:transparent; color:var(--text); border:0; cursor:pointer; text-align:left; }
+.cfg-patch-list button + button { border-top:1px solid var(--line); }
+.cfg-patch-list button:hover,.cfg-patch-list button:focus-visible { background:var(--surface-2); }
+.update-notes-dialog.cfg-history-dialog { box-sizing:border-box; width:min(600px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); padding:0; overflow:hidden; color:var(--text); background:var(--panel); font-family:var(--font); }
+.update-notes-dialog.cfg-history-dialog > header { padding:22px 24px 16px; flex-shrink:0; }
+.update-notes-dialog.cfg-history-dialog .cfg-history-body { min-height:0; overflow-y:auto; padding:8px 24px 24px; user-select:text; }
+.update-notes-dialog.cfg-history-dialog .cfg-patch-notes { margin:0; color:var(--text); font-family:inherit; font-size:14px; line-height:1.75; }
+.update-notes-dialog.cfg-history-dialog .cfg-history-close { display:grid; place-items:center; padding:6px; width:32px; height:32px; min-height:0; border:0; background:transparent; color:var(--text-2); flex-shrink:0; }
+.update-notes-dialog.cfg-history-dialog .cfg-history-close:hover { background:var(--surface-2); color:var(--text); }
+.update-notes-dialog.cfg-history-dialog > footer { margin:0; padding:16px 24px; flex-shrink:0; }
+.cfg-history-dialog header { display:flex; justify-content:space-between; gap:16px; }
+.cfg-history-dialog h2 { margin:0; font-size:20px; }
+.cfg-history-dialog header p { color:var(--text-2); font-size:12px; }
+.cfg-history-close { align-self:start; background:transparent; color:var(--text); border:0; padding:6px; cursor:pointer; }
+.cfg-history-body { padding:16px 0; display:grid; gap:18px; }
+.cfg-history-dialog footer { display:flex; justify-content:flex-end; border-top:1px solid var(--line); padding-top:16px; }
+.window-skeleton-heading span,.window-skeleton-fields span,.downloads-skeleton-icon,.downloads-skeleton-copy span,.downloads-skeleton-action,.dw-skeleton { background:color-mix(in srgb,var(--ember-solid) 22%,var(--surface)); }
+html[data-test-theme="true"][data-test-preset] .update-notes-dialog.cfg-history-dialog {
+  background:var(--game-surface,var(--surface));
+  color:var(--text);
+  border-color:color-mix(in srgb,var(--ember-solid) 35%,var(--line));
+  font-family:var(--font);
+}
+html[data-test-theme="true"][data-test-preset] .cfg-history-dialog > header,
+html[data-test-theme="true"][data-test-preset] .cfg-history-dialog > footer {
+  background:var(--game-surface,var(--surface));
+}
+html[data-test-theme="true"][data-test-preset] .cfg-history-dialog > footer button {
+  background:var(--game-raised,var(--surface-2));
+  color:var(--text);
+  border-color:color-mix(in srgb,var(--ember-solid) 45%,var(--line));
+}
+.sidebar .counter-badge {
+  background:var(--test-glass-fill,linear-gradient(145deg,color-mix(in srgb,var(--surface) 52%,transparent),color-mix(in srgb,var(--surface-2) 18%,transparent)));
+  backdrop-filter:blur(16px) saturate(125%);
+  -webkit-backdrop-filter:blur(16px) saturate(125%);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 7%,transparent),0 4px 12px color-mix(in srgb,var(--bg) 20%,transparent);
+  color:var(--text-2);
+}
+.sidebar .navigation__item--active .counter-badge {
+  background:linear-gradient(var(--ember-soft),var(--ember-soft)),var(--test-glass-fill,var(--surface));
+  color:var(--ember-solid);
+}
+/* Decorative descendants must let the drag-region header receive pointer events. */
+.dw-title > span,
+.dw-title > span *,
+.dw-details-header-title { pointer-events:none; }

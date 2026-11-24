@@ -1,10 +1,12 @@
 import type { AppFont } from "./appFonts";
+import {defaultRgbConfig} from "./rgbTheme";
 
 export type SpeedUnit = "Mbps" | "MB/s";
 export type AppTheme = "system" | "midnight" | "graphite" | "light";
 export type AppLanguage = "pt-BR" | "en-US";
 export type AccentColor =
   | "cyan"
+  | "lime" | "teal" | "indigo" | "lavender" | "rose" | "silver"
   | "emerald"
   | "amber"
   | "red"
@@ -27,6 +29,7 @@ export interface GradientStop {
 }
 
 export interface GradientConfig {
+  rgb?: boolean;
   enabled: boolean;
   type: "linear" | "radial";
   angle: number;
@@ -89,6 +92,11 @@ export interface AppSettings {
   accentColor: AccentColor;
   appColor: AppColor;
   interfaceGradient: GradientConfig;
+  rgbConfig?: import("./rgbTheme").RgbConfig;
+  rgbProfiles?: import("./rgbTheme").RgbProfile[];
+  accentRgbConfig?: import("./rgbTheme").RgbConfig;
+  accentRgbProfiles?: import("./rgbTheme").RgbProfile[];
+  customThemeProfiles?: import("./themeProfiles").ThemeProfile[];
   sidebarAnimation: boolean;
   customCategories: CustomCategory[];
   autoStartDownloads?: boolean;
@@ -102,6 +110,11 @@ export interface AppSettings {
 }
 
 export const defaultSettings: AppSettings = {
+  accentRgbConfig: {...defaultRgbConfig,colors:[...defaultRgbConfig.colors]},
+  accentRgbProfiles: [],
+  customThemeProfiles: [],
+  rgbConfig: {...defaultRgbConfig,colors:[...defaultRgbConfig.colors]},
+  rgbProfiles: [],
   rootDownloadFolder: "",
   secondaryDownloadFolder: "",
   secondaryFolderEnabled: false,

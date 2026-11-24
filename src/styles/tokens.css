@@ -124,7 +124,7 @@
 /* Acessibilidade: o foco via teclado precisa permanecer visível mesmo onde
    componentes específicos removem o outline visual padrão. */
 :where(button, a, input, select, textarea, [role="button"], [tabindex]):focus-visible {
-  outline: 3px solid var(--ember-strong);
+  outline: 3px solid var(--ember-solid);
   outline-offset: 3px;
   box-shadow: 0 0 0 2px var(--bg);
 }

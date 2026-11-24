@@ -13,6 +13,11 @@
   --st-connected: #00b884;
   --st-disconnected: #828e9e;
 }
+.page-download-card { display:flex;flex-direction:column;gap:7px;margin-bottom:12px; }
+#download-page { width:100%;border:1px solid var(--ember);border-radius:9px;padding:10px 12px;background:var(--ember-soft);color:var(--text);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer; }
+#download-page:hover:not(:disabled) { filter:brightness(1.15); }
+#download-page:disabled { opacity:.45;cursor:default; }
+#download-page:focus-visible { outline:2px solid var(--ember);outline-offset:2px; }
 
 * {
   box-sizing: border-box;

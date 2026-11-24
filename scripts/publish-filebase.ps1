@@ -78,6 +78,7 @@ try {
         $patchNotesPath = Join-Path $temp 'patch-notes.txt'
         [IO.File]::WriteAllText($patchNotesPath, $notes, $utf8)
         Upload $patchNotesPath "$key/patch-notes.txt" $immutable 'text/plain; charset=utf-8'
+        Assert-PublicHash "$($config.publicBaseUrl)/$($config.publicPrefix)/releases/$version/patch-notes.txt" (Get-Sha256 $patchNotesPath) (Get-Item -LiteralPath $patchNotesPath).Length
     }
     Upload $jsonPath "$($config.prefix)/latest.json" 'no-store' 'application/json'
     Write-Host '[5/5] Verificando o manifesto publicado...'

@@ -72,7 +72,7 @@ async function createSignedHeaders(request, originUrl, env) {
   return headers;
 }
 
-const publicPath = /^\/sfdownloader\/desktop\/(?:latest\.json|SFDownloader-Windows-x64-setup\.exe|releases\/\d+\.\d+\.\d+\/(?:latest\.json|SFDownloader-Windows-x64-setup\.exe|SHA256SUMS))$/;
+const publicPath = /^\/sfdownloader\/desktop\/(?:latest\.json|SFDownloader-Windows-x64-setup\.exe|releases\/\d+\.\d+\.\d+\/(?:latest\.json|SFDownloader-Windows-x64-setup\.exe|SHA256SUMS|patch-notes\.txt))$/;
 
 export default {
   async fetch(request, env) {

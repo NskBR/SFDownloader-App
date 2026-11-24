@@ -1,5 +1,7 @@
-import { gameThemeIds, defaultSettings, type AppSettings } from "../domain/settings";
+import {normalizeWindowBorder} from "../domain/windowBorder";
+import { gameThemeIds, defaultSettings, type AppSettings, type GameTheme } from "../domain/settings";
 import { appFontIds, type AppFont } from "../domain/appFonts";
+import {currentThemeManifest} from "./gameThemeManifest";
 import {selectedWallpaper} from "../domain/themeWallpapers";
 import {normalizeRgbConfig,normalizeRgbProfiles} from "../domain/rgbTheme";
 import {normalizeThemeProfiles} from "../domain/themeProfiles";
@@ -150,14 +152,14 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
       panelOpacity: numberFrom(testTheme.panelOpacity, base.testTheme.panelOpacity, 60, 100),
       position: valueFrom(testTheme.position, ["center", "left", "right"], "center"),
     },
-    gameTheme: valueFrom(value.gameTheme === "sarah-house" ? "none" : value.gameTheme, ["none", ...gameThemeIds], legacyGameTheme ? "cyberpunk" : "none"),
+    gameTheme: typeof value.gameTheme==="string"&&/^catalog:[a-z0-9-]{1,80}$/.test(value.gameTheme)?value.gameTheme as GameTheme:valueFrom(value.gameTheme === "sarah-house" ? "none" : value.gameTheme, ["none", ...gameThemeIds], legacyGameTheme ? "cyberpunk" : "none"),
     uiScale: numberFrom(value.uiScale, base.uiScale, 0.8, 1.5),
     startInTrayMode: booleanFrom(value.startInTrayMode, base.startInTrayMode),
     launchOnStartup: booleanFrom(value.launchOnStartup, base.launchOnStartup),
     language: valueFrom(value.language, languages, base.language),
     localThemeId:typeof value.localThemeId === "string" && /^[a-f0-9]{64}:[0-9]{1,2}$/.test(value.localThemeId)?value.localThemeId:undefined,
     cssThemesEnabled: value.cssThemesEnabled === true,
-    themeWallpapers:Object.fromEntries(gameThemeIds.flatMap(id=>{
+    themeWallpapers:Object.fromEntries(([...gameThemeIds,...new Set(currentThemeManifest().filter(e=>e.collection).map(e=>`catalog:${e.collection}` as const))] as Exclude<GameTheme,"none">[]).flatMap(id=>{
       const saved=isRecord(value.themeWallpapers)?value.themeWallpapers[id]:undefined;
       return typeof saved==="string"?[[id,selectedWallpaper(id,saved).id]]:[];
     })),
@@ -177,10 +179,20 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
       intensity: numberFrom(gradient.intensity, base.interfaceGradient.intensity, 0, 100),
       stops: stops.length >= 1 ? stops : base.interfaceGradient.stops,
     },
+    scrollInertiaStrength:valueFrom(value.scrollInertiaStrength,["soft","strong"],"soft"),
+    scrollbarStyle:valueFrom(value.scrollbarStyle,["default","thin","rounded","accent","glow","hidden"],"default"),
+    scrollInertia:booleanFrom(value.scrollInertia,false),
     sidebarAnimation: booleanFrom(value.sidebarAnimation, base.sidebarAnimation),
+    navigationPosition:valueFrom(value.navigationPosition,["left","right","top","bottom","titlebar"],"left"),
+    windowBorder:normalizeWindowBorder(value.windowBorder),
+    navigationLabels:booleanFrom(value.navigationLabels,true),
+    windowControlsStyle:valueFrom(value.windowControlsStyle,["default","rounded","outlined","traffic","compact","minimal","xbox","playstation","nintendo","apple"],"default"),
+    iconStyle:valueFrom(value.iconStyle,["filled","classic"],"filled"),
     customCategories: categories,
     autoStartDownloads: booleanFrom(value.autoStartDownloads, base.autoStartDownloads ?? true),
     openFolderOnComplete: booleanFrom(value.openFolderOnComplete, base.openFolderOnComplete ?? false),
+    completionSound:typeof value.completionSound==='string' && (/^custom:[a-f0-9]{64}$/.test(value.completionSound)||['default','soft','bright','arcade','bell'].includes(value.completionSound))?value.completionSound:'default',
+    completionSoundName:typeof value.completionSoundName==='string'?value.completionSoundName.slice(0,100):'',
     playSoundOnComplete: booleanFrom(value.playSoundOnComplete, base.playSoundOnComplete ?? true),
     autoRenameDuplicates: booleanFrom(value.autoRenameDuplicates, base.autoRenameDuplicates ?? false),
     downloadPriority: stringFrom(value.downloadPriority, base.downloadPriority ?? "Alta"),
@@ -191,6 +203,7 @@ export function normalizeSettings(value: unknown, fallbackLanguage: AppSettings[
 export function syncExtensionTheme(settings: AppSettings): void {
   try {
     const accentMap: Record<string, string> = {
+      lime: "#a3e635", teal: "#2dd4bf", indigo: "#6366f1", lavender: "#c084fc", rose: "#fb7185", silver: "#cbd5e1",
       cyan: "#06b6d4",
       emerald: "#10b981",
       amber: "#f59e0b",
@@ -212,28 +225,11 @@ export function syncExtensionTheme(settings: AppSettings): void {
     let bg = "linear-gradient(135deg, #12151b, #0b0d10)";
 
     if (settings.interfaceGradient?.enabled && settings.interfaceGradient.stops?.length) {
-      const firstStop = settings.interfaceGradient.stops[0]?.color.toLowerCase() || "";
-      if (firstStop === "#0b1638") {
-        accent = "#3b82f6";
-        bg = "linear-gradient(135deg, #0b1638, #040714)";
-      } else if (firstStop === "#320938") {
-        accent = "#8b5cf6";
-        bg = "linear-gradient(135deg, #320938, #050a1e)";
-      } else if (firstStop === "#0a0c10") {
-        accent = "#eab308";
-        bg = "linear-gradient(135deg, #0a0c10, #040507)";
-      } else if (firstStop === "#41010d") {
-        accent = "#ef4444";
-        bg = "linear-gradient(135deg, #41010d, #080204)";
-      } else if (firstStop === "#0a2818") {
-        accent = "#10b981";
-        bg = "linear-gradient(135deg, #0a2818, #040d08)";
-      } else {
-        const stops = settings.interfaceGradient.stops;
-        if (stops.length >= 2) {
-          bg = `linear-gradient(135deg, ${stops[0].color}, ${stops[1].color})`;
-        }
-      }
+      const gradient = settings.interfaceGradient;
+      const stops = gradient.stops.map(stop => `${stop.color} ${stop.position}%`).join(', ');
+      bg = gradient.type === 'radial'
+        ? `radial-gradient(circle, ${stops})`
+        : `linear-gradient(${gradient.angle}deg, ${stops})`;
     }
 
     void invoke("update_extension_theme", { accent, bg, language: settings.language }).catch(() => {});

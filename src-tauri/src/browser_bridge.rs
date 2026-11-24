@@ -40,6 +40,7 @@ pub struct BrowserBridge {
     token: String,
     contexts: Arc<Mutex<HashMap<String, HeaderContext>>>,
     last_seen: Arc<AtomicU64>,
+    extension_version: Arc<Mutex<Option<String>>>,
     theme_accent: Arc<Mutex<Option<String>>>,
     theme_bg: Arc<Mutex<Option<String>>>,
     language: Arc<Mutex<Option<String>>>,
@@ -53,6 +54,7 @@ impl Default for BrowserBridge {
             token: Uuid::new_v4().to_string(),
             contexts: Arc::new(Mutex::new(HashMap::new())),
             last_seen: Arc::new(AtomicU64::new(0)),
+            extension_version: Arc::new(Mutex::new(None)),
             theme_accent: Arc::new(Mutex::new(None)),
             theme_bg: Arc::new(Mutex::new(None)),
             language: Arc::new(Mutex::new(None)),
@@ -239,6 +241,9 @@ struct BrowserDownloadEvent {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowserBridgeDiagnostics {
+    installed_version: Option<String>,
+    available_version: Option<String>,
+    outdated: bool,
     listening: bool,
     connected: bool,
     port: u16,
@@ -357,7 +362,7 @@ fn cors_headers(request_headers: &AxumHeaderMap) -> AxumHeaderMap {
     );
     headers.insert(
         "access-control-allow-headers",
-        AxumHeaderValue::from_static("content-type"),
+        AxumHeaderValue::from_static("content-type, x-sf-extension-version"),
     );
     headers.insert(
         "access-control-allow-private-network",
@@ -480,6 +485,8 @@ async fn sync(State(state): State<BridgeState>, request_headers: AxumHeaderMap) 
     if !has_trusted_bridge_origin(&request_headers) {
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
+    let reported=request_headers.get("x-sf-extension-version").and_then(|value|value.to_str().ok()).filter(|value|extension_version_parts(value).is_some()).map(str::to_owned);
+    if let Ok(mut version)=state.bridge.extension_version.lock(){*version=reported;}
     state.bridge.mark_seen();
     let _ = state.app.emit("browser-extension-status", true);
     let theme_accent = state
@@ -632,7 +639,13 @@ pub fn browser_extension_status(bridge: tauri::State<'_, BrowserBridge>) -> bool
 pub fn browser_extension_diagnostics(
     bridge: tauri::State<'_, BrowserBridge>,
 ) -> BrowserBridgeDiagnostics {
+    let installed=bridge.extension_version.lock().ok().and_then(|value|value.clone());
+    let available=crate::commands::browser_extension::bundled_version("chromium").ok();
+    let outdated=bridge.is_connected() && installed.as_deref().and_then(extension_version_parts).zip(available.as_deref().and_then(extension_version_parts)).map(|(installed,available)|installed<available).unwrap_or(false);
     BrowserBridgeDiagnostics {
+        installed_version: if bridge.is_connected(){installed}else{None},
+        available_version: available,
+        outdated,
         listening: bridge.listening.load(Ordering::SeqCst),
         connected: bridge.is_connected(),
         port: BRIDGE_PORT,

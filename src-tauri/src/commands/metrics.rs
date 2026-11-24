@@ -113,3 +113,16 @@ pub fn import_metrics(app: AppHandle, database: State<'_, Database>) -> Result<(
         .map_err(|error| format!("Falha ao importar: {error}"))?;
     Ok(())
 }
+
+/// Preference-only reset: never remove tasks, chunks, history or downloaded files.
+#[tauri::command]
+pub fn reset_application_data(database: State<'_, Database>) -> Result<(), String> {
+    let mut connection = database.connect().map_err(|error| error.to_string())?;
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    metrics::reset(&transaction).map_err(|error| error.to_string())?;
+    transaction.execute("DELETE FROM global_download_schedule", []).map_err(|error|error.to_string())?;
+    transaction.execute("INSERT INTO global_download_schedule(id) VALUES(1)", []).map_err(|error|error.to_string())?;
+    transaction.execute("DELETE FROM app_settings", []).map_err(|error|error.to_string())?;
+    transaction.execute("INSERT INTO app_settings(id,auto_organize_enabled,theme) VALUES(1,0,'midnight')", []).map_err(|error|error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())
+}

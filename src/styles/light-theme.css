@@ -1,0 +1,63 @@
+/* Semantic light palette. No dark translucent fill is reused on light surfaces. */
+html[data-theme="light"] {
+ --text:#202936!important; --text-strong:#202936!important; --white:#202936;
+ --text-2:#495568!important; --text-3:#5e6a7b; --muted:#596577!important; --disabled:#768194;
+ --line:rgba(45,60,80,.19)!important; --line-soft:rgba(45,60,80,.1)!important;
+ --white-03:rgba(35,50,70,.03); --white-04:rgba(35,50,70,.04); --white-06:rgba(35,50,70,.06); --white-08:rgba(35,50,70,.08); --white-10:rgba(35,50,70,.1); --white-12:rgba(35,50,70,.12); --white-15:rgba(35,50,70,.15); --white-20:rgba(35,50,70,.2);
+ --st-completed:#087649!important; --st-failed:#be263b!important; --st-cancelled:#be263b!important; --st-paused:#8a5500!important;
+ --accent-danger:#be263b; --accent-warning:#8a5500; --accent-info:#245baf; --accent-ink:color-mix(in srgb,var(--ember-solid) 65%,#132334);
+ --shadow:0 8px 24px #25364d14; color-scheme:light;
+}
+html[data-theme="light"] .window-frame .download-card,
+html[data-theme="light"] .window-frame .cfg-card,
+html[data-theme="light"] .window-frame .game-theme-tile,
+html[data-theme="light"] .window-frame .cfg-theme-tile { background:var(--surface)!important; border-color:var(--line); color:var(--text); box-shadow:0 1px 3px #25364d08; }
+html[data-theme="light"] .window-frame .download-card:hover { background:var(--surface-2)!important; box-shadow:var(--shadow); }
+html[data-theme="light"] .window-frame .download-card.selected { background:linear-gradient(var(--ember-soft),var(--ember-soft)),var(--surface)!important; }
+html[data-theme="light"] :is(.card-file-name,.card-title,.cfg-card-title,.cfg-item-label,.cfg-theme-name,.confirm-title,.dw-title-name,.media-heading h1,.help-dialog h2) { color:var(--text)!important; }
+html[data-theme="light"] :is(.card-date,.card-info-row,.card-info-row .meta-size,.card-info-row .meta-speed,.cfg-card-subtitle,.cfg-item-desc,.cfg-path-label,.confirm-label,.dw-detail-label,.media-heading p) { color:var(--text-2)!important; }
+html[data-theme="light"] :is(.card-action-btn,.card-action-btn.menu-btn,.field-icon,.cfg-item-icon,.sort-direction) { color:var(--text-2); }
+html[data-theme="light"] :is(.card-source,.cfg-path-display,.cfg-item-row,.media-preview,.dw-details-card,.confirm-control-box,.custom-select-trigger,.search-container) { background:var(--panel)!important; color:var(--text)!important; border-color:var(--line)!important; }
+html[data-theme="light"] :is(.card-progress-bar-track,.dw-progress-track,.media-progress-track) { background:rgba(40,55,75,.13)!important; }
+html[data-theme="light"] :is(.counter-badge,.status-pill,.status-badge) { background:rgba(40,55,75,.07); }
+html[data-theme="light"] :is(.meta-done,.completed-check,.status-completed .status-badge) { color:var(--st-completed)!important; }
+html[data-theme="light"] :is(.ctx-menu,.custom-select-dropdown,.speed-limit-dialog,.help-dialog,.rgb-dialog,.update-dialog,.update-notes-dialog,.integr-dialog,.dw-details) { background:var(--panel)!important; color:var(--text)!important; border-color:var(--line)!important; box-shadow:var(--shadow)!important; }
+html[data-theme="light"] :is(.ctx-item,.custom-select-option) { color:var(--text)!important; }
+html[data-theme="light"] :is(.ctx-item,.custom-select-option):hover { background:var(--surface-2)!important; }
+html[data-theme="light"] :is(.ctx-sep,.dw-detail-row) { border-color:var(--line); }
+html[data-theme="light"] :is(.btn-layout-switcher,.sort-dropdown,.sort-direction,.secondary-button,.cfg-theme-customize-button,.cfg-path-display,.cfg-btn-alterar,.cfg-theme-gallery-toggle,.dw-btn-secondary) { background:var(--surface)!important; color:var(--text)!important; border-color:var(--line)!important; }
+html[data-theme="light"] :is(.navigation__item--active,.cfg-tab-btn.is-active,.btn-layout-switcher.active,.layout-preset[aria-pressed="true"]) { color:var(--text)!important; }
+html[data-theme="light"] :is(.cfg-card-icon-box,.navigation__item--active svg,.sidebar-footer-btn.active,.cfg-btn-alterar,.cfg-theme-status,.meta-eta.accent,.meta-status.accent,.footer-right svg,.footer-left svg) { color:var(--accent-ink)!important; }
+html[data-theme="light"] :is(.dw-window,.download-window,.confirm-v2,.media-window,.torrent-live-window,.torrent-confirm-window,.integr-layout,.dbg-window) { color:var(--text); }
+html[data-theme="light"] :is(input,textarea,select) { color:var(--text); caret-color:var(--accent-ink); }
+html[data-theme="light"] :is(input,textarea)::placeholder { color:var(--muted); opacity:1; }
+html[data-theme="light"] .rgb-dialog :is(button,input,.rgb-speed-options) { background:var(--surface); color:var(--text); border-color:var(--line); }
+html[data-theme="light"] .rgb-dialog .rgb-speed-options button[aria-pressed=true] { background:#7751c51a; color:#533096; border-color:#7751c580; }
+html[data-theme="light"] :is(.rgb-reverse,.layout-options) input { accent-color:var(--accent-ink); }
+html[data-theme="light"] .rgb-dialog:is(.theme-editor-dialog,.rgb-editor-dialog) { background:color-mix(in srgb,var(--panel) 85%,transparent)!important; }
+html[data-theme="light"] .cfg-theme-preview { color:#f3f4f6; }
+html[data-theme="light"] .cfg-theme-preview .cfg-mini-card { background:#ffffff1a; }
+html[data-theme="light"] :is(.cfg-theme-check-badge,.game-theme-check) { color:#fff!important; background:var(--accent-ink); }
+html[data-theme="light"] .window-frame .sidebar-footer-row { box-shadow:0 2px 12px #25364d0c; }
+html[data-theme="light"] .help-overlay .help-dialog > :is(header,footer) { background:var(--surface)!important; }
+
+html[data-theme="light"] .window-frame .download-card.status-completed { border-left-color:var(--st-completed)!important; }
+html[data-theme="light"] .window-frame .download-card:is(.status-failed,.status-cancelled) { border-left-color:var(--st-failed)!important; }
+html[data-theme="light"] .window-frame .download-card.status-paused { border-left-color:var(--st-paused)!important; }
+html[data-theme="light"] .window-frame .download-card.status-downloading { border-left-color:var(--accent-ink)!important; }
+html[data-theme="light"] .window-frame .download-card.selected { border-left-color:var(--accent-ink)!important; }
+
+/* Dark neutral thumb remains readable against every pastel light palette. */
+html[data-theme="light"] { --app-scrollbar-colors:#7b8798 transparent; }
+html[data-theme="light"] * { scrollbar-color:var(--app-scrollbar-colors); }
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background:#7b8798!important; border-radius:99px; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background:#526175!important; }
+html[data-theme="light"] ::-webkit-scrollbar-track { background:rgba(35,50,70,.05); }
+@media(forced-colors:active) { html[data-theme="light"] { --app-scrollbar-colors:auto; } }
+
+/* Personal colors use the same readable surfaces as named light presets. */
+html[data-theme="light"] .theme-editor-preview[data-light="true"] section { color:#202936!important; text-shadow:none; }
+html[data-theme="light"] .theme-editor-preview[data-light="true"] i { border-color:#20293626;background:#2029360d; }
+.theme-editor-preview[data-light="true"] section { color:#202936; text-shadow:none; }
+.theme-editor-preview[data-light="true"] i { border-color:#20293626;background:#2029360d; }
+html[data-theme="light"] :is(.cfg-card,.cfg-theme-tile,.download-card,.rgb-dialog,.help-dialog,.ctx-menu) { --muted:#596577; --text-2:#495568; }

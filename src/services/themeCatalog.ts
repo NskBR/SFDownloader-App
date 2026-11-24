@@ -1,3 +1,4 @@
+import {readThemeManifest} from "./gameThemeManifest";
 import {localThemes} from "./localThemes";
 import {invoke} from "@tauri-apps/api/core";
 import {gameThemePresets} from "../domain/testThemePresets";
@@ -31,10 +32,12 @@ export function prepareThemeCatalog(active:GameTheme="none",wallpaperId?:string)
    }
   };
   await Promise.all([
-   loadThemeCatalog().catch(()=>{}),localThemes().catch(()=>{}),worker(),worker(),
+   Promise.all([loadThemeCatalog(),readThemeManifest()]).catch(()=>{}),localThemes().catch(()=>{}),worker(),worker(),
    active!=="none"?loadThemeImage(`builtin:${selectedWallpaper(active,wallpaperId).id}`).catch(()=>{}):Promise.resolve(),
    document.fonts?.ready,
   ]);
  })();
  return preparation;
 }
+
+export async function reloadInstalledThemeCatalog(){installed=await invoke<string[]>('installed_game_themes');pending=Promise.resolve(installed);return installed;}

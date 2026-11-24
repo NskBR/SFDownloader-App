@@ -66,3 +66,26 @@
 .titlebar-update-badge .icon-pulse { animation:none; }
 .titlebar .titlebar-update-badge--install { background:var(--ember-solid);color:var(--on-accent,#071018); }
 .titlebar .titlebar-update-badge--install > svg { color:inherit; }
+
+.update-dialog.update-transfer-dialog { width:min(480px,calc(100vw - 32px));padding:0;overflow:hidden;text-align:left;background:var(--panel);font-family:var(--font); }
+.update-transfer-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 22px;border-bottom:1px solid var(--line); }
+.update-transfer-heading > span:first-child { display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;color:var(--text-2); }
+.update-transfer-heading svg { color:var(--ember-solid); }
+.update-preview-label { padding:3px 7px;border-radius:5px;background:var(--ember-soft);color:var(--text);font-size:10px; }
+.update-transfer-content { padding:12px 24px 22px; }
+.update-transfer-content .update-transfer-motion { width:260px;margin:0 auto 4px; }
+.update-transfer-content h2 { font-size:20px;text-align:center;margin:0 0 7px; }
+.update-transfer-content p { text-align:center;font-size:12px;line-height:1.5;max-width:340px;margin:0 auto 24px; }
+.update-transfer-progress-label { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;font-size:11px;color:var(--text-2); }
+.update-transfer-progress-label strong { font-size:16px;color:var(--text);font-variant-numeric:tabular-nums; }
+.update-transfer-content progress { height:6px; }
+.update-transfer-content .update-download-stats { grid-template-columns:1fr 1fr;margin-top:16px;border:1px solid var(--line);background:var(--surface);gap:0;padding:0;overflow:hidden;border-radius:10px; }
+.update-transfer-content .update-download-stats > div { padding:12px 14px; }
+.update-transfer-content .update-download-size { border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px; }
+.update-transfer-content .update-download-size span { margin:0; }
+.update-transfer-content .update-download-stats > div:last-child { border-left:1px solid var(--line); }
+.update-transfer-content .update-download-stats strong { font-size:13px;font-weight:600; }
+.update-transfer-footer { display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 22px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 60%,transparent); }
+.update-transfer-footer > span { color:var(--text-2);font-size:10px;line-height:1.5; }
+.update-transfer-footer button { display:inline-flex;align-items:center;gap:6px;margin:0;padding:8px 11px;min-height:32px;white-space:nowrap;font-size:11px;background:transparent; }
+@media(max-height:560px) { .update-transfer-content .update-transfer-motion {width:200px;} .update-transfer-content {padding:6px 20px 16px;} .update-transfer-content p {margin-bottom:14px;} }

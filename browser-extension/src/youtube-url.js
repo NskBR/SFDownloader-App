@@ -41,6 +41,7 @@ globalThis.sfMediaPlatform = function (value) {
     if (["facebook.com", "www.facebook.com", "m.facebook.com", "web.facebook.com"].includes(url.hostname)) return "facebook";
     if (["reddit.com", "www.reddit.com", "old.reddit.com", "sh.reddit.com", "redd.it", "v.redd.it"].includes(url.hostname)) return "reddit";
     if (["tiktok.com", "www.tiktok.com", "m.tiktok.com", "vm.tiktok.com", "vt.tiktok.com"].includes(url.hostname)) return "tiktok";
+    if (["x.com","www.x.com","twitter.com","www.twitter.com","mobile.twitter.com"].includes(url.hostname)) return "twitter";
     return globalThis.sfIsYouTubePage(value) ? "youtube" : null;
   } catch { return null; }
 };
@@ -50,6 +51,10 @@ globalThis.sfSocialMediaSource = function (value) {
     const platform = globalThis.sfMediaPlatform(value);
     const url = new URL(value);
     const path = url.pathname;
+    if (platform === 'twitter') {
+      const match=/^\/(?:[A-Za-z0-9_]{1,15}\/status|i\/web\/status)\/(\d{5,25})(?:\/(?:video|photo)\/\d+)?\/?$/.exec(path);
+      return match ? `https://x.com/i/web/status/${match[1]}` : null;
+    }
     if(platform === 'facebook') {
       const reel=/^\/reel\/(\d{5,30})\/?$/.exec(path);
       const watch=/^\/(?:watch\/?|video\.php)$/.test(path) && url.searchParams.get('v');

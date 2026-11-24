@@ -115,6 +115,7 @@ pub fn source_platform(source: &str) -> &'static str {
         .as_deref()
     {
         Some("instagram.com" | "www.instagram.com") => "Instagram",
+        Some("x.com"|"www.x.com"|"twitter.com"|"www.twitter.com"|"mobile.twitter.com") => "Twitter / X",
         Some("facebook.com" | "www.facebook.com" | "m.facebook.com" | "web.facebook.com") => "Facebook",
         Some("reddit.com" | "www.reddit.com" | "old.reddit.com" | "sh.reddit.com" | "redd.it" | "v.redd.it") => "Reddit",
         Some(
@@ -136,6 +137,18 @@ pub fn media_source(input: &str) -> Result<(String, String, bool), String> {
         || url.port().is_some()
     {
         return Err("Link de mídia inválido.".into());
+    }
+    if matches!(url.host_str(),Some("x.com"|"www.x.com"|"twitter.com"|"www.twitter.com"|"mobile.twitter.com")) {
+        let parts:Vec<_>=url.path().trim_matches('/').split('/').collect();
+        let id = match parts.as_slice() {
+            [user,"status",id] | [user,"status",id,"video"|"photo",_] if !user.is_empty() && user.len()<=15 && user.bytes().all(|c|c.is_ascii_alphanumeric() || c==b'_') => Some(*id),
+            ["i","web","status",id] => Some(*id),
+            _=>None,
+        };
+        if let Some(id)=id.filter(|id|(5..=25).contains(&id.len()) && id.bytes().all(|c|c.is_ascii_digit())) {
+            return Ok((format!("https://x.com/i/web/status/{id}"),format!("twitter-{id}"),false));
+        }
+        return Err("Link de post do Twitter/X invalido.".into());
     }
     if matches!(url.host_str(),Some("facebook.com"|"www.facebook.com"|"m.facebook.com"|"web.facebook.com")) {
         let parts:Vec<_>=url.path().trim_matches('/').split('/').collect();
@@ -1624,6 +1637,12 @@ mod tests {
     use super::*;
     #[test]
     fn social_sources_are_scoped_to_individual_media_and_namespaced() {
+        for url in ["https://x.com/test/status/123456789012345/video/1", "https://twitter.com/test/status/123456789012345?s=20"] {
+            assert_eq!(media_source(url).unwrap(),("https://x.com/i/web/status/123456789012345".into(),"twitter-123456789012345".into(),false));
+        }
+        assert!(media_source("https://x.com.evil.test/test/status/123456789012345").is_err());
+        assert!(media_source("https://x.com/test").is_err());
+
         for url in ["https://www.facebook.com/reel/1368202691917922?locale=nb_NO","https://m.facebook.com/watch/?v=1368202691917922&_rdr"] {
             assert_eq!(media_source(url).unwrap(),("https://www.facebook.com/reel/1368202691917922/".into(),"facebook-1368202691917922".into(),false));
         }

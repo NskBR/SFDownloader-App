@@ -4,9 +4,11 @@ vi.mock("@tauri-apps/api/core",()=>({invoke:vi.fn(async(command:string)=>command
 const mocks=vi.hoisted(()=>({validate:vi.fn()}));
 vi.mock("../../services/testThemes",()=>({validateTestTheme:mocks.validate,invalidateGameThemeImages:vi.fn()}));
 import {invoke} from "@tauri-apps/api/core";
-vi.mock("../../services/themeCatalog",()=>({cachedThemeCatalog:()=>null,loadThemeCatalog:()=>invoke("installed_game_themes"),markThemeDownloaded:vi.fn()}));
+vi.mock("../../services/themeCatalog",()=>({cachedThemeCatalog:()=>null,loadThemeCatalog:()=>invoke("installed_game_themes"),markThemeDownloaded:vi.fn(),reloadInstalledThemeCatalog:()=>invoke("installed_game_themes")}));
+import bundled from "../../../themes/manifest.json";
+import {setThemeManifest,currentThemeManifest} from "../../services/gameThemeManifest";
 import {GameThemesCard} from "./GameThemesCard";
-beforeEach(()=>{vi.clearAllMocks();vi.mocked(invoke).mockImplementation(async(command:string)=>command==="installed_game_themes"?[]:undefined as any);mocks.validate.mockResolvedValue(undefined);});afterEach(cleanup);
+beforeEach(()=>{setThemeManifest(bundled);vi.clearAllMocks();vi.mocked(invoke).mockImplementation(async(command:string)=>command==="installed_game_themes"?[]:undefined as any);mocks.validate.mockResolvedValue(undefined);});afterEach(cleanup);
 
 it("shows only four themes until expanded, and can collapse again",async()=>{
  render(<GameThemesCard selected="none" onSelect={vi.fn()}/>);
@@ -82,4 +84,25 @@ it("blocks rapid switches for one second without adding a layout row",async()=>{
   act(()=>vi.advanceTimersByTime(1000));expect(star.hasAttribute("disabled")).toBe(false);
   await act(async()=>{fireEvent.click(star);});expect(select).toHaveBeenLastCalledWith("star-citizen");
  }finally{cleanup();vi.useRealTimers();}
+});
+
+it("refreshes the remote catalog, shows a new collection and downloads only on selection",async()=>{
+ const remote=[...bundled,{id:"ocean-day",file:"ocean-day.png",sha256:"a".repeat(64),bytes:100,collection:"ocean",collectionName:"Ocean",preset:"star-citizen",name:"Day",preview:"data:image/jpeg;base64,aGVsbG8="}];
+ vi.mocked(invoke).mockImplementation(async command=>command==="refresh_game_theme_catalog"?remote:command==="game_theme_manifest"?bundled:command==="installed_game_themes"?[]:undefined as any);
+ const select=vi.fn();render(<GameThemesCard selected="none" onSelect={select}/>);
+ fireEvent.click(screen.getByRole("button",{name:/Consultar novos temas|Check for new themes/}));
+ await waitFor(()=>expect(screen.getByRole("status").textContent).toMatch(/1 novidade|1 new/));
+ expect(invoke).not.toHaveBeenCalledWith("download_game_theme",expect.anything());
+ fireEvent.click(screen.getByRole("button",{name:/Mostrar todos|Show all/}));
+ fireEvent.click(await screen.findByRole("button",{name:/Aplicar Ocean|Apply Ocean/}));
+ await waitFor(()=>expect(select).toHaveBeenCalledWith("catalog:ocean"));
+ expect(invoke).toHaveBeenCalledWith("download_game_theme",{id:"ocean-day"});
+ expect(mocks.validate).toHaveBeenCalledWith(expect.any(String),"builtin:ocean-day");
+});
+it("keeps the existing catalog and selection when the remote check fails",async()=>{
+ vi.mocked(invoke).mockImplementation(async command=>{if(command==="refresh_game_theme_catalog")throw new Error("Offline");return command==="game_theme_manifest"?bundled:command==="installed_game_themes"?[]:undefined as any;});
+ const select=vi.fn();render(<GameThemesCard selected="cs2" onSelect={select}/>);
+ fireEvent.click(screen.getByRole("button",{name:/Consultar novos temas|Check for new themes/}));
+ expect((await screen.findByRole("alert")).textContent).toContain("Offline");
+ expect(currentThemeManifest()).toEqual(bundled);expect(select).not.toHaveBeenCalled();
 });

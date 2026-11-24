@@ -179,6 +179,9 @@ export const updateGlobalDownloadSchedule = (scheduleInput: GlobalDownloadSchedu
 export const browserExtensionConnected = () =>
   invoke<boolean>("browser_extension_status");
 export interface BrowserBridgeDiagnostics {
+  installedVersion?:string|null;
+  availableVersion?:string|null;
+  outdated?:boolean;
   listening: boolean;
   connected: boolean;
   port: number;

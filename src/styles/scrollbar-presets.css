@@ -1,0 +1,23 @@
+.scrollbar-picker {margin:18px 0;}.scrollbar-picker h3 {font-size:13px;margin:0;}.scrollbar-picker p {color:var(--text-2);font-size:11px;line-height:1.5;margin:5px 0 12px;}
+.scrollbar-options {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}.scrollbar-options > button {flex:0 0 112px;display:grid;justify-items:center;gap:12px;padding:14px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-size:11px;}.scrollbar-options > button[aria-pressed=true] {border-color:var(--ember-solid);background:var(--ember-soft);}.scrollbar-options > button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:2px;}
+.scrollbar-preview {position:relative;display:flex;flex-direction:column;gap:6px;width:70px;height:44px;padding:8px 16px 8px 6px;background:var(--panel);border-radius:5px;}.scrollbar-preview > i {height:4px;background:var(--surface-2);border-radius:2px;}.scrollbar-preview > b {position:absolute;right:5px;top:4px;bottom:4px;width:5px;border-radius:6px;background:var(--surface-2);}.scrollbar-preview em {position:absolute;inset:6px 0 12px;background:var(--text-2);border-radius:5px;}.scrollbar-preview.thin > b {width:2px;}.scrollbar-preview.rounded > b {width:8px;}.scrollbar-preview.rounded em {border:1px solid var(--surface-2);}.scrollbar-preview:is(.accent,.glow) em {background:var(--ember-solid);}.scrollbar-preview.glow em {box-shadow:0 0 6px var(--ember-solid);}.scrollbar-preview.hidden > b {display:none;}
+/* Use custom WebView scrollbars so shape and thickness remain consistent. */
+html[data-scrollbar-style]:not([data-scrollbar-style="default"]) * {scrollbar-width:auto!important;scrollbar-color:auto!important;}
+html[data-scrollbar-style]:not([data-scrollbar-style="default"]) ::-webkit-scrollbar {width:var(--preset-scrollbar-size,6px);height:var(--preset-scrollbar-size,6px);}
+html[data-scrollbar-style]:not([data-scrollbar-style="default"]) ::-webkit-scrollbar-track {background:transparent;}
+html[data-scrollbar-style]:not([data-scrollbar-style="default"]) ::-webkit-scrollbar-thumb {border-radius:99px;background:var(--preset-scrollbar-color,var(--text-2))!important;border:var(--preset-scrollbar-border,0) solid transparent;background-clip:padding-box!important;}
+html[data-scrollbar-style="thin"] {--preset-scrollbar-size:3px;}
+html[data-scrollbar-style="rounded"] {--preset-scrollbar-size:10px;--preset-scrollbar-border:2px;}
+html[data-scrollbar-style="accent"],html[data-scrollbar-style="glow"] {--preset-scrollbar-color:var(--ember-solid);}
+html[data-theme="light"]:is([data-scrollbar-style="accent"],[data-scrollbar-style="glow"]) {--preset-scrollbar-color:var(--accent-ink,var(--ember-solid));}
+/* Native scrollbar layers can leave trails with outer shadows in WebView2. */
+html[data-scrollbar-style="glow"] {--preset-scrollbar-size:8px;}
+html[data-scrollbar-style="glow"] ::-webkit-scrollbar-thumb {
+ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--preset-scrollbar-color) 45%,#fff)!important;
+ background:linear-gradient(90deg,color-mix(in srgb,var(--preset-scrollbar-color) 65%,transparent),var(--preset-scrollbar-color) 45%,color-mix(in srgb,var(--preset-scrollbar-color) 65%,transparent))!important;
+ transition:none!important;
+}
+html[data-scrollbar-style="glow"] ::-webkit-scrollbar-track {box-shadow:none!important;background:transparent!important;}
+html[data-scrollbar-style="hidden"] * {scrollbar-width:none!important;}
+html[data-scrollbar-style="hidden"] ::-webkit-scrollbar {display:none;width:0;height:0;}
+@media(forced-colors:active) {html[data-scrollbar-style]:not([data-scrollbar-style="hidden"]) * {scrollbar-color:auto!important;scrollbar-width:auto!important;}}

@@ -66,7 +66,7 @@ const hsvToHex = (hue: number, saturation: number, value: number) => {
   return rgbToHex(Math.round((r + match) * 255), Math.round((g + match) * 255), Math.round((b + match) * 255));
 };
 
-function ColorPicker({ color, onChange, onClose, position }: { color: string; onChange: (color: string) => void; onClose: () => void; position?: { left: number; top: number } }) {
+export function ColorPicker({ color, onChange, onClose, position }: { color: string; onChange: (color: string) => void; onClose: () => void; position?: { left: number; top: number } }) {
   const [red, green, blue] = hexToRgb(color);
   const [hue, saturation, value] = rgbToHsv(red, green, blue);
   const updateSpectrum = (event: React.PointerEvent<HTMLDivElement>) => {

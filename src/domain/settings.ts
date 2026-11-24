@@ -1,3 +1,4 @@
+import {defaultWindowBorder} from "./windowBorder";
 import type { AppFont } from "./appFonts";
 import {defaultRgbConfig} from "./rgbTheme";
 
@@ -44,8 +45,8 @@ export interface CustomCategory {
 }
 
 export const gameThemeIds = ["cyberpunk", "cs2", "star-citizen", "god-of-war-ragnarok", "valorant", "league-of-legends", "overwatch", "among-us", "gta-6", "gta-san-andreas", "the-last-of-us-2", "red-dead-redemption-2", "minecraft", "saitama", "naruto"] as const;
-export type GameTheme = "none" | typeof gameThemeIds[number];
-export type ThemeVisualPreset = Exclude<GameTheme,"none"> | "naruto-baryon" | "hinata" | "botanical" | "local";
+export type GameTheme = "none" | typeof gameThemeIds[number] | `catalog:${string}`;
+export type ThemeVisualPreset = typeof gameThemeIds[number] | "naruto-baryon" | "hinata" | "botanical" | "local";
 export interface ThemeAppearance {
   palette?:{surface:string;raised:string;accent:string;strong:string};
   geometry?:{window:string;cardRadius:string;navigationRadius:string};
@@ -97,10 +98,20 @@ export interface AppSettings {
   accentRgbConfig?: import("./rgbTheme").RgbConfig;
   accentRgbProfiles?: import("./rgbTheme").RgbProfile[];
   customThemeProfiles?: import("./themeProfiles").ThemeProfile[];
+  scrollbarStyle?:"default"|"thin"|"rounded"|"accent"|"glow"|"hidden";
+  scrollInertia?:boolean;
+  scrollInertiaStrength?:"soft"|"strong";
   sidebarAnimation: boolean;
+  navigationPosition?: "left" | "right" | "top" | "bottom" | "titlebar";
+  windowBorder?:import("./windowBorder").WindowBorder;
+  navigationLabels?: boolean;
+  iconStyle?: "filled" | "classic";
+  windowControlsStyle?:"default"|"rounded"|"outlined"|"traffic"|"compact"|"minimal"|"xbox"|"playstation"|"nintendo"|"apple";
   customCategories: CustomCategory[];
   autoStartDownloads?: boolean;
   openFolderOnComplete?: boolean;
+  completionSound?:string;
+  completionSoundName?:string;
   playSoundOnComplete?: boolean;
   autoRenameDuplicates?: boolean;
   downloadPriority?: string;
@@ -110,6 +121,8 @@ export interface AppSettings {
 }
 
 export const defaultSettings: AppSettings = {
+  windowBorder:{...defaultWindowBorder},
+  navigationPosition:"left", navigationLabels:true, iconStyle:"filled",
   accentRgbConfig: {...defaultRgbConfig,colors:[...defaultRgbConfig.colors]},
   accentRgbProfiles: [],
   customThemeProfiles: [],
@@ -149,6 +162,10 @@ export const defaultSettings: AppSettings = {
       { color: "#161A1E", position: 100 },
     ],
   },
+  windowControlsStyle:"default",
+  scrollbarStyle:"default",
+  scrollInertia:false,
+  scrollInertiaStrength:"soft",
   sidebarAnimation: true,
   customCategories: [
     { id: "cat-jogos", name: "Jogos", extensions: ["iso", "rom", "pkg"] },
@@ -157,6 +174,8 @@ export const defaultSettings: AppSettings = {
   ],
   autoStartDownloads: true,
   openFolderOnComplete: false,
+  completionSound:"default",
+  completionSoundName:"",
   playSoundOnComplete: true,
   autoRenameDuplicates: false,
   downloadPriority: "Alta",

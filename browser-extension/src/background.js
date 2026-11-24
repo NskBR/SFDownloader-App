@@ -204,7 +204,7 @@ function syncBridge() {
     }
 
     try {
-      const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store" });
+      const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store", headers:{"x-sf-extension-version":chrome.runtime.getManifest().version} });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       bridge = {
@@ -572,7 +572,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     void (async () => {
       // Updating must work even when automatic download capture is switched off.
-      const sync = await fetch(`${BRIDGE}/sync`,{cache:"no-store"});
+      const sync = await fetch(`${BRIDGE}/sync`,{cache:"no-store",headers:{"x-sf-extension-version":chrome.runtime.getManifest().version}});
       if (!sync.ok) throw new Error("app-unavailable");
       const data = await sync.json();
       const response = await fetch(`${BRIDGE}/extension/update`,{

@@ -1,3 +1,4 @@
+import {VirtualDownloadList} from "../components/downloads/VirtualDownloadList";
 import {Pause as AnimatedPause,Play as AnimatedPlay} from "../components/icons";
 import {ReplaceDownloadLinkDialog} from "../components/downloads/ReplaceDownloadLinkDialog";
 import { createPortal } from "react-dom";
@@ -688,8 +689,7 @@ export function DownloadsPage({
             <strong>{t.downloads.emptyTitle}</strong>
           </div>
         ) : (
-          <div className={`cards-scroll-container view-${view}`}>
-            {visible.map((item) => {
+          <VirtualDownloadList items={visible} view={view} renderItem={(item) => {
               const progress = item.fileSize
                 ? Math.min(100, (item.totalDownloaded / item.fileSize) * 100)
                 : 0;
@@ -1015,8 +1015,7 @@ export function DownloadsPage({
                   </div>
                 </article>
               );
-            })}
-          </div>
+            }}/>
         )}
       </section>
 

@@ -1,4 +1,4 @@
-import { Bug, Clock, Download, Globe, Settings2, Upload } from "../icons";
+import { Bug, Clock, Download, Globe, Settings2, Upload, RotateCcw } from "../icons";
 import { useRef } from "react";
 import type { Translations } from "../../i18n";
 import { Toggle } from "../ui/Toggle";
@@ -14,6 +14,7 @@ interface SettingsAdvancedTabProps {
   onExportPreferences: () => void;
   onImportPreferences: (file: File) => void;
   onConfigureGlobalSchedule: () => void;
+  onResetApplication:()=>void;
 }
 
 export function SettingsAdvancedTab({
@@ -27,6 +28,7 @@ export function SettingsAdvancedTab({
   onExportPreferences,
   onImportPreferences,
   onConfigureGlobalSchedule,
+  onResetApplication,
 }: SettingsAdvancedTabProps) {
   const importInputRef = useRef<HTMLInputElement>(null);
   return (
@@ -139,6 +141,7 @@ export function SettingsAdvancedTab({
           </button>
         </div>
       </div>
+      <div className="cfg-card"><div className="cfg-card-content reset-app-setting"><div><strong className="cfg-item-label">Redefinir aplicativo</strong><span className="cfg-item-desc">Restaurar preferências e zerar as métricas de uso.</span></div><button type="button" className="cfg-btn-alterar" onClick={onResetApplication}><RotateCcw size={16}/>Redefinir</button></div></div>
     </div>
   );
 }

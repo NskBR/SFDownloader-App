@@ -1,10 +1,11 @@
-import {UpdateDownloadStats} from "../UpdateDownloadStats";
+import {WindowControlSymbols} from "../ui/WindowControlSymbols";
+import {UpdateDownloadPanel} from "../UpdateDownloadPanel";
 import {UpdateReleaseNotes} from "../UpdateReleaseNotes";
-import { Minus, Square, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "../icons";
+import { AlertTriangle, Minus, Square, Maximize, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "../icons";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { UpdateCheckResult, UpdateDownloadProgress } from "../../services/downloadService";
 import * as downloadService from "../../services/downloadService";
 import type { PageId } from "../../app/navigation";
@@ -14,6 +15,7 @@ import { createPortal } from "react-dom";
 import "../../styles/update.css";
 
 const appWindow = getCurrentWindow();
+const subscribeControls=(callback:()=>void)=>{window.addEventListener('sf-window-controls',callback);return()=>window.removeEventListener('sf-window-controls',callback);};
 
 const idleUpdateProgress: UpdateDownloadProgress = {
   status: "idle",
@@ -29,8 +31,10 @@ const formatBytes = (bytes: number) => {
 };
 
 interface TitleBarProps {
+  navigation?:ReactNode;
   updateInfo?: UpdateCheckResult | null;
   showFooterActionsInTitleBar?: boolean;
+  showBrandInTitleBar?:boolean;
   activePage?: PageId;
   onNavigate?: (page: PageId) => void;
   onOpenHelp?: () => void;
@@ -38,13 +42,18 @@ interface TitleBarProps {
 
 export function TitleBar({
   updateInfo,
+  navigation,
   showFooterActionsInTitleBar,
+  showBrandInTitleBar,
   activePage,
   onNavigate,
   onOpenHelp,
 }: TitleBarProps) {
   const { t } = useTranslation();
+  const appleControls=useSyncExternalStore(subscribeControls,()=>document.documentElement.dataset.windowControls==='apple');
   const [showReleaseNotes,setShowReleaseNotes]=useState(false);
+  const [previewUpdate,setPreviewUpdate]=useState(import.meta.env.DEV);
+  const [previewTransfer,setPreviewTransfer]=useState(false);
   useEffect(()=>{
     const open=()=>setShowReleaseNotes(true);
     window.addEventListener("sf-show-update-notes",open);
@@ -68,13 +77,15 @@ export function TitleBar({
       delete document.documentElement.dataset.windowMaximized;
     };
   }, []);
+  const [extensionWarning,setExtensionWarning]=useState("");
   const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress>(idleUpdateProgress);
   useEffect(() => {
     const updateStatus = () => {
-      invoke<boolean>("browser_extension_status")
-        .then(setExtensionConnected)
-        .catch(() => setExtensionConnected(false));
+      void downloadService.browserExtensionDiagnostics().then(status=>{
+        setExtensionConnected(status.connected);
+        setExtensionWarning(status.connected?(status.outdated?`Extensão ${status.installedVersion} desatualizada. Disponível: ${status.availableVersion}.`:!status.installedVersion?'Não foi possível verificar a versão da extensão. Abra a integração para atualizar.':''):'');
+      }).catch(()=>{setExtensionConnected(false);setExtensionWarning('');});
     };
     updateStatus();
     const timer = setInterval(updateStatus, 3000);
@@ -107,32 +118,13 @@ export function TitleBar({
     ? Math.min(100, Math.round((updateProgress.downloaded_bytes / updateTotal) * 100))
     : null;
 
-  return (
-    <header
-      className="titlebar"
-      data-tauri-drag-region
-      onDoubleClick={() => void appWindow.toggleMaximize()}
-    >
-      {showReleaseNotes && updateInfo?.available && <UpdateReleaseNotes update={updateInfo} onCancel={()=>setShowReleaseNotes(false)} onConfirm={()=>{setShowReleaseNotes(false);startUpdateDownload();}}/>}
-      {(["downloading", "preparing", "installing", "cancelling", "failed"].includes(updateProgress.status)) && createPortal(
-        <div className="update-overlay">
-          <section className="update-dialog" role="dialog" aria-modal="true" aria-label="Atualização do aplicativo">
-            <div className="update-logo">
-              <svg viewBox="0 0 100 100" aria-hidden="true" className={percentage === null || updateProgress.status !== "downloading" ? "update-ring--busy" : ""}>
-                <circle cx="50" cy="50" r="46" className="update-ring-track" />
-                <circle cx="50" cy="50" r="46" pathLength="100" className="update-ring-progress" strokeDasharray={`${updateProgress.status === "downloading" && percentage !== null ? percentage : 24} 100`} />
-              </svg>
-              <img src={logo} alt="" draggable={false} />
-            </div>
-            <h2>{updateProgress.status === "failed" ? "Não foi possível atualizar" : updateProgress.status === "downloading" ? "Baixando atualização…" : updateProgress.status === "cancelling" ? "Cancelando…" : "Preparando atualização…"}</h2>
-            <p role="status">{updateProgress.status === "failed" ? updateProgress.message : updateProgress.status === "downloading" ? "A instalação começará automaticamente." : "Verificando o instalador e salvando seus downloads."}</p>
-            <progress max={100} value={updateProgress.status === "downloading" ? percentage ?? undefined : undefined} aria-label="Progresso da atualização" />
-            {updateProgress.status === "downloading" && <>{percentage!==null&&<small>{percentage}%</small>}<UpdateDownloadStats downloaded={updateProgress.downloaded_bytes} total={updateTotal} speed={updateProgress.bytes_per_second}/></>}
-            {updateProgress.status === "downloading" && <button onClick={() => void downloadService.cancelUpdateDownload()}>Cancelar</button>}
-            {updateProgress.status === "failed" && <button autoFocus onClick={() => setUpdateProgress(idleUpdateProgress)}>Fechar</button>}
-          </section>
-        </div>, document.body)}
-      <div className="titlebar-side" data-tauri-drag-region>
+  const updateControls = <>
+    {previewUpdate && !updateInfo?.available && <div className="nodrag titlebar-update-preview" onDoubleClick={event=>event.stopPropagation()}>
+      <button type="button" className="titlebar-update-badge" title="Simulação visual: nenhum download será iniciado" onClick={()=>setPreviewTransfer(true)}>
+        <Sparkles size={12}/><span>{t.titlebar.downloadUpdate}</span><Download size={12}/>
+      </button>
+      <button type="button" className="titlebar-theme-btn" title="Encerrar simulação" aria-label="Encerrar simulação" onClick={()=>setPreviewUpdate(false)}><X size={12}/></button>
+    </div>}
         {updateInfo?.available && (updateProgress.status === "idle" || updateProgress.status === "failed") && (
           <button className="nodrag titlebar-update-badge" onClick={()=>setShowReleaseNotes(true)} title={updateInfo.installer_url ? t.titlebar.downloadUpdate : t.titlebar.locateUpdateInstaller}>
             <Sparkles size={12} className="icon-pulse" />
@@ -159,11 +151,91 @@ export function TitleBar({
             <span>{t.titlebar.installUpdate}</span>
           </button>
         )}
+  </>;
+
+  const windowControls = (        <div className="window-controls nodrag" onDoubleClick={event=>event.stopPropagation()}>
+{appleControls && <>          <button
+            className="window-close"
+            aria-label={t.titlebar.closeTooltip}
+            title={t.titlebar.closeTooltip}
+            onClick={() => void appWindow.close()}
+          >
+            <X size={18} /><WindowControlSymbols index={2}/>
+          </button>
+          <button
+            aria-label={t.titlebar.minimizeTooltip}
+            title={t.titlebar.minimizeTooltip}
+            onClick={() => void appWindow.minimize()}
+          >
+            <Minus size={17} /><WindowControlSymbols index={0}/>
+          </button>
+          <button
+            aria-label={t.titlebar.maximizeTooltip}
+            title={t.titlebar.maximizeTooltip}
+            onClick={() => void appWindow.toggleMaximize()}
+          >
+            <Square size={14} className="window-maximize-standard" /><Maximize size={13} className="window-maximize-corners" /><WindowControlSymbols index={1}/>
+          </button>
+</>}{!appleControls && <>          <button
+            aria-label={t.titlebar.minimizeTooltip}
+            title={t.titlebar.minimizeTooltip}
+            onClick={() => void appWindow.minimize()}
+          >
+            <Minus size={17} /><WindowControlSymbols index={0}/>
+          </button>
+          <button
+            aria-label={t.titlebar.maximizeTooltip}
+            title={t.titlebar.maximizeTooltip}
+            onClick={() => void appWindow.toggleMaximize()}
+          >
+            <Square size={14} className="window-maximize-standard" /><Maximize size={13} className="window-maximize-corners" /><WindowControlSymbols index={1}/>
+          </button>
+          <button
+            className="window-close"
+            aria-label={t.titlebar.closeTooltip}
+            title={t.titlebar.closeTooltip}
+            onClick={() => void appWindow.close()}
+          >
+            <X size={18} /><WindowControlSymbols index={2}/>
+          </button>
+</>}
+        </div>);
+
+  return (
+    <header
+      className="titlebar"
+      data-tauri-drag-region
+      onDoubleClick={() => void appWindow.toggleMaximize()}
+    >
+      {import.meta.env.DEV && previewTransfer && createPortal(<div className="update-overlay"><UpdateDownloadPanel preview percentage={62} downloaded={Math.round(128*1024**2*.62)} total={128*1024**2} speed={4.8*1024**2} onCancel={()=>setPreviewTransfer(false)}/></div>,document.body)}
+      {showReleaseNotes && updateInfo?.available && <UpdateReleaseNotes update={updateInfo} onCancel={()=>setShowReleaseNotes(false)} onConfirm={()=>{setShowReleaseNotes(false);startUpdateDownload();}}/>}
+      {(["downloading", "preparing", "installing", "cancelling", "failed"].includes(updateProgress.status)) && createPortal(
+        <div className="update-overlay">
+          {updateProgress.status === "downloading" ? <UpdateDownloadPanel percentage={percentage} downloaded={updateProgress.downloaded_bytes} total={updateTotal} speed={updateProgress.bytes_per_second} onCancel={()=>void downloadService.cancelUpdateDownload()}/> : <section className="update-dialog" role="dialog" aria-modal="true" aria-label="Atualização do aplicativo">
+            <div className="update-logo">
+              <svg viewBox="0 0 100 100" aria-hidden="true" className="update-ring--busy">
+                <circle cx="50" cy="50" r="46" className="update-ring-track" />
+                <circle cx="50" cy="50" r="46" pathLength="100" className="update-ring-progress" strokeDasharray="24 100" />
+              </svg>
+              <img src={logo} alt="" draggable={false} />
+            </div>
+            <h2>{updateProgress.status === "failed" ? "Não foi possível atualizar" : updateProgress.status === "cancelling" ? "Cancelando…" : "Preparando atualização…"}</h2>
+            <p role="status">{updateProgress.status === "failed" ? updateProgress.message : "Verificando o instalador e salvando seus downloads."}</p>
+            <progress max={100} aria-label="Progresso da atualização" />
+            {updateProgress.status === "failed" && <button autoFocus onClick={() => setUpdateProgress(idleUpdateProgress)}>Fechar</button>}
+          </section>}
+        </div>, document.body)}
+      <div className="titlebar-side" data-tauri-drag-region>
+        {appleControls && windowControls}
+        {showBrandInTitleBar && <img className="titlebar-brand-logo" src={logo} alt="SF Downloader" draggable={false}/>}
+        {navigation}
+        {!navigation && updateControls}
       </div>
       <div className="titlebar-center" data-tauri-drag-region>
         <strong>{t.titlebar.title}</strong>
       </div>
       <div className="titlebar-side titlebar-actions" data-tauri-drag-region>
+        {navigation && updateControls}
         {showFooterActionsInTitleBar && (
           <div className="nodrag titlebar-footer-actions">
             <button
@@ -195,43 +267,20 @@ export function TitleBar({
 
         <div className="nodrag titlebar-integration">
           <button
-            className="titlebar-theme-btn titlebar-extension-button"
-            onClick={() => void invoke("open_browser_integration_window").catch(console.error)}
-            title={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
+            className={`titlebar-theme-btn titlebar-extension-button ${extensionWarning?"extension-needs-update":""}`}
+            onClick={() => window.dispatchEvent(new Event("sf-open-integration"))}
+            title={extensionWarning || `${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
             aria-label={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
           >
             <Puzzle size={16} />
-            <span>{t.titlebar.extensionLabel}</span>
+            <span className="titlebar-extension-label">{t.titlebar.extensionLabel}</span>{extensionWarning&&<AlertTriangle size={13} className="extension-version-warning"/>}
             <span
               className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
               aria-hidden="true"
             />
           </button>
         </div>
-        <div className="window-controls nodrag">
-          <button
-            aria-label={t.titlebar.minimizeTooltip}
-            title={t.titlebar.minimizeTooltip}
-            onClick={() => void appWindow.minimize()}
-          >
-            <Minus size={17} />
-          </button>
-          <button
-            aria-label={t.titlebar.maximizeTooltip}
-            title={t.titlebar.maximizeTooltip}
-            onClick={() => void appWindow.toggleMaximize()}
-          >
-            <Square size={14} />
-          </button>
-          <button
-            className="window-close"
-            aria-label={t.titlebar.closeTooltip}
-            title={t.titlebar.closeTooltip}
-            onClick={() => void appWindow.close()}
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {!appleControls && windowControls}
       </div>
     </header>
   );

@@ -1,0 +1,71 @@
+Novidades
+
+• Cinco opções de layout: barra lateral à esquerda ou à direita, abas no topo ou no rodapé e navegação por ícones na barra de título.
+• Nos layouts superior e inferior, logo e categorias ficam centralizadas como um conjunto. Configurações, Métricas e Informações passam para a barra de título.
+• O layout integrado à barra de título mostra a logo e os ícones de categorias à esquerda, sem nomes, e posiciona o botão de atualização à direita.
+• Controle para mostrar ou ocultar os nomes exclusivamente nas abas superiores e inferiores, com dicas ao passar o mouse.
+• Temas claros Pérola, Areia e Menta Clara.
+• Escolha entre ícones Sólido e Normal, com amostras visuais e animações nos dois estilos.
+• Personalização do formato da janela em modal com cards: seguir o tema, arredondado, reto, cantos recortados, diagonal e recorte inferior.
+• Contorno configurável com espessura, cor independente e efeitos Sólido, Neon e RGB. O RGB possui sequência de cores, direção, velocidade e perfis próprios no mesmo editor usado pelos outros efeitos RGB.
+• Prévia ao vivo das bordas e do contorno, com Aplicar para salvar e Cancelar para restaurar a configuração anterior.
+• Inércia na rolagem com níveis Suave e Forte, controle independente e preferência salva no aplicativo.
+• Botão Restaurar personalização no topo da aba: restaura aparência, fonte, layout e ícones e desativa animações, inércia e contorno. Preserva as demais configurações, downloads, métricas e perfis salvos.
+• Redefinir aplicativo em Avançado: restaura preferências e agendamento global, desativa a inicialização com o Windows e zera métricas. Exige segurar a confirmação por três segundos; arquivos baixados, histórico e temas instalados são preservados.
+• Integração com navegadores em um modal interno com três etapas, barra de progresso, seleção entre Chrome e derivados ou Firefox e confirmação da conexão.
+• Na instalação para Chrome e derivados, o endereço copiável da página de extensões aparece junto às instruções de modo desenvolvedor e à área de arrastar. A abertura automática do navegador foi removida.
+• Demonstração animada de um cursor arrastando a extensão até o navegador, mantendo a área funcional para o arraste real.
+• Animação de arquivos passando entre pastas durante o download da atualização.
+• Extensão 0.4.0 com botão para baixar vídeos do Twitter/X nos posts e detecção de links pelo popup.
+
+• Estilos dos botões de minimizar, maximizar e fechar: Padrão, Arredondado, Contornado, Semáforo, Compacto, Minimalista, Xbox, PlayStation, Nintendo e Apple, com prévias em Personalização.
+• Estilos de barra de rolagem: Padrão, Fina, Arredondada, Destaque, Neon e Oculta, com prévias e cores adaptadas ao tema.
+• Personalização reorganizada por categorias: Navegação e ícones, Janela e controles, Movimento e rolagem abrem em modais próprios; temas, cores e fontes ficam agrupados na aba principal.
+• Indicador no botão da extensão e aviso no assistente quando a versão conectada estiver abaixo da disponível no aplicativo; versões antigas que não informam seu número são identificadas como não verificadas.
+
+Melhorias e desempenho
+
+• Virtualização da lista de downloads: apenas os cards visíveis e uma pequena margem são montados, em vez de renderizar toda a categoria. Funciona em lista e grade, com medição das alturas dos cards e preservação de busca, ordenação e seleção.
+• Barra de busca redesenhada, com botão para limpar, foco na cor do tema e largura adaptada ao espaço disponível.
+• Paleta clara ou escura escolhida automaticamente pela luminosidade do fundo personalizado, inclusive durante a prévia.
+• Superfícies, textos, campos, menus, status, modais, cards e barras de rolagem adaptados aos temas claros.
+• Indicador animado de navegação também nas abas superiores e inferiores, acompanhando a cor de destaque e a rolagem horizontal.
+• Ajustes de espaçamento entre barra de título, navegação e conteúdo, centralização da logo e alinhamento dos textos nos cards das categorias.
+• Fade discreto no topo do conteúdo rolável das configurações, com espaço para preservar o início do primeiro card.
+• Modal de download da atualização reorganizado, com animação central, porcentagem junto à barra e painel de tamanho baixado, velocidade e tempo estimado restante.
+• Controles de borda e contorno separados, com miniaturas do formato e do efeito selecionado, cards de efeitos e amostras de cores.
+• Ao soltar a confirmação de redefinição antes do prazo, o preenchimento recua suavemente. A operação é cancelada imediatamente e continua exigindo uma pressão contínua de três segundos.
+• Novas animações respeitam a configuração de movimento do aplicativo e a preferência de movimento reduzido do sistema.
+• Preferências de layout, ícones, inércia e contorno preservadas nas configurações e backups.
+
+• Modais de personalização com prévia ao vivo e botões Aplicar e Cancelar: layout, ícones, controles da janela e rolagem só são salvos ao aplicar. Cancelar, fechar ou pressionar Esc restaura o estado anterior.
+• Editores laterais sem desfoque ou escurecimento do aplicativo, deixando a barra de título visível durante a prévia. Painéis anteriores ficam ocultos ao abrir os editores de bordas e RGB.
+• Variante Apple com controles à esquerda, na ordem fechar, minimizar e maximizar. Demais estilos permanecem à direita.
+• Galerias de temas do aplicativo, jogos, temas locais e estilos dos botões centralizam a última linha de cards quando há quebra.
+• Categorias das barras laterais mantêm espaçamento regular em janelas altas; o rodapé conserva altura e tamanho dos botões, sem esticar com a janela.
+
+Correções
+
+• Animações dos ícones sólidos incluídas no pacote de produção, evitando depender da injeção de CSS em tempo de execução.
+• Fundo da barra de busca e recorte dos cantos corrigidos nos temas personalizados.
+• Ocultar nomes nas abas não interfere mais na expansão das barras laterais; as laterais expandidas mantêm os nomes das categorias.
+• Ícone do botão da extensão preservado no layout integrado à barra de título.
+• Paleta completa do popup da extensão adaptada aos temas claros, mantendo a cor de destaque independente do fundo.
+• Detecção do botão do Reddit ampliada para componentes aninhados e vídeos carregados depois da abertura da página; alinhamento ajustado junto às ações nativas do post.
+• Contorno acompanha o formato da janela e os raios individuais dos cantos, inclusive nos temas com curvas assimétricas.
+• Prévia do contorno preservada durante alterações de layout e retomada da animação RGB quando o efeito é ativado.
+• Contorno padrão discreto de 1 px, seguindo a paleta e o formato real da janela, sem linhas duplicadas nos efeitos personalizados.
+• Tema e contorno da janela ocultados durante o splash de inicialização para evitar vazamento nos cantos.
+• Inércia corrigida para alcançar exatamente o topo, mesmo quando a posição da rolagem é arredondada para pixels inteiros.
+• Caracteres acentuados das notas de atualização corrigidos e arquivo unificado em UTF-8.
+• Botão duplicado Restaurar tema padrão removido da galeria; a ação continua no modal do tema padrão.
+• Controles sobre as imagens dos temas, como setas, lixeira e contador, usam contraste próprio para permanecer legíveis nos temas claros.
+• Alinhamento dos símbolos PlayStation ajustado; variante Minimalista com ícones maiores, traços mais firmes e maior contraste.
+• Barra de rolagem Neon usa brilho interno para evitar rastros de sombra durante a rolagem.
+• Controles de força da inércia e interruptor mantidos juntos no modal, sem quebra de linha desnecessária.
+• Espaço interno acima do primeiro card das configurações ajustado para evitar sobreposição com o fade.
+
+• Personalização do som de conclusão pela engrenagem: Padrão, Suave, Cristal, Arcade e Sino, prévia de áudio e importação de MP3 de até 5 segundos e 5 MB. O arquivo é validado e guardado no armazenamento do aplicativo; a escolha só é salva ao aplicar.
+
+- Galeria: botão Consultar novos temas para buscar coleções, variações e wallpapers atualizados no GitHub, com catálogo offline e download sob demanda.
+- GTA VI: seis novas variações de wallpaper, mantendo a imagem original e as versões adaptadas para janelas menores.

@@ -1,3 +1,14 @@
+import {CompletionSoundDialog} from "../components/settings/CompletionSoundDialog";
+import {PersonalizationPanel} from "../components/settings/PersonalizationPanel";
+import {ScrollbarPicker} from "../components/settings/ScrollbarPicker";
+import {WindowControlsPicker} from "../components/settings/WindowControlsPicker";
+import {resetPersonalization} from "../domain/resetPersonalization";
+import {clearWindowBorderPreview} from "../domain/windowBorder";
+import {WindowBorderEditor} from "../components/settings/WindowBorderEditor";
+import {ResetApplicationDialog} from "../components/settings/ResetApplicationDialog";
+import {resetApplication} from "../services/resetApplication";
+import {Settings as FilledIconPreview,Folder as FilledFolderPreview} from "kineticons";
+import {Settings as NormalIconPreview,Folder as NormalFolderPreview} from "lucide-react";
 import {LocalThemes} from "../components/settings/LocalThemes";
 import {RgbThemeDialog} from "../components/settings/RgbThemeDialog";
 import {applyThemeSettings} from "../services/theme";
@@ -26,6 +37,7 @@ import {
   Type,
   Upload,
   ChevronDown,
+  Mouse,
 } from "../components/icons";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SettingsTabNavigation, type SettingsTab, type TabIndicator, type TabItem } from "../components/settings/SettingsTabNavigation";
@@ -64,6 +76,9 @@ interface Props {
 export function SettingsPage({ settings, onSave, saved }: Props) {
   const { t, setLanguage } = useTranslation();
   const [draft, setDraft] = useState(settings);
+  const [resetDialogOpen,setResetDialogOpen]=useState(false);
+  const [soundDialogOpen,setSoundDialogOpen]=useState(false);
+  const [personalizationPanel,setPersonalizationPanel]=useState<"navigation"|"window"|"motion"|null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("downloads");
   const [error, setError] = useState<string | null>(null);
   const [categoryName, setCategoryName] = useState("");
@@ -136,6 +151,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     } finally { setImportingFont(false); }
   };
 
+  const savedPersonalization=useRef(settings);savedPersonalization.current=settings;
+  const previewPersonalization=(next:AppSettings)=>{applyThemeSettings(next);window.dispatchEvent(new CustomEvent('sf-personalization-preview',{detail:next}));};
+  const cancelPersonalization=()=>{const original=savedPersonalization.current;clearWindowBorderPreview(original.windowBorder);setDraft(original);previewPersonalization(original);window.dispatchEvent(new Event('sf-personalization-preview-end'));setPersonalizationPanel(null);};
+  const applyPersonalization=()=>{clearWindowBorderPreview(draft.windowBorder);onSave(draft);window.dispatchEvent(new Event('sf-personalization-preview-end'));setPersonalizationPanel(null);};
+  useEffect(()=>()=>{clearWindowBorderPreview(savedPersonalization.current.windowBorder);applyThemeSettings(savedPersonalization.current);window.dispatchEvent(new Event('sf-personalization-preview-end'));},[]);
   const selectedThemeId = selectedSettingsThemeId(draft.interfaceGradient);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
@@ -147,6 +167,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
       ...(key === "organizeFoldersOnDemand" && value === true ? { autoOrganizeEnabled: false } : {}),
     };
     setDraft(next);
+    if(personalizationPanel){previewPersonalization(next);return;}
     if (next.rootDownloadFolder.trim()) void save(next);
     else setError("Escolha a pasta principal de downloads.");
   };
@@ -256,7 +277,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
     }
   };
   const openBrowserIntegration = () => {
-    void invoke("open_browser_integration_window").catch(console.error);
+    window.dispatchEvent(new Event("sf-open-integration"));
   };
 
   const openDebugWindow = () => {
@@ -550,10 +571,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                         </div>
                       </div>
                       <div className="cfg-item-right cfg-sound-controls">
+                        <button type="button" className="cfg-sound-preview" aria-label="Personalizar som de conclusão" title="Personalizar som" onClick={()=>setSoundDialogOpen(true)}><Settings2 size={16}/></button>
                         <button
                           type="button"
                           className="cfg-sound-preview"
-                          onClick={() => void invoke("play_completion_sound").catch((cause) => setError(ipcErrorMessage(cause, t.settings.downloadsTab.soundTestFailed)))}
+                          onClick={() => void invoke("play_completion_sound",{soundId:draft.completionSound??"default"}).catch((cause) => setError(ipcErrorMessage(cause, t.settings.downloadsTab.soundTestFailed)))}
                         >
                           <Play size={12} aria-hidden="true" />
                           {t.settings.downloadsTab.testSound}
@@ -599,6 +621,9 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
         {/* ABA: PERSONALIZAÇÃO */}
         {activeTab === "personalizacao" && (
           <div className="cfg-tab-view">
+            <div className="personalization-reset-bar"><span>Personalização do aplicativo</span><button type="button" className="cfg-btn-alterar" onClick={()=>{const next=resetPersonalization(draft);localStorage.removeItem('sf_sidebar_width');window.dispatchEvent(new Event('sf-reset-sidebar-width'));clearWindowBorderPreview(next.windowBorder);setDraft(next);onSave(next);applyThemeSettings(next);}}><Settings2 size={15}/>Restaurar personalização</button></div>
+            <div className="personalization-categories">{([{id:'navigation',name:'Navegação e ícones',description:'Layout, categorias e ícones',icon:Sliders},{id:'window',name:'Janela e controles',description:'Botões, bordas e contorno',icon:Settings2},{id:'motion',name:'Movimento e rolagem',description:'Animações, inércia e scrollbar',icon:Mouse}] as const).map(category=><button type="button" key={category.id} onClick={()=>setPersonalizationPanel(category.id)}><category.icon size={20}/><span><strong>{category.name}</strong><small>{category.description}</small></span><ChevronDown size={15}/></button>)}</div>
+            <div className="personalization-section-heading"><h3>Temas, cores e fontes</h3><p>Defina a aparência e o fundo do aplicativo.</p></div>
             {/* Galeria de temas do aplicativo */}
             <div className="cfg-card">
               <div className="cfg-card-header cfg-theme-header">
@@ -606,12 +631,7 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
                   <h3 className="cfg-card-title">{t.settings.personalization.appThemeTitle}</h3>
                   <p className="cfg-card-subtitle">{t.settings.personalization.appThemeSubtitle}</p>
                 </div>
-                <button type="button" className="cfg-theme-customize-button" onClick={() => {
-                  const next = {...draft, appColor:defaultSettings.appColor, accentColor:"blue" as const,
-                    fontFamily:defaultSettings.fontFamily, interfaceGradient:{...defaultSettings.interfaceGradient},
-                    localThemeId:undefined, gameTheme:"none" as const, testTheme:{...defaultTestTheme}, defaultThemeInitialized:true};
-                  setDraft(next);onSave(next);
-                }}>Restaurar tema padrão</button>
+
               </div>
 
               <div className="cfg-card-content">
@@ -793,7 +813,14 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
 
             {draft.cssThemesEnabled && <details className="cfg-card css-theme-disclosure"><summary>Tema CSS</summary><TestThemesCard value={draft.testTheme} onChange={value => update("testTheme", value)} /></details>}
 
-            {/* Card 3: Animações e Efeitos da Interface */}
+            {personalizationPanel==='navigation'&&<PersonalizationPanel title="Navegação e ícones" description="Posição das categorias, nomes e estilo dos ícones." onClose={cancelPersonalization} onApply={applyPersonalization}>            <div className="cfg-card"><div className="cfg-card-header"><div className="cfg-card-icon-box"><Sliders size={18}/></div><div><h3 className="cfg-card-title">Layout e ícones</h3><p className="cfg-card-subtitle">Escolha onde navegar e o estilo dos ícones.</p></div></div>
+              <div className="layout-presets-grid">{([{id:'left',name:'Barra à esquerda'},{id:'right',name:'Barra à direita'},{id:'top',name:'Abas no topo'},{id:'bottom',name:'Abas no rodapé'},{id:'titlebar',name:'Ícones na titlebar'}] as const).map(layout=><button type="button" key={layout.id} className="layout-preset" aria-pressed={(draft.navigationPosition??'left')===layout.id} onClick={()=>update('navigationPosition',layout.id)}><span className={`layout-preset-preview ${layout.id}`} aria-hidden="true"><i/><b/></span>{layout.name}</button>)}</div>
+              {(draft.navigationPosition === 'top' || draft.navigationPosition === 'bottom') && (<div className="layout-options"><label className="navigation-label-option"><span><strong>Mostrar nomes nas abas</strong><small>Aplica-se apenas aos layouts de abas no topo e no rodapé.</small></span><input className="navigation-label-switch" type="checkbox" role="switch" checked={draft.navigationLabels!==false} onChange={e=>update('navigationLabels',e.target.checked)}/></label></div>)}<fieldset className="icon-style-picker"><legend>Estilo dos ícones</legend><div className="icon-style-options"><button type="button" className="icon-style-option" aria-pressed={(draft.iconStyle??'filled')==='filled'} onClick={()=>update('iconStyle','filled')}><span className="icon-style-samples" aria-hidden="true"><FilledIconPreview variant="filled" size={23} css={false}/><FilledFolderPreview variant="filled" size={23} css={false}/></span><span><strong>Sólido</strong><small>Ícones preenchidos</small></span><span className="icon-style-radio" aria-hidden="true"/></button><button type="button" className="icon-style-option" aria-pressed={draft.iconStyle==='classic'} onClick={()=>update('iconStyle','classic')}><span className="icon-style-samples" aria-hidden="true"><NormalIconPreview size={23}/><NormalFolderPreview size={23}/></span><span><strong>Normal</strong><small>Ícones em contorno</small></span><span className="icon-style-radio" aria-hidden="true"/></button></div></fieldset>
+            </div>
+
+</PersonalizationPanel>}
+            {personalizationPanel==='window'&&<PersonalizationPanel title="Janela e controles" description="Botões da barra de título, formato da janela e contorno." onClose={cancelPersonalization} onApply={applyPersonalization}><WindowControlsPicker value={draft.windowControlsStyle} onChange={value=>update('windowControlsStyle',value)}/><WindowBorderEditor value={draft.windowBorder} onApply={windowBorder=>{const next={...draft,windowBorder};setDraft(next);previewPersonalization(next);}}/></PersonalizationPanel>}
+            {personalizationPanel==='motion'&&<PersonalizationPanel title="Movimento e rolagem" description="Animações, força da inércia e aparência da barra de rolagem." onClose={cancelPersonalization} onApply={applyPersonalization}>            {/* Card 3: Animações e Efeitos da Interface */}
             <div className="cfg-card">
               <div className="cfg-card-header" style={{ justifyContent: "space-between" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -814,6 +841,8 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
               </div>
             </div>
 
+            <div className="cfg-card"><div className="cfg-card-header inertia-setting"><div className="inertia-setting-info"><div className="cfg-card-icon-box"><Mouse className="cfg-card-icon" size={18}/></div><div><h3 className="cfg-card-title">Inércia na rolagem</h3><p className="cfg-card-subtitle">Suaviza a rolagem do mouse com desaceleração gradual.</p></div></div><div className="inertia-setting-controls"><div className="inertia-strength" role="group" aria-label="Força da inércia">{([{id:'soft',label:'Suave'},{id:'strong',label:'Forte'}] as const).map(option=><button type="button" key={option.id} disabled={!draft.scrollInertia} aria-pressed={(draft.scrollInertiaStrength??'soft')===option.id} onClick={()=>update('scrollInertiaStrength',option.id)}>{option.label}</button>)}</div><Toggle label="Inércia na rolagem" checked={draft.scrollInertia===true} onChange={value=>update('scrollInertia',value)}/></div></div></div>
+<ScrollbarPicker value={draft.scrollbarStyle} onChange={value=>update('scrollbarStyle',value)}/></PersonalizationPanel>}
             {/* Modal Drawer: Personalizar Tema (Do print do usuario) */}
             {customizerModalOpen && (
               <ThemeCustomizerModal
@@ -1123,8 +1152,11 @@ export function SettingsPage({ settings, onSave, saved }: Props) {
             onExportPreferences={exportPreferences}
             onImportPreferences={importPreferences}
             onConfigureGlobalSchedule={() => void configureGlobalSchedule()}
+            onResetApplication={()=>setResetDialogOpen(true)}
           />
         )}      </div>
+      {soundDialogOpen&&<CompletionSoundDialog value={draft.completionSound??'default'} name={draft.completionSoundName??''} onClose={()=>setSoundDialogOpen(false)} onApply={(completionSound,completionSoundName)=>{const next={...draft,completionSound,completionSoundName};setDraft(next);onSave(next);setSoundDialogOpen(false);}}/>}
+      {resetDialogOpen && <ResetApplicationDialog onClose={()=>setResetDialogOpen(false)} onConfirm={async()=>{const next=await resetApplication();setDraft(next);setLanguage(next.language);onSave(next);setResetDialogOpen(false);window.location.reload();}}/>}
       {rgbDialogOpen && <RgbThemeDialog config={draft.rgbConfig} profiles={draft.rgbProfiles??[]} onClose={()=>setRgbDialogOpen(false)}
       onPreview={rgbConfig=>applyThemeSettings({...draft,rgbConfig,gameTheme:'none',localThemeId:undefined,testTheme:{...draft.testTheme,enabled:false},interfaceGradient:{...draft.interfaceGradient,rgb:true,enabled:true,stops:[{color:'#161125',position:0},{color:'#080e16',position:100}]}})}
       onCancelPreview={()=>applyThemeSettings(draft)} onApply={(rgbConfig,rgbProfiles)=>{

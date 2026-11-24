@@ -40,3 +40,17 @@ test('detects an unpacked copy loaded from a different directory after reload',a
   const f=fixture(null,{pendingExtensionUpdate:{version:'0.3.9',path:'C:/App/extension/chromium'}});
   try{await f.flush();assert.match(f.window.document.querySelector('#update-result').textContent,/outra pasta.*C:\/App\/extension\/chromium/);assert.equal(f.reloads(),0);}finally{f.close();}
 });
+
+
+test('popup switches the whole palette between light and dark backgrounds',async()=>{
+  const f=fixture(null,{themeAccent:'#10b981',themeBg:'linear-gradient(135deg, #edf8f2, #dceee6)'});
+  try {
+    await f.flush();const root=f.window.document.documentElement;
+    assert.equal(root.dataset.theme,'light');
+    assert.equal(root.style.getPropertyValue('--st-connected'),'#087649');
+    assert.match(root.style.getPropertyValue('--ember'),/color-mix/);
+    f.window.applyTheme('#10b981','linear-gradient(135deg, #12151b, #0b0d10)');
+    assert.equal(root.dataset.theme,'dark');
+    assert.equal(root.style.getPropertyValue('--ember'),'#10b981');
+  }finally{f.close();}
+});

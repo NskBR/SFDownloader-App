@@ -1,0 +1,14 @@
+import {useRef,useState} from "react";
+import {invoke} from "@tauri-apps/api/core";
+import {PersonalizationPanel} from "./PersonalizationPanel";
+import {Play,Upload,Music2} from "../icons";
+import {importCompletionMp3} from "../../services/completionSoundImport";
+import "../../styles/completion-sound.css";
+const presets=[{id:'default',name:'Padrão',detail:'Som original do SFDownloader'},{id:'soft',name:'Suave',detail:'Dois tons delicados'},{id:'bright',name:'Cristal',detail:'Notas claras e ascendentes'},{id:'arcade',name:'Arcade',detail:'Sequência curta de quatro notas'},{id:'bell',name:'Sino',detail:'Um toque discreto'}];
+export function CompletionSoundDialog({value,name,onClose,onApply}:{value:string;name:string;onClose:()=>void;onApply:(id:string,name:string)=>void}){
+ const [selected,setSelected]=useState(value),[custom,setCustom]=useState(value.startsWith('custom:')?value:''),[customName,setCustomName]=useState(name),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const input=useRef<HTMLInputElement>(null);
+ const preview=(id:string)=>{setError('');void invoke('play_completion_sound',{soundId:id}).catch(cause=>setError(String(cause)));};
+ const upload=async(file:File)=>{setBusy(true);setError('');try{const id=await importCompletionMp3(file);setCustom(id);setCustomName(file.name);setSelected(id);}catch(cause){setError(cause instanceof Error?cause.message:String(cause));}finally{setBusy(false);}};
+ return <PersonalizationPanel title="Som de conclusão" description="Escolha uma variação ou importe seu MP3 de até 5 segundos." onClose={onClose} onApply={()=>{if(!busy)onApply(selected,selected.startsWith('custom:')?customName:'');}}><div className="completion-sounds">{[...presets,...(custom?[{id:custom,name:'Personalizado',detail:customName}]:[])].map(sound=><div key={sound.id} className="completion-sound-option" data-selected={selected===sound.id}><button type="button" className="completion-sound-select" aria-pressed={selected===sound.id} onClick={()=>setSelected(sound.id)}><Music2 size={18}/><span><strong>{sound.name}</strong><small>{sound.detail}</small></span><i aria-hidden="true"/></button><button type="button" className="completion-sound-play" aria-label={`Ouvir ${sound.name}`} onClick={()=>preview(sound.id)}><Play size={16}/></button></div>)}</div><button type="button" className="completion-sound-import" disabled={busy} onClick={()=>input.current?.click()}><Upload size={16}/>{busy?'Validando áudio…':'Importar MP3'}<span>Até 5 segundos · 5 MB</span></button><input hidden type="file" ref={input} accept=".mp3,audio/mpeg" disabled={busy} onChange={event=>{const file=event.target.files?.[0];if(file)void upload(file);event.currentTarget.value='';}}/>{error&&<p role="alert" className="completion-sound-error">{error}</p>}</PersonalizationPanel>;
+}

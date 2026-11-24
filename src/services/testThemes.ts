@@ -1,4 +1,4 @@
-import themeManifest from "../../themes/manifest.json";
+import {currentThemeManifest} from "./gameThemeManifest";
 import {appearanceCss} from "./themeAppearance";
 import { invoke } from "@tauri-apps/api/core";
 import type { TestThemeSettings } from "../domain/settings";
@@ -11,7 +11,7 @@ const scope = 'html.window-type-main[data-test-theme="true"]';
 const validId = /^[a-f0-9]{64}$/;
 const imageCache = new Map<string, Promise<string>>();
 export function invalidateGameThemeImages(id: string) {
-  for (const entry of themeManifest) {
+  for (const entry of currentThemeManifest()) {
     if ([id,`${id}-medium`,`${id}-compact`].includes(entry.id)) imageCache.delete(entry.sha256);
   }
   activeKey = "";
@@ -37,9 +37,7 @@ export function loadThemeImage(id: string): Promise<string> {
     const root=document.documentElement;
     const suffix=root.classList.contains("window-type-main") ? "" :
       root.classList.contains("window-type-confirmation") || (root.classList.contains("window-type-media") && window.innerWidth>600) ? "-medium" : "-compact";
-    const entry=themeManifest.find(theme=>theme.id===id.slice(8)+suffix);
-    if(!entry) return Promise.reject(new Error("Tema desconhecido / Unknown theme"));
-    return loadThemeImage(entry.sha256);
+    return invoke<string>('resolve_game_theme_image',{id:id.slice(8)+suffix}).then(hash=>loadThemeImage(hash));
   }
   if (!validId.test(id)) return Promise.reject(new Error("Identificação de imagem inválida / Invalid image ID"));
   if (!imageCache.has(id)) {

@@ -88,6 +88,7 @@ describe("DownloadsPage empty and error states", () => {
     cleanup();
   });
   beforeEach(() => {
+    vi.stubGlobal("ResizeObserver",class {observe(){}disconnect(){}});
     localStorage.clear();
     setError.mockClear();
   });

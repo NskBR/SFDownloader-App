@@ -1,0 +1,52 @@
+.personalization-categories {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;}
+.personalization-categories > button {display:flex;align-items:center;gap:10px;padding:14px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);text-align:left;min-width:0;}
+.personalization-categories > button:hover {border-color:var(--ember-solid);background:var(--ember-soft);}.personalization-categories > button > svg:first-child {color:var(--ember-solid);flex:none;}.personalization-categories > button > svg:last-child {transform:rotate(-90deg);flex:none;color:var(--text-2);}.personalization-categories > button > span {flex:1;min-width:0;}.personalization-categories strong {display:block;font-size:12px;line-height:1.4;}.personalization-categories small {display:block;margin-top:4px;font-size:10px;color:var(--text-2);line-height:1.5;}
+.personalization-section-heading h3 {margin:0;font-size:13px;}.personalization-section-heading p {margin:4px 0 12px;font-size:11px;color:var(--text-2);}
+.personalization-panel {position:fixed;inset:20px;margin:auto;width:min(780px,calc(100vw - 40px));max-height:calc(100dvh - 40px);padding:0;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);box-shadow:0 20px 80px #0006;}
+.personalization-panel[open] {display:flex;flex-direction:column;}.personalization-panel::backdrop {background:#0006;backdrop-filter:blur(4px);}
+.personalization-panel > header,.personalization-panel > footer {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;flex-shrink:0;}.personalization-panel > header {border-bottom:1px solid var(--line);}.personalization-panel h2 {margin:0;font-size:20px;}.personalization-panel > header p {color:var(--text-2);font-size:12px;line-height:1.5;margin:6px 0 0;}.personalization-panel > header button {background:transparent;color:var(--text-2);padding:6px;}
+.personalization-panel-body {display:grid;gap:12px;padding:18px 22px;overflow-y:auto;min-height:0;container-type:inline-size;}.personalization-panel-body > .cfg-card {margin:0;}.personalization-panel-body > :is(.window-controls-picker,.scrollbar-picker) {margin:0;}.personalization-panel > footer {border-top:1px solid var(--line);}.personalization-panel > footer span {font-size:11px;color:var(--text-2);}.personalization-panel > footer button {padding:9px 16px;border:1px solid var(--ember-solid);border-radius:8px;background:var(--ember-soft);color:var(--text);font-size:12px;}
+.personalization-panel button:focus-visible,.personalization-categories > button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:2px;}
+@container(max-width:650px){.personalization-categories {grid-template-columns:1fr;}}
+
+/* Preview drawers should reveal the application, not a stack of settings panels. */
+html:has(.border-custom-dialog[open]) .personalization-panel {
+ visibility:hidden;pointer-events:none;
+}
+html:has(.border-custom-dialog[open]) .personalization-panel::backdrop {
+ background:transparent;backdrop-filter:none;
+}
+html:has(.rgb-editor-dialog[open]) .personalization-panel,
+html:has(.rgb-editor-dialog[open]) .border-custom-dialog {
+ visibility:hidden;pointer-events:none;
+}
+html:has(.rgb-editor-dialog[open]) :is(.personalization-panel,.border-custom-dialog)::backdrop {
+ background:transparent;backdrop-filter:none;
+}
+
+/* Live appearance controls keep the real titlebar and underlying interface visible. */
+.personalization-panel {inset:54px 12px 12px auto;margin:0;width:min(480px,calc(100vw - 24px));max-height:calc(100dvh - 66px);background:color-mix(in srgb,var(--panel) 90%,transparent);backdrop-filter:blur(22px);}
+.personalization-panel::backdrop {background:transparent;backdrop-filter:none;}
+.personalization-panel > header,.personalization-panel > footer {padding:16px 18px;}
+.personalization-panel-body {padding:16px 18px;}
+.personalization-panel .inertia-setting {align-items:flex-start;}
+.personalization-panel .inertia-setting-controls {width:100%;justify-content:flex-end;}
+.personalization-panel .window-controls-options > button {flex-basis:118px;width:118px;}
+.personalization-panel .scrollbar-options > button {flex-basis:118px;}
+
+.personalization-panel-actions {display:flex;gap:8px;}
+.personalization-panel > footer .personalization-panel-actions > button:first-child {background:var(--surface);border-color:var(--line);}
+
+/* Keep inertia controls together instead of dropping them to a second row. */
+.personalization-panel .inertia-setting {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;}
+.personalization-panel .inertia-setting-info {min-width:0;gap:9px;}
+.personalization-panel .inertia-setting-info > div:last-child {min-width:0;}
+.personalization-panel .inertia-setting-info .cfg-card-subtitle {white-space:normal;line-height:1.45;}
+.personalization-panel .inertia-setting-controls {width:auto;margin:0;gap:10px;flex-wrap:nowrap;}
+.personalization-panel .inertia-strength {flex-shrink:0;}
+.personalization-panel .inertia-strength button {padding:6px 8px;white-space:nowrap;}
+.personalization-panel .inertia-setting-controls .toggle {flex-shrink:0;}
+@media(max-width:400px){
+ .personalization-panel .inertia-setting {grid-template-columns:1fr;}
+ .personalization-panel .inertia-setting-controls {justify-content:space-between;width:100%;}
+}

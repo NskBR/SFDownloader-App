@@ -50,7 +50,7 @@ it("loads the cached wallpaper as a short owned URL and releases it on reset",as
  const create=URL.createObjectURL,revoke=URL.revokeObjectURL;
  const make=vi.fn(()=>"blob:sf-builtin-wallpaper");const release=vi.fn();
  URL.createObjectURL=make;URL.revokeObjectURL=release;
- vi.mocked(invoke).mockResolvedValue(data);
+ vi.mocked(invoke).mockImplementation(async command=>command==="resolve_game_theme_image"?id:data);
  vi.stubGlobal("Image",class {naturalWidth=10;naturalHeight=10;onload:(()=>void)|null=null;set src(_value:string){queueMicrotask(()=>this.onload?.());}});
  try {
   await applyTestTheme({...defaultTestTheme,preset:"cyberpunk",enabled:true,imageId:"builtin:cyberpunk"});
@@ -75,7 +75,7 @@ it("keeps the current theme visible while the next wallpaper loads",async()=>{
  await applyTestTheme({...defaultTestTheme});
  await applyTestTheme({...defaultTestTheme,enabled:true,preset:"cs2",css:".sidebar{color:red}"});
  let resolveFetch!:(value:unknown)=>void;
- vi.mocked(invoke).mockImplementation(()=>new Promise(resolve=>{resolveFetch=resolve;}));
+ vi.mocked(invoke).mockImplementation(command=>command==="resolve_game_theme_image"?Promise.resolve("b".repeat(64)):new Promise(resolve=>{resolveFetch=resolve;}));
  vi.stubGlobal("Image",class {naturalWidth=10;naturalHeight=10;onload:(()=>void)|null=null;set src(_value:string){queueMicrotask(()=>this.onload?.());}});
  const create=URL.createObjectURL,revoke=URL.revokeObjectURL;
  URL.createObjectURL=vi.fn(()=>"blob:next-theme");URL.revokeObjectURL=vi.fn();
@@ -83,6 +83,7 @@ it("keeps the current theme visible while the next wallpaper loads",async()=>{
   const pending=applyTestTheme({...defaultTestTheme,enabled:true,preset:"god-of-war-ragnarok",imageId:"builtin:god-of-war-ragnarok"});
   expect(document.documentElement.dataset.testPreset).toBe("cs2");
   expect(document.getElementById("sf-test-theme-css")?.textContent).toContain("color:red");
+  await new Promise(resolve=>setTimeout(resolve,0));
   resolveFetch(data);
   await pending;
   expect(document.documentElement.dataset.testPreset).toBe("god-of-war-ragnarok");

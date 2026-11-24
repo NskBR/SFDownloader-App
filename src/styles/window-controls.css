@@ -1,0 +1,78 @@
+.window-controls-picker {margin:18px 0;}.window-controls-picker h3 {margin:0;font-size:13px;}.window-controls-picker p {margin:5px 0 12px;color:var(--text-2);font-size:11px;}
+.window-controls-options {display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:9px;}.window-controls-options > button {display:flex;flex-direction:column;align-items:center;gap:12px;padding:15px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);font-size:11px;}.window-controls-options > button[aria-pressed=true] {border-color:var(--ember-solid);background:var(--ember-soft);}.window-controls-options > button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:2px;}.window-controls-sample {display:flex;align-items:center;gap:4px;height:28px;}.window-controls-sample i {display:grid;place-items:center;width:23px;height:24px;color:var(--text-2);font-style:normal;}
+.window-controls-sample.rounded i {background:var(--surface-2);border-radius:8px;}.window-controls-sample.outlined i {border:1px solid var(--line);border-radius:5px;}.window-controls-sample.compact {gap:2px;}.window-controls-sample.compact i {width:18px;height:20px;}
+.window-controls-sample.traffic i {width:16px;height:16px;border-radius:50%;background:#e8b339;color:#32270b;}.window-controls-sample.traffic i:nth-child(2) {background:#38ba74;color:#092d19;}.window-controls-sample.traffic i:nth-child(3) {background:#ef6560;color:#3b0d0b;}.window-controls-sample.traffic svg {width:10px;height:10px;}
+html[data-window-controls="rounded"] .titlebar .window-controls {gap:4px;padding:0 4px;}html[data-window-controls="rounded"] .titlebar .window-controls button {width:32px;height:30px;border-radius:9px;background:var(--surface-2);}
+html[data-window-controls="outlined"] .titlebar .window-controls {gap:4px;padding:0 4px;}html[data-window-controls="outlined"] .titlebar .window-controls button {width:32px;height:28px;border:1px solid var(--line);border-radius:6px;background:transparent;}
+html[data-window-controls="compact"] .titlebar .window-controls button {width:28px;height:28px;border-radius:5px;}
+html[data-window-controls="traffic"] .titlebar .window-controls {gap:8px;padding:0 8px;}html[data-window-controls="traffic"] .titlebar .window-controls button {width:19px;height:19px;min-height:0;padding:3px;border-radius:50%;background:#e8b339;color:#32270b;}html[data-window-controls="traffic"] .titlebar .window-controls button:nth-child(2) {background:#38ba74;color:#092d19;}html[data-window-controls="traffic"] .titlebar .window-controls button:nth-child(3) {background:#ef6560;color:#3b0d0b;}html[data-window-controls="traffic"] .titlebar .window-controls button svg {width:12px;height:12px;}html[data-window-controls="traffic"] .titlebar .window-controls button:hover {filter:brightness(1.15);}
+html[data-window-controls]:not([data-window-controls="traffic"]) .titlebar .window-controls .window-close:hover {background:var(--st-failed);color:#fff;}
+
+.titlebar .window-controls .window-maximize-corners {display:none;}
+html[data-window-controls="minimal"] .titlebar .window-controls {gap:2px;padding:0 3px;}
+html[data-window-controls="minimal"] .titlebar .window-controls button {width:28px;height:28px;padding:7px;border:0;border-radius:4px;background:transparent;color:var(--text-2);}
+html[data-window-controls="minimal"] .titlebar .window-controls button svg {width:12px;height:12px;stroke-width:1.25;}
+html[data-window-controls="minimal"] .titlebar .window-controls .window-maximize-standard {display:none;}
+html[data-window-controls="minimal"] .titlebar .window-controls .window-maximize-corners {display:block;}
+html[data-window-controls="minimal"] .titlebar .window-controls button:hover {background:var(--surface-2);color:var(--text);}
+.window-controls-sample.minimal {gap:2px;}
+.window-controls-sample.minimal i {width:22px;color:var(--text-2);}
+.window-controls-sample.minimal svg {width:11px;height:11px;stroke-width:1.25;}
+
+.window-symbol-xbox,.window-symbol-playstation {display:none;}
+html:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls {gap:5px;padding:0 5px;}
+html:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls button {width:29px;height:29px;min-height:0;padding:5px;border:1px solid var(--line);border-radius:50%;background:var(--surface);}
+html:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls button > svg:not(.window-symbol-playstation) {display:none;}
+html[data-window-controls="xbox"] .titlebar .window-controls .window-symbol-xbox,.window-controls-sample.xbox .window-symbol-xbox {display:grid;place-items:center;font:700 12px/1 var(--font);}
+html[data-window-controls="playstation"] .titlebar .window-controls .window-symbol-playstation,.window-controls-sample.playstation .window-symbol-playstation {display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;}
+html:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls button:nth-child(1),.window-controls-sample.xbox i:nth-child(1) {color:#419bff;}
+html[data-window-controls="xbox"] .titlebar .window-controls button:nth-child(2),.window-controls-sample.xbox i:nth-child(2) {color:#e8ba3a;}
+html[data-window-controls="playstation"] .titlebar .window-controls button:nth-child(1),.window-controls-sample.playstation i:nth-child(1) {color:#df7eaf;}
+html[data-window-controls="playstation"] .titlebar .window-controls button:nth-child(2),.window-controls-sample.playstation i:nth-child(2) {color:#30bc9c;}
+html:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls button:nth-child(3),.window-controls-sample:is(.xbox,.playstation) i:nth-child(3) {color:#ef6666;}
+.window-controls-sample:is(.xbox,.playstation) {gap:5px;}
+.window-controls-sample:is(.xbox,.playstation) i {width:23px;height:23px;border:1px solid var(--line);border-radius:50%;background:var(--panel);}
+html[data-theme="light"][data-window-controls="xbox"] .titlebar .window-controls button:nth-child(1) {color:#1765b8;}
+html[data-theme="light"][data-window-controls="xbox"] .titlebar .window-controls button:nth-child(2) {color:#8a6200;}
+html[data-theme="light"][data-window-controls="playstation"] .titlebar .window-controls button:nth-child(1) {color:#a23872;}
+html[data-theme="light"][data-window-controls="playstation"] .titlebar .window-controls button:nth-child(2) {color:#087c62;}
+html[data-theme="light"]:is([data-window-controls="xbox"],[data-window-controls="playstation"]) .titlebar .window-controls button:nth-child(3) {color:#bd3030;}
+
+/* Keep controller glyphs centered without inheriting icon wrapper dimensions. */
+html[data-window-controls="playstation"] .titlebar .window-controls button {display:flex;align-items:center;justify-content:center;padding:0;line-height:0;}
+html[data-window-controls="playstation"] .titlebar .window-controls button > .window-symbol-playstation,
+.window-controls-sample.playstation i > .window-symbol-playstation {display:block;flex:none;width:20px;height:20px;margin:0;transform:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;}
+html[data-window-controls="minimal"] .titlebar .window-controls button {width:32px;height:30px;padding:7px;display:flex;align-items:center;justify-content:center;}
+html[data-window-controls="minimal"] .titlebar .window-controls button > svg {width:16px;height:16px;stroke-width:1.75;color:var(--text);}
+.window-controls-sample.minimal i {width:24px;height:26px;color:var(--text);}
+.window-controls-sample.minimal svg {width:15px;height:15px;stroke-width:1.75;}
+
+.window-symbol-nintendo {display:none;}
+html[data-window-controls="nintendo"] .titlebar .window-controls {gap:5px;padding:0 5px;}
+html[data-window-controls="nintendo"] .titlebar .window-controls button {display:flex;align-items:center;justify-content:center;width:28px;height:28px;min-height:0;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--surface-2);color:var(--text);}
+html[data-window-controls="nintendo"] .titlebar .window-controls button > svg {display:none;}
+html[data-window-controls="nintendo"] .titlebar .window-controls .window-symbol-nintendo,.window-controls-sample.nintendo .window-symbol-nintendo {display:block;font:650 12px/1 var(--font);}
+.window-controls-sample.nintendo {gap:5px;}.window-controls-sample.nintendo i {width:23px;height:23px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--text);}
+html[data-window-controls="apple"] .titlebar .window-controls {gap:8px;padding:0 8px;}
+html[data-window-controls="apple"] .titlebar .window-controls button {display:flex;align-items:center;justify-content:center;width:16px;height:16px;min-height:0;padding:2px;border-radius:50%;border:1px solid #0002;background:#febc2e;color:#624300;}
+html[data-window-controls="apple"] .titlebar .window-controls button:nth-child(2) {background:#28c840;color:#075913;}
+html[data-window-controls="apple"] .titlebar .window-controls button:nth-child(3) {background:#ff5f57;color:#7c100b;}
+html[data-window-controls="apple"] .titlebar .window-controls button > svg {width:10px;height:10px;opacity:0;stroke-width:2;}
+html[data-window-controls="apple"] .titlebar .window-controls:hover button > svg,html[data-window-controls="apple"] .titlebar .window-controls button:focus-visible > svg {opacity:1;}
+.window-controls-sample.apple {gap:7px;}.window-controls-sample.apple i {width:14px;height:14px;border-radius:50%;background:#febc2e;border:1px solid #0002;}.window-controls-sample.apple i:nth-child(2) {background:#28c840;}.window-controls-sample.apple i:nth-child(3) {background:#ff5f57;}.window-controls-sample.apple svg {opacity:0;}
+
+/* Apple uses native visual and keyboard order: close, minimize, maximize, on the left. */
+html[data-window-controls="apple"] .titlebar > .titlebar-side:not(.titlebar-actions) {gap:10px;}
+html[data-window-controls="apple"] .titlebar .window-controls {flex-shrink:0;padding:0 7px 0 3px;}
+html[data-window-controls="apple"] .titlebar .window-controls button:nth-child(1) {background:#ff5f57;color:#7c100b;}
+html[data-window-controls="apple"] .titlebar .window-controls button:nth-child(2) {background:#febc2e;color:#624300;}
+html[data-window-controls="apple"] .titlebar .window-controls button:nth-child(3) {background:#28c840;color:#075913;}
+
+.window-controls-sample.apple i:nth-child(1) {background:#ff5f57;}
+.window-controls-sample.apple i:nth-child(2) {background:#febc2e;}
+.window-controls-sample.apple i:nth-child(3) {background:#28c840;}
+
+/* Center incomplete rows while keeping every variant card the same width. */
+.window-controls-options {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.window-controls-options > button {flex:0 0 126px;width:126px;min-width:0;min-height:94px;box-sizing:border-box;}
+@media(max-width:450px) {.window-controls-options > button {flex-basis:calc((100% - 20px)/3);width:calc((100% - 20px)/3);}}

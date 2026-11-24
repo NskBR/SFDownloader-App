@@ -318,14 +318,69 @@ mod tests {
 
 
 
-#[derive(Deserialize)]
-
-struct GameWallpaper { id: String, file: String, sha256: String, bytes: u64 }
-
-fn game_wallpapers() -> Result<Vec<GameWallpaper>, String> {
-
-    serde_json::from_str(include_str!("../../../themes/manifest.json")).map_err(|e|e.to_string())
-
+#[derive(Clone, Deserialize, Serialize)]
+pub struct GameWallpaper { id:String,file:String,sha256:String,bytes:u64,#[serde(default,skip_serializing_if="Option::is_none")] collection:Option<String>,#[serde(default,rename="collectionName",skip_serializing_if="Option::is_none")] collection_name:Option<String>,#[serde(default,skip_serializing_if="Option::is_none")] preset:Option<String>,#[serde(default,skip_serializing_if="Option::is_none")] name:Option<String>,#[serde(default,skip_serializing_if="Option::is_none")] preview:Option<String> }
+const CATALOG_LIMIT:usize=2*1024*1024;
+fn bundled_wallpapers()->Result<Vec<GameWallpaper>,String>{serde_json::from_str(include_str!("../../../themes/manifest.json")).map_err(|e|e.to_string())}
+fn parse_catalog(bytes:&[u8])->Result<Vec<GameWallpaper>,String>{
+    if bytes.len()>CATALOG_LIMIT{return Err("Catalogo de temas acima do limite.".into());}
+    let entries:Vec<GameWallpaper>=serde_json::from_slice(bytes).map_err(|_|"Catalogo de temas invalido.")?;
+    if entries.is_empty()||entries.len()>1500{return Err("Quantidade de imagens invalida.".into());}
+    let mut ids=std::collections::HashSet::new();
+    for e in &entries {
+        if e.id.is_empty()||e.id.len()>120||!e.id.bytes().all(|c|c.is_ascii_lowercase()||c.is_ascii_digit()||c==b'-')||!ids.insert(&e.id)||!valid_id(&e.sha256)||e.bytes==0||e.bytes>MAX_BYTES||e.file.len()>256||!e.file.ends_with(".png")||e.file.split('/').any(|part|part.is_empty()||part=="."||part==".."||!part.bytes().all(|c|c.is_ascii_alphanumeric()||matches!(c,b'-'|b'_'|b'.'))) {
+            return Err("Entrada de tema invalida.".into());
+        }
+        if e.name.as_ref().is_some_and(|value|value.len()>160)||e.collection.as_ref().is_some_and(|value|value.is_empty()||value.len()>80||!value.bytes().all(|c|c.is_ascii_lowercase()||c.is_ascii_digit()||c==b'-'))||e.collection_name.as_ref().is_some_and(|v|v.len()>160)||e.preset.as_ref().is_some_and(|v|v.len()>80)||e.preview.as_ref().is_some_and(|value|value.len()>100000||!value.starts_with("data:image/jpeg;base64,")||!value[23..].bytes().all(|c|c.is_ascii_alphanumeric()||matches!(c,b'+'|b'/'|b'='))){return Err("Metadados do tema invalidos.".into());}
+    }
+    for entry in entries.iter().filter(|e|!e.id.ends_with("-medium")&&!e.id.ends_with("-compact")) {
+        if !["-medium","-compact"].iter().all(|suffix|entries.iter().any(|e|e.id==format!("{}{suffix}",entry.id))){return Err("Tema sem imagens auxiliares.".into());}
+    }
+    Ok(entries)
+}
+fn cached_wallpapers(app:&AppHandle,name:&str)->Option<Vec<GameWallpaper>>{
+    let path=folder(app).ok()?.join(name);let file=std::fs::File::open(path).ok()?;let mut bytes=Vec::new();file.take(CATALOG_LIMIT as u64+1).read_to_end(&mut bytes).ok()?;parse_catalog(&bytes).ok()
+}
+fn game_wallpapers(app:&AppHandle)->Result<Vec<GameWallpaper>,String>{
+    let mut entries=bundled_wallpapers()?;
+    if let Some(remote)=cached_wallpapers(app,"game-catalog.json") {for entry in remote {if let Some(previous)=entries.iter_mut().find(|e|e.id==entry.id){*previous=entry;}else{entries.push(entry);}}}
+    Ok(entries)
+}
+#[tauri::command]
+pub fn game_theme_manifest(app:AppHandle)->Result<Vec<GameWallpaper>,String>{game_wallpapers(&app)}
+#[tauri::command]
+pub async fn refresh_game_theme_catalog(app:AppHandle,window:WebviewWindow)->Result<Vec<GameWallpaper>,String>{
+    if window.label()!="main"{return Err("Consulte temas nas configuracoes.".into());}
+    let client=reqwest::Client::builder().timeout(std::time::Duration::from_secs(25)).redirect(reqwest::redirect::Policy::none()).build().map_err(|e|e.to_string())?;
+    let mut response=client.get("https://raw.githubusercontent.com/NskBR/SFDownloader-App/main/themes/manifest.json").header("Cache-Control","no-cache").send().await.map_err(|_|"Nao foi possivel consultar o GitHub. O catalogo offline foi mantido.")?.error_for_status().map_err(|_|"Catalogo indisponivel no GitHub.")?;
+    let mut bytes=Vec::new();while let Some(chunk)=response.chunk().await.map_err(|e|e.to_string())?{if bytes.len()+chunk.len()>CATALOG_LIMIT{return Err("Catalogo acima do limite.".into());}bytes.extend_from_slice(&chunk);}
+    let remote=parse_catalog(&bytes)?;
+    let bundled=bundled_wallpapers()?;
+    // The repository may still describe the preceding app release. Never drop bundled entries.
+    let mut merged=bundled;
+    for entry in remote {if let Some(previous)=merged.iter_mut().find(|e|e.id==entry.id){*previous=entry;}else{merged.push(entry);}}
+    let root=folder(&app)?;std::fs::create_dir_all(&root).map_err(|e|e.to_string())?;
+    let target=root.join("game-catalog.json");let pending=root.join(format!("game-catalog-{}.pending",uuid::Uuid::new_v4()));
+    let mut previous=game_wallpapers(&app)?;
+    // Repeated checks must not forget an older, still-installed wallpaper.
+    let older=cached_wallpapers(&app,"game-catalog-previous.json").unwrap_or_default();
+    for entry in &mut previous {
+        if !root.join(format!("{}.image",entry.sha256)).exists() {
+            if let Some(installed)=older.iter().find(|old|old.id==entry.id&&root.join(format!("{}.image",old.sha256)).exists()){*entry=installed.clone();}
+        }
+    }
+    std::fs::write(root.join("game-catalog-previous.json"),serde_json::to_vec(&previous).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+    std::fs::write(&pending,serde_json::to_vec(&merged).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+    if target.exists(){std::fs::remove_file(&target).map_err(|e|e.to_string())?;}std::fs::rename(pending,target).map_err(|e|e.to_string())?;
+    Ok(merged)
+}
+#[tauri::command]
+pub fn resolve_game_theme_image(app:AppHandle,id:String)->Result<String,String>{
+    let root=folder(&app)?;
+    let mut candidates=game_wallpapers(&app)?;
+    candidates.extend(cached_wallpapers(&app,"game-catalog-previous.json").unwrap_or_default());candidates.extend(bundled_wallpapers()?);
+    for entry in candidates.iter().filter(|e|e.id==id){if let Ok(bytes)=read_bytes(&root.join(format!("{}.image",entry.sha256))){if format!("{:x}",Sha256::digest(&bytes))==entry.sha256 {return Ok(entry.sha256.clone());}}}
+    Err("Imagem nao baixada. Baixe ou atualize o tema pela galeria.".into())
 }
 
 #[tauri::command]
@@ -335,7 +390,7 @@ pub async fn installed_game_themes(app: AppHandle) -> Result<Vec<String>, String
 
     let root=folder(&app)?;
 
-    let entries=game_wallpapers()?;
+    let entries=game_wallpapers(&app)?;
     Ok(entries.iter().filter(|entry| !entry.id.ends_with("-compact") && !entry.id.ends_with("-medium"))
       .filter(|entry| ["","-compact","-medium"].iter().all(|suffix| {
         entries.iter().find(|asset|asset.id==format!("{}{suffix}",entry.id)).is_some_and(|asset|
@@ -350,7 +405,7 @@ async fn download_wallpaper(app: AppHandle, id: String) -> Result<(), String> {
 
 
 
-    let entry=game_wallpapers()?.into_iter().find(|entry|entry.id==id).ok_or("Tema desconhecido.")?;
+    let entry=game_wallpapers(&app)?.into_iter().find(|entry|entry.id==id).ok_or("Tema desconhecido.")?;
 
     let root=folder(&app)?;
 
@@ -396,7 +451,7 @@ async fn download_wallpaper(app: AppHandle, id: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
     if window.label()!="main" { return Err("Baixe temas pelas configurações.".into()); }
-    let wallpapers = game_wallpapers()?;
+    let wallpapers = game_wallpapers(&app)?;
     if id.ends_with("-compact") || id.ends_with("-medium") || !wallpapers.iter().any(|entry| entry.id == id) {
         return Err("Tema desconhecido.".into());
     }
@@ -409,7 +464,7 @@ pub async fn download_game_theme(app: AppHandle, window: WebviewWindow, id: Stri
 #[tauri::command]
 pub fn delete_game_theme(app: AppHandle, window: WebviewWindow, id: String) -> Result<(), String> {
     if window.label() != "main" { return Err("Gerencie temas pelas configurações.".into()); }
-    let entries = game_wallpapers()?;
+    let entries = game_wallpapers(&app)?;
     if id.ends_with("-compact") || id.ends_with("-medium") || !entries.iter().any(|entry| entry.id == id) {
         return Err("Tema desconhecido.".into());
     }

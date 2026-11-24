@@ -1,4 +1,4 @@
-import { ArrowDown, LayoutGrid, List, Magnet, Search } from "../icons";
+import { ArrowDown, LayoutGrid, List, Magnet, Search, X } from "../icons";
 import type { KeyboardEvent, ClipboardEvent } from "react";
 import type { DownloadSort, DownloadSortKey, DownloadView } from "../../hooks/useDownloadViewPreferences";
 import { CustomSelect } from "../ui/CustomSelect";
@@ -48,9 +48,9 @@ export function DownloadsToolbar({
   };
 
   return (
-    <header className="flux-header" data-tauri-drag-region>
+    <header className="flux-header downloads-toolbar" data-tauri-drag-region>
       <div className="search-container" data-tauri-drag-region>
-        <Search />
+        <span className="search-leading" aria-hidden="true"><Search size={16}/></span>
         <input
           className="search-input"
           value={search}
@@ -58,7 +58,10 @@ export function DownloadsToolbar({
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           placeholder={placeholder}
+          aria-label={placeholder}
+          spellCheck={false}
         />
+        {search && <button type="button" className="search-clear" aria-label="Limpar busca" title="Limpar busca" onClick={()=>onSearchChange("")}><X size={14}/></button>}
       </div>
 
       <div className="header-right-group" data-tauri-drag-region>

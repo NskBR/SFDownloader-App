@@ -392,3 +392,9 @@ html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog {
 .help-overlay .help-dialog > header,.help-overlay .help-dialog > footer { background:color-mix(in srgb,var(--panel,#161a1e) 35%,transparent); }
 html[data-test-theme="true"][data-test-preset] .help-overlay .help-dialog > footer { background:color-mix(in srgb,var(--game-surface,#161a1e) 35%,transparent); }
 html[data-test-theme="true"][data-test-preset] .help-overlay .help-close-action { color:#161a1e; background:var(--ember-solid); }
+
+.game-themes-catalog-notice {padding:0 14px 12px;margin:0;color:var(--text-2);font-size:12px;line-height:1.5;}
+.game-themes-header {flex-wrap:wrap;gap:10px;}.game-themes-check {margin-left:auto;white-space:nowrap;}
+.theme-check-spinning {animation:theme-catalog-spin 1s linear infinite;}
+@keyframes theme-catalog-spin {to {transform:rotate(360deg);}}
+@media(prefers-reduced-motion:reduce){.theme-check-spinning {animation:none;}}

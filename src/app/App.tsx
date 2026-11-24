@@ -1,3 +1,4 @@
+import {useScrollInertia} from "../hooks/useScrollInertia";
 import {watchUpdates} from "../services/updatePolling";
 import {prepareThemeCatalog} from "../services/themeCatalog";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -29,6 +30,10 @@ export function App() {
   const [activePage, setActivePage] = useState<PageId>(pageFromHash);
   const previousPage=useRef<PageId>("active");
   const { settings, persist, saved } = useSettings();
+  const [personalizationPreview,setPersonalizationPreview]=useState<typeof settings|null>(null);
+  useEffect(()=>{const preview=(event:Event)=>setPersonalizationPreview((event as CustomEvent<typeof settings>).detail);const end=()=>setPersonalizationPreview(null);window.addEventListener('sf-personalization-preview',preview);window.addEventListener('sf-personalization-preview-end',end);return()=>{window.removeEventListener('sf-personalization-preview',preview);window.removeEventListener('sf-personalization-preview-end',end);};},[]);
+  const motionSettings=personalizationPreview??settings;
+  useScrollInertia(motionSettings.scrollInertia===true,motionSettings.scrollInertiaStrength??"soft");
   const currentSettings = useRef(settings);
   currentSettings.current = settings;
   const processedLinks=useRef(new Set<string>(JSON.parse(sessionStorage.getItem("sf-downloader.processed-links")||"[]")));
@@ -62,10 +67,10 @@ export function App() {
 
   useEffect(() => watchUpdates(setUpdateInfo), []);
 
-  useEffect(()=>{const media=matchMedia("(prefers-color-scheme: dark)");const apply=()=>{document.documentElement.dataset.theme=settings.theme==="system"?(media.matches?"midnight":"light"):settings.theme;document.documentElement.lang=settings.language};apply();media.addEventListener("change",apply);return()=>media.removeEventListener("change",apply)},[settings.theme,settings.language]);
+  useEffect(()=>{document.documentElement.lang=settings.language},[settings.language]);
   useEffect(()=>{
     applyThemeSettings(settings);
-  },[settings.accentColor, settings.appColor, settings.interfaceGradient, settings.testTheme, settings.gameTheme, settings.sidebarAnimation]);
+  },[settings.scrollbarStyle,settings.windowControlsStyle,settings.windowBorder,settings.accentColor, settings.appColor, settings.interfaceGradient, settings.testTheme, settings.gameTheme, settings.sidebarAnimation, settings.navigationPosition,settings.navigationLabels,settings.iconStyle,settings.rgbConfig,settings.accentRgbConfig]);
   useEffect(() => applyFontSettings(settings.fontFamily), [settings.fontFamily]);
   useEffect(() => {
     void invoke("cache_theme_settings", { themeSettings: settings }).catch(console.error);
@@ -76,7 +81,7 @@ export function App() {
     const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
       if (!acceptCompletion(payload) || !currentSettings.current.playSoundOnComplete) return;
       if (disposed) return;
-      void invoke("play_completion_sound").catch((error) => {
+      void invoke("play_completion_sound",{soundId:currentSettings.current.completionSound??"default"}).catch((error) => {
         console.error("[SOUND] Falha ao reproduzir o som de conclusão:", error);
       });
     });
@@ -121,7 +126,7 @@ export function App() {
    return (
      <>
        {splashVisible && <SplashScreen fade={splashFading} onReady={revealMainAfterSplashPaint} />}
-       <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={settings.sidebarAnimation} updateInfo={updateInfo}>{content}</AppShell>
+       <AppShell activePage={activePage} onNavigate={navigate} sidebarAnimation={motionSettings.sidebarAnimation} navigationPosition={motionSettings.navigationPosition} navigationLabels={motionSettings.navigationLabels} updateInfo={updateInfo}>{content}</AppShell>
      </>
    );
 }

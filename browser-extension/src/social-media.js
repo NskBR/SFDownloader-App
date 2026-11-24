@@ -2,7 +2,7 @@
   if (window.top !== window || globalThis.sfSocialButtonsMounted) return;
   globalThis.sfSocialButtonsMounted = true;
   const platform = globalThis.sfMediaPlatform(location.href);
-  if (!['instagram', 'tiktok', 'reddit', 'facebook'].includes(platform)) return;
+  if (!['instagram', 'tiktok', 'reddit', 'facebook', 'twitter'].includes(platform)) return;
   document.querySelectorAll('[data-sf-social-action]').forEach(node => node.remove());
   const actions = new Map();
   const observedRoots = new WeakSet();
@@ -39,11 +39,24 @@
     }
     // A feed contains several posts. Never use the page URL for a different card.
     if (scope === document.body) return globalThis.sfSocialMediaSource(location.href);
+    if (platform === 'twitter') {
+      const links=[...scope.querySelectorAll('a[href]')].filter(a=>a.querySelector('time'));
+      return [...links,...scope.querySelectorAll('a[href*="/status/"]')].map(a=>globalThis.sfSocialMediaSource(a.href)).find(Boolean) || null;
+    }
     const candidates = [...scope.querySelectorAll('a[href]')].map(a => a.href);
     if (scope.matches('[role="dialog"]') || !scope.closest('article') || document.querySelectorAll('article').length === 1) candidates.push(location.href);
     return candidates.map(globalThis.sfSocialMediaSource).find(Boolean) || null;
   };
   function matchActionLayout(action, target, after) {
+    if (platform === 'reddit') {
+      const reference = after || target.querySelector('shreddit-post-share-button,button,a');
+      const height = reference?.getBoundingClientRect().height;
+      const desired = {verticalAlign:'top', lineHeight:'0', height:height > 0 ? `${height}px` : '32px'};
+      for (const [key,value] of Object.entries(desired)) {
+        if (action.host.style[key] !== value) action.host.style[key] = value;
+      }
+      return;
+    }
     if (!['instagram','facebook'].includes(platform) || !after || after.parentElement !== target) return;
     const vertical = getComputedStyle(target).flexDirection === 'column';
     const style = getComputedStyle(after);
@@ -83,8 +96,12 @@
       button:disabled { opacity:.55; cursor:wait; }
       svg { width:23px; height:23px; flex:none; }
       .label { display:none; }
+      :host([data-sf-social-action="twitter"]) button { color:var(--color-text-secondary,rgb(113,118,123));padding:6px;border-radius:50%; }
+      :host([data-sf-social-action="twitter"]) button:hover { color:rgb(29,155,240);background:rgba(29,155,240,.12); }
+      :host([data-sf-social-action="twitter"]) svg { width:19px;height:19px; }
       :host([data-sf-social-action="reddit"]) .label { display:inline; }
-      :host([data-sf-social-action="reddit"]) button { font:600 12px/1 var(--font-sans,Arial,sans-serif); height:32px; padding:0 12px; gap:6px; border-radius:999px; color:var(--color-neutral-content-strong,inherit); background:var(--color-secondary-background,rgba(128,128,128,.16)); margin:0; }
+      :host([data-sf-social-action="reddit"]) { vertical-align:top; line-height:0; }
+      :host([data-sf-social-action="reddit"]) button { box-sizing:border-box; height:100%; font:600 12px/1 var(--font-sans,Arial,sans-serif); min-height:32px; padding:0 12px; gap:6px; border-radius:999px; color:var(--color-neutral-content-strong,inherit); background:var(--color-secondary-background,rgba(128,128,128,.16)); margin:0; }
       :host([data-sf-social-action="reddit"]) button:hover { background:var(--color-secondary-background-hover,rgba(128,128,128,.26)); }
       :host([data-sf-social-action="reddit"]) svg { width:20px; height:20px; }
       :host([data-sf-social-action="instagram"]) button { box-sizing:border-box; width:40px; height:40px; padding:8px; flex-shrink:0; }
@@ -148,6 +165,13 @@
   function reconcile() {
     scheduled = false;
     const targets = new Map();
+    if (enabled && platform === 'twitter') {
+      for (const scope of document.querySelectorAll('article[data-testid="tweet"]')) {
+        if (!scope.querySelector('video,[data-testid="videoPlayer"],[data-testid="videoComponent"]') || !sourceFor(scope)) continue;
+        const target=scope.querySelector('[role="group"]');
+        if (target) targets.set(target,{scope});
+      }
+    }
     if(enabled && platform==='facebook') {
       for(const share of document.querySelectorAll('button,[role="button"]')) {
         if(share.closest('[hidden],[aria-hidden="true"]'))continue;
@@ -167,19 +191,28 @@
     }
     if (enabled && platform === 'reddit') {
       for (const scope of document.querySelectorAll('shreddit-post, article, .thing.link')) {
-        if (!scope.querySelector('video,shreddit-player,shreddit-async-loader[bundlename*="video"]')
-          && scope.getAttribute('post-type') !== 'video') continue;
-        if (!sourceFor(scope)) continue;
-        const root = scope.shadowRoot || scope;
-        if (root !== scope && !observedRoots.has(root)) {
-          new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
-          observedRoots.add(root);
+        const roots = [scope];
+        for (let index=0; index<roots.length; index++) {
+          const root = roots[index];
+          if (root.host && !observedRoots.has(root)) {
+            new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+            observedRoots.add(root);
+          }
+          for (const node of [root, ...root.querySelectorAll('*')]) {
+            if (node.shadowRoot && !roots.includes(node.shadowRoot)) roots.push(node.shadowRoot);
+          }
         }
-        const share = root.querySelector('shreddit-post-share-button, [slot="share-button"], button[aria-label="Share"], button[aria-label="Compartilhar"]') || scope.querySelector('shreddit-post-share-button');
-        const target = share?.parentElement || root.querySelector('[slot="post-actions"], .flat-list.buttons, [part="post-actions"]') || scope.querySelector('[slot="post-actions"], .flat-list.buttons');
-        // Wait for the real action row rather than placing a separate button below the video.
+        if (scope.getAttribute('post-type') !== 'video' && !roots.some(root =>
+          root.querySelector('video,shreddit-player,shreddit-async-loader[bundlename*="video"]'))) continue;
+        if (!sourceFor(scope)) continue;
+        let target, after;
+        for (const root of roots) {
+          const share = root.querySelector('shreddit-post-share-button, [slot="share-button"], button[aria-label="Share"], button[aria-label="Compartilhar"], button[data-post-click-location="share"]');
+          target = share?.parentElement || root.querySelector('[slot="post-actions"], .flat-list.buttons, [part="post-actions"]');
+          if (target) { after = share; break; }
+        }
         if (!target) continue;
-        targets.set(target, {scope});
+        targets.set(target, {scope,after});
       }
     }
     if (enabled && platform === 'tiktok') {

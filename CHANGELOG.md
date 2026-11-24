@@ -2,6 +2,15 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 2.0.2 — 24/11/2026
+
+- Cinco layouts, temas claros, ícones Sólido/Normal e personalização organizada com prévias ao vivo.
+- Formatos e contornos da janela, dez estilos de controles, seis barras de rolagem e inércia opcional.
+- Lista virtualizada, busca responsiva, melhorias de contraste e assistente de integração em etapas.
+- Extensão 0.4.0 com Twitter/X, correções do Reddit e XPI Firefox assinado.
+- Sons de conclusão personalizáveis, consulta de novos temas e seis variações adicionais de GTA VI.
+- [Notas completas](docs/release-notes/2.0.2.txt).
+
 ## 1.1.4 — 13/11/2026
 
 - Progresso na taskbar do Windows e indicação amarela para downloads pausados.

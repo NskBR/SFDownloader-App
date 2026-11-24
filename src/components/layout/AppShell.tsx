@@ -1,3 +1,5 @@
+import {WindowOutline} from "../WindowOutline";
+import {BrowserIntegrationWizard} from "../BrowserIntegrationWizard";
 import {
   Check,
   Copy,
@@ -33,6 +35,8 @@ interface Props extends PropsWithChildren {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
   sidebarAnimation: boolean;
+  navigationPosition?:"left"|"right"|"top"|"bottom"|"titlebar";
+  navigationLabels?:boolean;
   updateInfo?: downloadService.UpdateCheckResult | null;
 }
 
@@ -52,6 +56,7 @@ export function AppShell({
   activePage,
   onNavigate,
   sidebarAnimation,
+  navigationPosition="left",navigationLabels=true,
   updateInfo,
   children,
 }: Props) {
@@ -90,7 +95,12 @@ export function AppShell({
     return DEFAULT_WIDTH;
   });
   const [isResizing, setIsResizing] = useState(false);
-  const isCompact = sidebarWidth <= 90;
+  useEffect(()=>{const reset=()=>setSidebarWidth(DEFAULT_WIDTH);window.addEventListener('sf-reset-sidebar-width',reset);return()=>window.removeEventListener('sf-reset-sidebar-width',reset);},[]);
+  const [integrationOpen,setIntegrationOpen]=useState(false);
+  useEffect(()=>{const open=()=>setIntegrationOpen(true);window.addEventListener("sf-open-integration",open);return()=>window.removeEventListener("sf-open-integration",open);},[]);
+  const horizontal=navigationPosition==="top" || navigationPosition==="bottom";
+  // Label visibility is independent from the sidebar width and resize controls.
+  const isCompact = !horizontal && sidebarWidth <= 90;
 
   const startResizing = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -104,7 +114,7 @@ export function AppShell({
       const sidebar = sidebarRef.current;
       if (!sidebar) return;
       const baseLeft = sidebar.getBoundingClientRect().left;
-      const rawWidth = e.clientX - baseLeft;
+      const rawWidth = navigationPosition==="right" ? sidebar.getBoundingClientRect().right-e.clientX : e.clientX-baseLeft;
 
       let finalWidth: number;
       if (rawWidth < 115) {
@@ -128,7 +138,7 @@ export function AppShell({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing,navigationPosition]);
 
   const toggleSidebarWidth = () => {
     const targetWidth = isCompact ? DEFAULT_WIDTH : COMPACT_WIDTH;
@@ -173,6 +183,7 @@ export function AppShell({
     updatePosition();
 
     window.addEventListener("resize", updatePosition);
+    sidebar.addEventListener("scroll", updatePosition, true);
     const resizeObserver = new ResizeObserver(updatePosition);
     resizeObserver.observe(sidebar);
 
@@ -185,9 +196,10 @@ export function AppShell({
 
     return () => {
       window.removeEventListener("resize", updatePosition);
+      sidebar.removeEventListener("scroll", updatePosition, true);
       resizeObserver.disconnect();
     };
-  }, [activePage, typesOpen, sidebarWidth, isCompact]);
+  }, [activePage, typesOpen, sidebarWidth, isCompact, navigationPosition, navigationLabels]);
 
   const navigate = (page: PageId) => {
     onNavigate(page);
@@ -227,9 +239,12 @@ export function AppShell({
 
   return (
     <div className="window-frame">
+      <WindowOutline/>
       <TitleBar
         updateInfo={updateInfo}
-        showFooterActionsInTitleBar={isCompact}
+        showBrandInTitleBar={navigationPosition === "titlebar"}
+        showFooterActionsInTitleBar={isCompact || horizontal || navigationPosition==='titlebar'}
+        navigation={navigationPosition==='titlebar' ? <nav className="titlebar-navigation nodrag" aria-label="Navegação principal" onDoubleClick={event=>event.stopPropagation()}>{[{id:'downloads' as PageId,label:t.sidebar.all,icon:Download,count:allCount},...typeItems].map(item=><button key={item.id} type="button" className={`titlebar-theme-btn ${activePage===item.id?'active':''}`} aria-label={item.label} aria-current={activePage===item.id?'page':undefined} title={`${item.label} (${item.count})`} onClick={()=>navigate(item.id)}><item.icon size={16}/></button>)}</nav> : undefined}
         activePage={activePage}
         onNavigate={navigate}
         onOpenHelp={() => setHelpOpen(true)}
@@ -249,10 +264,10 @@ export function AppShell({
             aria-label="Fechar menu"
           />
         )}
-        <aside
+        {navigationPosition!=="titlebar" && <aside
           className={`sidebar ${isCompact ? "sidebar--compact" : ""} ${open ? "sidebar--open" : ""} ${sidebarAnimation !== false ? "" : "sidebar--no-animation"} ${isResizing ? "sidebar--resizing" : ""}`}
           ref={sidebarRef}
-          style={{ width: `${sidebarWidth}px` }}
+          style={{ width: horizontal?undefined:`${isCompact?COMPACT_WIDTH:sidebarWidth}px` }}
         >
           <span
             className="sidebar-indicator"
@@ -277,7 +292,7 @@ export function AppShell({
             <button
               className={`navigation__item ${activePage === "downloads" ? "navigation__item--active" : ""}`}
               onClick={() => navigate("downloads")}
-              title={isCompact ? `${t.sidebar.all} (${allCount})` : undefined}
+              title={isCompact || horizontal ? `${t.sidebar.all} (${allCount})` : undefined}
             >
               <div>
                 <span className="navigation__icon"><Download /></span>
@@ -300,14 +315,14 @@ export function AppShell({
                 </span>
               </button>
 
-              {(typesOpen || isCompact) && typeItems.map((item) => {
+              {(typesOpen || isCompact || horizontal) && typeItems.map((item) => {
                 const isActive = activePage === item.id;
                 return (
                   <button
                     key={item.id}
                     className={`navigation__item navigation__item--child ${isActive ? "navigation__item--active" : ""}`}
                     onClick={() => navigate(item.id)}
-                    title={isCompact ? `${item.label} (${item.count})` : undefined}
+                    title={isCompact || horizontal ? `${item.label} (${item.count})` : undefined}
                   >
                     <div>
                       <span className="navigation__icon"><item.icon /></span>
@@ -320,7 +335,7 @@ export function AppShell({
             </div>
           </nav>
 
-          {!isCompact && (
+          {!isCompact && !horizontal && (
             <div className="sidebar-actions">
               <div className="sidebar-footer-row">
                 <button
@@ -356,13 +371,14 @@ export function AppShell({
             onDoubleClick={toggleSidebarWidth}
             title={t.sidebar.collapse}
           />
-        </aside>
+        </aside>}
 
         <main className="main-content">
           <div key={activePage} className="page-transition">{children}</div>
         </main>
       </div>
 
+      {integrationOpen && <BrowserIntegrationWizard onClose={()=>setIntegrationOpen(false)}/>}
       {helpOpen && createPortal(
         <div className="help-overlay" onMouseDown={() => setHelpOpen(false)}>
           <section

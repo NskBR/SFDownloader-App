@@ -164,20 +164,25 @@ if (btnResetDefault) {
 }
 
 function applyTheme(themeAccent, themeBg) {
+  const root = document.documentElement;
+  const colors = (themeBg || '').match(/#[0-9a-f]{6}\b/gi) || [];
+  const luminance = hex => {
+    const channels = [1,3,5].map(i => parseInt(hex.slice(i,i+2),16)/255)
+      .map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4);
+    return channels[0]*.2126 + channels[1]*.7152 + channels[2]*.0722;
+  };
+  const light = colors.length > 0 && colors.reduce((sum,c)=>sum+luminance(c),0)/colors.length > .4;
+  root.dataset.theme = light ? 'light' : 'dark';
+  root.style.colorScheme = light ? 'light' : 'dark';
   if (themeAccent) {
-    document.documentElement.style.setProperty("--ember", themeAccent);
-    document.documentElement.style.setProperty("--ember-solid", themeAccent);
-    document.documentElement.style.setProperty("--accent-cyan", themeAccent);
-    document.documentElement.style.setProperty("--st-connected", themeAccent);
-    let soft = themeAccent + "26";
-    if (themeAccent.startsWith("rgb")) {
-      soft = themeAccent.replace("rgb", "rgba").replace(")", ", 0.15)");
-    }
-    document.documentElement.style.setProperty("--ember-soft", soft);
+    const ink = light ? `color-mix(in srgb, ${themeAccent} 65%, #132334)` : themeAccent;
+    root.style.setProperty('--ember', ink);
+    root.style.setProperty('--ember-solid', themeAccent);
+    root.style.setProperty('--accent-cyan', ink);
+    root.style.setProperty('--st-connected', light ? '#087649' : themeAccent);
+    root.style.setProperty('--ember-soft', `color-mix(in srgb, ${themeAccent} 16%, transparent)`);
   }
-  if (themeBg) {
-    document.documentElement.style.setProperty("--bg-fill", themeBg);
-  }
+  if (themeBg) root.style.setProperty('--bg-fill', themeBg);
 }
 
 function updateThemeAndLangFromStorage() {
@@ -291,7 +296,7 @@ async function refreshDownloadPage(){
   downloadPageButton.textContent=pageText('Baixar desta página','Download from this page');
   downloadPageButton.disabled=!media;
   downloadPageHint.textContent=media
-    ?pageText('Vídeo detectado em ','Video detected on ')+({youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok',reddit:'Reddit',facebook:'Facebook'}[media.platform] || '')
+    ?pageText('Vídeo detectado em ','Video detected on ')+({youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok',reddit:'Reddit',facebook:'Facebook',twitter:'Twitter / X'}[media.platform] || '')
     :pageText('Abra um vídeo ou Reel do YouTube, Instagram, TikTok, Reddit ou Facebook.','Open a video or Reel on YouTube, Instagram, TikTok, Reddit or Facebook.');
 }
 downloadPageButton?.addEventListener('click',async()=>{

@@ -175,3 +175,11 @@ it("preserves an installed local package reference and retires the former offici
  expect(normalizeSettings({localThemeId:"../../outside"},"pt-BR").localThemeId).toBeUndefined();
  expect(normalizeSettings({gameTheme:"sarah-house"},"pt-BR").gameTheme).toBe("none");
 });
+
+it('preserves layout and icon preferences in backups and rejects invalid positions',()=>{
+ const titlebar=normalizeSettings({...defaultSettings,navigationPosition:'titlebar'},'pt-BR');
+ expect(importSettingsBackup(exportSettingsBackup(titlebar)).navigationPosition).toBe('titlebar');
+ const settings=normalizeSettings({...defaultSettings,navigationPosition:'right',navigationLabels:false,iconStyle:'classic'},'pt-BR');
+ expect(importSettingsBackup(exportSettingsBackup(settings))).toMatchObject({navigationPosition:'right',navigationLabels:false,iconStyle:'classic'});
+ expect(normalizeSettings({navigationPosition:'floating',iconStyle:'unknown'},'pt-BR')).toMatchObject({navigationPosition:'left',navigationLabels:true,iconStyle:'filled'});
+});

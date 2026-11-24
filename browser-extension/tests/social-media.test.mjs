@@ -152,3 +152,33 @@ test('Reel download is a separate icon action and never widens the share row',as
     assert.match(f.shadows[0].querySelector('style').textContent,/\.label\s*\{\s*display:none/);
   } finally {f.close();}
 });
+
+
+test('Reddit finds nested action roots and waits for a video to load there',async()=>{
+  const f=fixture('https://www.reddit.com/r/SonicTheHedgehog/comments/1y4fl59/i_was_wondering_why_he_was_on_a_treadmill_and/', '<shreddit-post permalink="/r/SonicTheHedgehog/comments/1y4fl59/example/"><post-controls></post-controls></shreddit-post>');
+  try {
+    const root=f.window.document.querySelector('post-controls').attachShadow({mode:'open'});
+    root.innerHTML='<div id="actions"><shreddit-post-share-button></shreddit-post-share-button></div>';
+    await f.flush();assert.equal(root.querySelector('[data-sf-social-action]'),null);
+    root.insertAdjacentHTML ? root.insertAdjacentHTML('afterbegin','<video></video>') : root.appendChild(f.window.document.createElement('video'));
+    await f.flush();const host=root.querySelector('[data-sf-social-action="reddit"]');assert.ok(host);
+    f.shadows.at(-1).querySelector('button').click();await f.flush();
+    assert.equal(f.messages[0].url,'https://www.reddit.com/comments/1y4fl59/');
+    await f.flush();assert.equal(root.querySelectorAll('[data-sf-social-action]').length,1);
+  }finally{f.close();}
+});
+
+
+test('Twitter video buttons use each post permalink and skip image-only posts',async()=>{
+  const tweet=(id,video)=>`<article data-testid="tweet"><a href="https://x.com/test/status/${id}"><time>Now</time></a>${video?'<div data-testid="videoPlayer"><video></video></div>':'<img/>'}<div role="group"><button>Share</button></div></article>`;
+  const f=fixture('https://x.com/home',tweet('123456789012345',true)+tweet('123456789012346',true)+tweet('123456789012347',false));
+  try {
+    await f.flush();assert.equal(f.window.document.querySelectorAll('[data-sf-social-action="twitter"]').length,2);
+    f.shadows[1].querySelector('button').click();await f.flush();
+    assert.equal(f.messages[0].url,'https://x.com/i/web/status/123456789012346');
+    const parse=f.window.sfSocialMediaSource;
+    assert.equal(parse('https://twitter.com/test/status/123456789012345/video/1?s=20'),'https://x.com/i/web/status/123456789012345');
+    for(const url of ['https://x.com.evil.test/test/status/123456789012345','https://x.com/test','https://user@x.com/test/status/123456789012345'])assert.equal(parse(url),null);
+    f.change({captureEnabled:{newValue:false}});await f.flush();assert.equal(f.window.document.querySelector('[data-sf-social-action]'),null);
+  }finally{f.close();}
+});

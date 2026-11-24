@@ -15,6 +15,18 @@
 > [!IMPORTANT]
 > **Versão atual: 2.0.1.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
 
+## Novidades da 2.0.2
+
+- Cinco layouts de navegação, temas claros e escolha entre ícones Sólido e Normal, com animações também na build instalada.
+- Personalização organizada em categorias, com prévia ao vivo, Aplicar e Cancelar para layouts, controles, bordas e rolagem.
+- Formatos de janela, contorno Sólido/Neon/RGB, dez estilos de botões da janela e seis estilos de barra de rolagem.
+- Lista de downloads virtualizada, inércia opcional Suave/Forte, busca responsiva e melhor contraste nos temas claros.
+- Assistente de integração em três etapas, extensão **0.4.0** com Twitter/X, correções no Reddit e aviso de extensão desatualizada. XPI Firefox assinado incluído.
+- Sons de conclusão selecionáveis ou MP3 de até cinco segundos, consulta de novos temas e seis wallpapers adicionais de GTA VI.
+- Redefinição de preferências e métricas com confirmação por pressão contínua; histórico e arquivos baixados são preservados.
+
+[Notas completas da 2.0.2](docs/release-notes/2.0.2.txt).
+
 ## Novidades da 2.0.1
 
 - Novos temas, fundo RGB e destaque RGB independentes, com editores em glass fosco, prévia ao vivo e perfis salvos.
@@ -35,9 +47,9 @@ O SFDownloader reúne downloads HTTP/HTTPS e BitTorrent em uma interface desktop
 
 ## Estado do projeto
 
-A versão 2.0.1 está disponível para Windows 10/11 x64. Downloads HTTP, organização, personalização e integração com navegadores estão disponíveis; o motor BitTorrent continua em beta, com cenários de interoperabilidade ainda em validação.
+A versão 2.0.2 está disponível para Windows 10/11 x64. Downloads HTTP, organização, personalização e integração com navegadores estão disponíveis; o motor BitTorrent continua em beta, com cenários de interoperabilidade ainda em validação.
 
-A release foi verificada com 230 testes de interface e 122 testes de backend aprovados, além dos testes da extensão. Isso não substitui a validação de cada site, servidor ou swarm real.
+O projeto conta com testes automatizados de interface, backend e extensão executados no processo de release. Isso não substitui a validação de cada site, servidor ou swarm real.
 
 ## Recursos
 
@@ -45,7 +57,7 @@ A release foi verificada com 230 testes de interface e 122 testes de backend apr
 
 O novo fluxo abre uma janela independente ao colar um link de vídeo, Shorts ou YouTube Music na busca. Permite escolher MP4 na resolução disponível ou MP3 em 128/192/256/320 kbps, com capa e metadados. Os arquivos recebem o sufixo `-sfd` e seguem o destino e a organização por categoria configurados no aplicativo.
 
-A extensão 0.3.9 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.9 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
+A extensão 0.4.0 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.4.0 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
 
 A janela compacta mostra a transferência na barra de progresso e informa a conversão/capa e a conclusão pelo status. As tarefas entram na fila geral, podem ser pausadas durante a transferência e retomadas usando os parciais, inclusive após reiniciar. A conclusão depende da validação do arquivo final com ffprobe. Links de playlist, incluindo vídeos com `list=`, abrem uma seleção de faixas com caixas de marcação, Ctrl+A e seleção por intervalo. Apenas as faixas escolhidas entram na fila e são salvas em uma pasta com o nome da playlist, com MP3 como padrão. A qualidade MP4 funciona como limite por vídeo, usando uma resolução nativa disponível sem ampliação. Playlists públicas de até 1.000 entradas são aceitas. Mixes oferecem até 50 faixas retornadas na consulta, mantendo a seleção fixa ao baixar. Lives e autenticação não são suportadas. Faixas indisponíveis identificadas na consulta são informadas; falhas posteriores aparecem individualmente na fila.
 
@@ -55,9 +67,9 @@ Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruçõ
 
 O instalador inclui yt-dlp, Deno e FFmpeg/ffprobe, com os respectivos avisos de terceiros. Consulte [Downloads de mídia](docs/media-downloads.md) para detalhes das ferramentas e licenças.
 
-### Reddit, Instagram, TikTok e Facebook
+### Reddit, Instagram, TikTok, Facebook e Twitter/X
 
-Links de vídeos públicos individuais usam a janela de escolha de MP4/MP3. A extensão 0.3.9 adiciona botões dentro dos sites e oferece **Baixar desta página** no popup como alternativa quando os controles da página não são reconhecidos. Abra o vídeo ou Reel e clique no botão da extensão; ele verifica a aba ativa e funciona mesmo com a captura automática desativada.
+Links de vídeos públicos individuais usam a janela de escolha de MP4/MP3. A extensão 0.4.0 adiciona botões dentro dos sites e oferece **Baixar desta página** no popup como alternativa quando os controles da página não são reconhecidos. Abra o vídeo ou Reel e clique no botão da extensão; ele verifica a aba ativa e funciona mesmo com a captura automática desativada.
 
 No Reddit, vídeos nativos podem usar o manifesto público identificado na página. No Facebook, são aceitos links de Reels individuais. Páginas de perfil, Stories, lives e conteúdos que exigem autenticação não são cobertos por esse fluxo. Mudanças na interface dos sites e bloqueios da plataforma podem limitar a integração.
 

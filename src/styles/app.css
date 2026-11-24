@@ -1,3 +1,7 @@
+@import "./window-border.css";
+@import "./light-theme.css";
+@import "./kineticons.css";
+@import "./layout-presets.css";
 @import "./theme-fonts.css";
 @import "./test-themes.css";
 @import "./http-windows.css";
@@ -4928,3 +4932,124 @@ html[data-test-theme="true"][data-test-preset] .cfg-history-dialog > footer butt
 .dw-title > span,
 .dw-title > span *,
 .dw-details-header-title { pointer-events:none; }
+
+/* Search is a flexible command field, with one quiet inset focus edge. */
+.downloads-toolbar { width:100%; max-width:1320px; margin-inline:auto; height:auto; min-height:46px; gap:clamp(12px,2vw,28px); }
+.downloads-toolbar .search-container { flex:1; min-width:180px; width:auto; max-width:none; height:42px; border:1px solid var(--line); border-radius:9px; background:color-mix(in srgb,var(--surface) 65%,transparent); transition:border-color .16s,background .16s; }
+.downloads-toolbar .search-container:focus-within { border-color:color-mix(in srgb,var(--ember-solid) 65%,var(--line)); box-shadow:inset 0 -2px 0 var(--ember-solid); background:var(--surface); }
+.downloads-toolbar .search-leading { display:grid;place-items:center;width:38px;flex-shrink:0;align-self:stretch;border-right:1px solid var(--line-soft);margin-right:10px; }
+.downloads-toolbar .search-container svg { position:static; width:16px;height:16px;color:var(--text-2); }
+.downloads-toolbar .search-input { flex:1;min-width:0;width:0;height:100%;padding:0 12px 0 0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;color:var(--text);font-size:13px; }
+.downloads-toolbar .search-input::placeholder { color:var(--text-2);opacity:.8; }
+.downloads-toolbar .search-clear { display:grid;place-items:center;width:28px;height:28px;margin-right:6px;padding:0;flex-shrink:0;border:0;border-radius:6px;background:transparent;color:var(--text-2);cursor:pointer; }
+.downloads-toolbar .search-clear:hover { background:var(--ember-soft);color:var(--text); }
+.downloads-toolbar .search-container .search-clear svg { width:14px;height:14px;pointer-events:none; }
+@media(max-width:650px) { .downloads-toolbar { flex-wrap:wrap; gap:8px; } .downloads-toolbar .search-container { flex-basis:100%; } .downloads-toolbar .header-right-group { margin-left:auto; } }
+
+/* The outer search field owns its paint and rounded clipping in every theme. */
+.downloads-toolbar .search-container { overflow:hidden; isolation:isolate; }
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .downloads-toolbar .search-input {
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.downloads-toolbar .search-leading { border-radius:0; background:transparent; }
+
+/* Remove the stacked top gutters below the integrated title bar. */
+.window-frame > .app-shell > .main-content { padding-top:6px; }
+.window-frame .main-content .cfg-container { padding-top:4px; }
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .window-frame > .app-shell > .sidebar { padding-top:6px; }
+
+/* Avoid stacking workspace and settings gutters beside a vertical sidebar. */
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .window-frame .main-content:has(.cfg-container) { padding-inline:10px; }
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .window-frame .main-content .cfg-container { max-width:none; padding-inline:8px; }
+
+/* Horizontal navigation meets the content without stacking outer gutters. */
+html:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame > .app-shell > .main-content {
+  padding-block: 4px;
+}
+html:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame .main-content .cfg-container {
+  padding-block: 0;
+}
+
+/* Keep the content centered inside themed navigation cards in every orientation. */
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation__item {
+  display:flex;align-items:center;box-sizing:border-box;line-height:1.2;
+}
+html.window-type-main[data-test-theme="true"] .window-frame .sidebar .navigation__item > div {
+  display:flex;align-items:center;min-height:0;
+}
+html.window-type-main:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame .sidebar .navigation__item {
+  justify-content:center;height:40px;min-height:40px;padding:0 12px;
+}
+html.window-type-main:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame .sidebar .navigation__item > div {
+  justify-content:center;gap:8px;
+}
+html.window-type-main:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame .sidebar .navigation__icon {
+  width:20px;height:20px;flex:0 0 20px;border:0;border-radius:0;background:transparent;
+}
+html.window-type-main:is([data-navigation-position="top"],[data-navigation-position="bottom"]) .window-frame .sidebar .navigation__item > div > span:not(.navigation__icon) {
+  line-height:20px;
+}
+
+/* Startup splash owns the outer silhouette until its fade starts. */
+html.window-type-main:has(.sf-splash-screen:not(.sf-splash-fade)),
+html.window-type-main:has(.sf-splash-screen:not(.sf-splash-fade)) body,
+html.window-type-main:has(.sf-splash-screen:not(.sf-splash-fade)) #root {
+  background:transparent!important;
+}
+html.window-type-main:has(.sf-splash-screen:not(.sf-splash-fade)) .window-frame {
+  visibility:hidden;
+}
+html.window-type-main[data-window-maximized="true"] .sf-splash-screen {border-radius:0;}
+
+/* SVG draws the thin default outline or the configured effect along the actual silhouette. */
+html.window-type-main .window-frame {border:0!important;outline:0!important;}
+html.window-type-main .window-frame::after {display:none!important;}
+
+.cards-scroll-container.virtual-downloads {display:block;overflow-anchor:none;}
+.virtual-downloads-row > .download-card {min-width:0;margin:0;}
+
+/* Image overlay controls need their own contrast, independent from the page palette. */
+html .window-frame .game-theme-entry .game-theme-delete,
+html .window-frame .game-theme-entry .theme-wallpaper-controls button {
+  color:#f8fafc!important;background:rgba(15,20,28,.82)!important;
+  border:1px solid rgba(255,255,255,.25)!important;
+  box-shadow:0 1px 5px #0004;backdrop-filter:blur(6px);
+}
+html .window-frame .game-theme-entry .game-theme-delete svg,
+html .window-frame .game-theme-entry .theme-wallpaper-controls button svg {color:inherit!important;}
+html .window-frame .game-theme-entry .theme-wallpaper-controls span {color:#f8fafc!important;background:rgba(15,20,28,.85)!important;}
+html .window-frame .game-theme-entry .game-theme-delete:hover:not(:disabled),
+html .window-frame .game-theme-entry .theme-wallpaper-controls button:hover:not(:disabled) {background:rgba(45,55,70,.95)!important;border-color:rgba(255,255,255,.65)!important;}
+html .window-frame .game-theme-entry :is(.game-theme-delete,.theme-wallpaper-controls button):focus-visible {outline:2px solid #fff;outline-offset:2px;}
+
+/* Vertical navigation grows its free area, not the spacing between categories. */
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar {
+ grid-template-rows:auto minmax(0,1fr) auto;gap:12px;
+}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar-nav {
+ display:flex;flex-direction:column;justify-content:flex-start;gap:10px;overflow-y:auto;overflow-x:hidden;
+}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .navigation__types {
+ flex:0 0 auto;justify-content:flex-start;gap:6px;
+}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .navigation__item {flex-shrink:0;}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar-actions {align-self:end;min-width:0;}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar-footer-row {
+ display:flex;align-items:center;justify-content:space-around;gap:4px;height:54px;min-height:54px;padding:6px;border-radius:14px;box-sizing:border-box;
+}
+html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar-footer-btn {
+ flex:0 0 38px;width:38px;height:38px;min-height:38px;padding:0;border-radius:10px;
+}
+@media(min-height:820px){
+ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .brand {min-height:72px;}
+ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .navigation__item {height:44px;min-height:44px;font-size:13px;padding-inline:12px;}
+ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .navigation__group {min-height:25px;font-size:10px;}
+ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .navigation__icon {width:30px;height:30px;flex-basis:30px;}
+ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .sidebar .counter-badge {min-width:32px;padding:4px 8px;font-size:11px;}
+}
+
+.titlebar .titlebar-extension-button.extension-needs-update {box-shadow:inset 0 0 0 1px #e6ad3980;background:color-mix(in srgb,#e6ad39 12%,var(--surface));}
+.titlebar .extension-version-warning {color:#e6ad39;flex-shrink:0;}

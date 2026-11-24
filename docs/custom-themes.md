@@ -1,6 +1,6 @@
 # Temas personalizados da comunidade
 
-Wallpapers e temas podem ser criados pela comunidade. Para aparecerem no catálogo da **build oficial do repositório NskBR/SFDownloader-App**, faça um **fork**, implemente e teste o tema e abra um **pull request** pedindo sua inclusão. Um fork, issue ou arquivo enviado não entra automaticamente no aplicativo: a proposta precisa ser revisada, aceita e incluída em uma release oficial.
+Wallpapers e temas podem ser criados pela comunidade. Para aparecerem no catálogo da **build oficial do repositório NskBR/SFDownloader-App**, faça um **fork**, implemente e teste o tema e abra um **pull request** pedindo sua inclusão. Um fork, issue ou arquivo enviado não entra automaticamente no aplicativo: a proposta precisa ser revisada, aceita e publicada no repositório oficial.
 
 ## Preparar o wallpaper
 
@@ -155,3 +155,14 @@ identificadas por SHA-256, em `theme-images`. A lixeira remove o registro local;
 imagens compartilhadas no cache são preservadas para não afetar outros temas ou CSS.
 Pacotes locais não são enviados ao GitHub nem incluídos automaticamente no catálogo oficial.
 Temas particulares podem ser distribuídos separadamente como ZIP local.
+
+
+## Atualizar a galeria pelo aplicativo
+
+Em Personalização, use **Consultar novos temas**. O aplicativo consulta o manifesto da branch `main`, valida os metadados e atualiza o catálogo local. A consulta não baixa todos os wallpapers: cada variação é baixada somente ao selecionar. Uma falha de rede preserva o catálogo offline e o tema selecionado.
+
+Para adicionar variações a uma coleção existente, inclua nas entradas principais do manifesto `collection` (por exemplo, `gta-6`), `name` e `preview` (miniatura JPEG em data URI base64; recomendação 240 × 136). Mantenha os três arquivos e hashes de cada variação, com os sufixos `-medium` e `-compact`.
+
+Para uma nova coleção, use um identificador `collection` novo, `collectionName` para o nome exibido e `preset` para escolher um estilo visual já suportado (por exemplo, `star-citizen`, `cs2` ou `gta-6`). As entradas principais precisam de `name` e `preview`. O app agrupa as variações em um novo card. Novos estilos visuais com CSS próprio continuam exigindo alteração e build do aplicativo: o catálogo remoto não executa CSS ou código recebido da rede.
+
+Publique as imagens antes do manifesto para evitar que o catálogo anuncie arquivos ainda indisponíveis. O manifesto deve ter até 2 MiB, miniaturas de até 100 KB por entrada e no máximo 1500 arquivos.

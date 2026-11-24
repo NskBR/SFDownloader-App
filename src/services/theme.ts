@@ -1,10 +1,11 @@
+import {applySavedWindowBorder} from "../domain/windowBorder";
+import {backgroundIsLight} from "../domain/backgroundPalette";
 import {resolveLocalTheme} from "./localThemes";
 import { createGameTheme } from "../domain/testThemePresets";
 import { applyTestTheme } from "./testThemes";
 import { defaultTestTheme } from "../domain/settings";
 import type { AppSettings, GradientConfig, GradientStop } from "../domain/settings";
 import { applyFontSettings } from "../domain/appFonts";
-import { settingsThemePresets } from "../domain/settingsThemes";
 import {normalizeRgbConfig,rgbFrame,type RgbConfig} from "../domain/rgbTheme";
 
 function clamp(value: number, min: number, max: number): number {
@@ -168,15 +169,24 @@ function stopCosmicFlow() {
 
 let localThemeRevision=0;
 export function applyThemeSettings(settings: AppSettings): void {
+  applySavedWindowBorder(settings.windowBorder);
   const generation=++localThemeRevision;
   if(settings.localThemeId){void resolveLocalTheme(settings.localThemeId).then(theme=>{if(generation===localThemeRevision)void applyTestTheme(theme,settings.sidebarAnimation!==false);}).catch(error=>{console.error(error);if(generation===localThemeRevision)void applyTestTheme(defaultTestTheme,false);});}
   else void applyTestTheme(settings.gameTheme && settings.gameTheme !== "none" ? createGameTheme(settings.gameTheme,settings.themeWallpapers?.[settings.gameTheme]) : settings.testTheme ?? defaultTestTheme, settings.sidebarAnimation !== false);
   applyFontSettings(settings.fontFamily);
   const root = document.documentElement;
+  root.dataset.interfaceMotion=String(settings.sidebarAnimation!==false);
+  const controls=settings.windowControlsStyle??"default";
+  if(root.dataset.windowControls!==controls){root.dataset.windowControls=controls;window.dispatchEvent(new Event('sf-window-controls'));}
+  root.dataset.scrollbarStyle=settings.scrollbarStyle??"default";
+  root.dataset.navigationPosition=settings.navigationPosition ?? "left";
+  root.dataset.navigationLabels=String(settings.navigationLabels!==false);
+  if(root.dataset.iconStyle!==(settings.iconStyle??"filled")){root.dataset.iconStyle=settings.iconStyle??"filled";window.dispatchEvent(new Event("sf-icon-style"));}
   root.dataset.appColor = settings.appColor;
   root.dataset.appcolor = settings.appColor;
   for (const token of ["--panel", "--surface", "--surface-2"]) root.style.removeProperty(token);
-  root.dataset.theme = "midnight";
+  const lightPreset=!settings.localThemeId && settings.gameTheme==='none' && !settings.testTheme.enabled && settings.interfaceGradient.enabled && settings.interfaceGradient.rgb!==true && backgroundIsLight(settings.interfaceGradient);
+  root.dataset.theme=lightPreset?'light':'midnight';
   root.dataset.accent = settings.accentColor;
   root.style.setProperty("--ui-scale", `${settings.uiScale}`);
 
@@ -203,13 +213,11 @@ export function applyThemeSettings(settings: AppSettings): void {
   root.style.setProperty("--st-paused", "#f59e0b");
 
   if (settings.interfaceGradient && settings.interfaceGradient.enabled) {
-    const preset = settingsThemePresets.find(theme => theme.stops
-      && theme.stops.every((color, index) => color.toLowerCase() === settings.interfaceGradient.stops[index]?.color.toLowerCase()));
-    if (preset && !settings.localThemeId && (!settings.gameTheme || settings.gameTheme === "none") && !settings.testTheme?.enabled) {
-      const [hue, saturation] = hexToHsl(preset.stops![0]);
-      root.style.setProperty("--panel", hslToHex(hue, saturation * .5, .08));
-      root.style.setProperty("--surface", hslToHex(hue, saturation * .4, .11));
-      root.style.setProperty("--surface-2", hslToHex(hue, saturation * .35, .15));
+    if (!settings.localThemeId && (!settings.gameTheme || settings.gameTheme === "none") && !settings.testTheme?.enabled && settings.interfaceGradient.stops.length) {
+      const [hue, saturation] = hexToHsl(settings.interfaceGradient.stops[0].color);
+      root.style.setProperty("--panel", hslToHex(hue, saturation * .5, lightPreset ? .98 : .08));
+      root.style.setProperty("--surface", hslToHex(hue, saturation * .4, lightPreset ? .96 : .11));
+      root.style.setProperty("--surface-2", hslToHex(hue, saturation * .35, lightPreset ? .92 : .15));
     }
     root.dataset.gradient = "true";
     const gradStr = buildGradient(settings.interfaceGradient);
@@ -217,7 +225,7 @@ export function applyThemeSettings(settings: AppSettings): void {
     if(rgbTheme) root.style.setProperty("--bg-fill", "var(--rgb-bg)");
     const intensity = clamp(settings.interfaceGradient.intensity ?? 80, 0, 100) / 100;
     const overlayDarkness = (0.7 - intensity * 0.55).toFixed(2);
-    root.style.setProperty("--gradient-overlay", `rgba(0, 0, 0, ${overlayDarkness})`);
+    root.style.setProperty("--gradient-overlay",lightPreset?"transparent":`rgba(0, 0, 0, ${overlayDarkness})`);
   } else {
     root.dataset.gradient = "false";
     root.style.setProperty("--bg-fill", settings.appColor === "slate" ? "#161A1E" : "var(--bg)");

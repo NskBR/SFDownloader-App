@@ -92,7 +92,7 @@ export const gameThemePresets = [
 export function createGameTheme(id: Exclude<GameTheme,"none">,wallpaperId?:string): TestThemeSettings {
   const wallpaper=selectedWallpaper(id,wallpaperId);
   const appearance=wallpaper.appearance;
-  const preset=appearance?.preset??id;
+  const preset=appearance?.preset??(id.startsWith("catalog:")?"cs2":id as Exclude<GameTheme,"none"|`catalog:${string}`>);
   if (preset in additionalThemes) {
     const visual = additionalThemes[preset as keyof typeof additionalThemes];
     return {preset,appearance,enabled:true,imageId:`builtin:${wallpaper.id}`,css:appearance?.css??visual.css,darkness:appearance?.darkness??40,panelOpacity:appearance?.panelOpacity??80,position:appearance?.position??"center"};

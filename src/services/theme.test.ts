@@ -29,3 +29,20 @@ it('allows RGB accent independently of the background and restores a solid accen
   applyThemeSettings(rgbSettings('blue'));tick();
   expect(document.documentElement.style.getPropertyValue('--ember-solid')).toBe('#3b82f6');
 });
+
+it('switches light presets back to dark without changing the selected accent',()=>{
+ const settings={...defaultSettings,accentColor:'red' as const,interfaceGradient:{...defaultSettings.interfaceGradient,enabled:true,stops:[{color:'#f2f5fa',position:0},{color:'#e4eaf3',position:100}]}};
+ applyThemeSettings(settings);expect(document.documentElement.dataset.theme).toBe('light');expect(document.documentElement.style.getPropertyValue('--gradient-overlay')).toBe('transparent');expect(document.documentElement.style.getPropertyValue('--ember-solid')).toBe('#ef4444');
+ applyThemeSettings(defaultSettings);expect(document.documentElement.dataset.theme).toBe('midnight');
+});
+it('applies layout and icon preferences independently from the palette',()=>{
+ const listener=vi.fn();window.addEventListener('sf-icon-style',listener);
+ applyThemeSettings({...defaultSettings,navigationPosition:'bottom',navigationLabels:false,iconStyle:'classic'});
+ expect(document.documentElement.dataset.navigationPosition).toBe('bottom');expect(document.documentElement.dataset.navigationLabels).toBe('false');expect(document.documentElement.dataset.iconStyle).toBe('classic');expect(listener).toHaveBeenCalled();window.removeEventListener('sf-icon-style',listener);
+});
+
+it('adapts custom white backgrounds and restores the previous palette on cancel',()=>{
+ const white={...defaultSettings,interfaceGradient:{...defaultSettings.interfaceGradient,rgb:false,enabled:true,stops:[{color:'#ffffff',position:0},{color:'#fafafa',position:100}]}};
+ applyThemeSettings(white);expect(document.documentElement.dataset.theme).toBe('light');expect(document.documentElement.style.getPropertyValue('--surface')).toBe('#f5f5f5');
+ applyThemeSettings(defaultSettings);expect(document.documentElement.dataset.theme).toBe('midnight');expect(document.documentElement.style.getPropertyValue('--surface')).toBe('');
+});

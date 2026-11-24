@@ -8,7 +8,7 @@
   border: 1px solid var(--white-08);
   border-radius: 12px;
   padding: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -1125,3 +1125,37 @@ html[data-rgb-motion="true"] .cfg-card {
 }
 
 .cfg-update-result { margin:10px 0 0; color:var(--text-2); font-size:12px; line-height:1.5; }
+
+/* Fade scrolling settings beneath the fixed tab navigation. */
+.cfg-tab-content {
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.5) 1px,rgba(0,0,0,.9) 3px,#000 4px,#000 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.5) 1px,rgba(0,0,0,.9) 3px,#000 4px,#000 100%);
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+}
+
+.inertia-setting {justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.inertia-setting-info,.inertia-setting-controls {display:flex;align-items:center;gap:12px;}
+.inertia-setting-controls {margin-left:auto;gap:18px;}
+.inertia-strength {display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:8px;background:var(--panel);}
+.inertia-strength button {padding:6px 12px;border:1px solid transparent;border-radius:5px;font-size:11px;color:var(--text-2);background:transparent;}
+.inertia-strength button[aria-pressed="true"] {color:var(--text);background:var(--ember-soft);border-color:color-mix(in srgb,var(--ember-solid) 40%,transparent);}
+.inertia-strength button:disabled {opacity:.4;cursor:default;}
+.inertia-strength button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:2px;}
+
+/* Keep the first settings card below the fade rather than under its edge. */
+.cfg-tab-content { padding-top:6px; }
+
+.personalization-reset-bar {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:4px 0 10px;}
+.personalization-reset-bar > span {font-size:12px;font-weight:600;color:var(--text-2);}
+.personalization-reset-bar .cfg-btn-alterar {display:inline-flex;align-items:center;gap:7px;}
+
+/* Center the final row instead of leaving unused cells at the right. */
+.cfg-themes-grid {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.cfg-themes-grid > .cfg-theme-tile-wrapper {flex:0 0 112px;width:112px;max-width:100%;}
+.game-themes-grid {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.game-themes-grid > .game-theme-entry {flex:0 0 172px;width:172px;max-width:100%;}
+@container(max-width:420px) {
+ .game-themes-grid > .game-theme-entry {flex-basis:calc((100% - 10px)/2);width:calc((100% - 10px)/2);}
+ .cfg-themes-grid > .cfg-theme-tile-wrapper {flex-basis:calc((100% - 20px)/3);width:calc((100% - 20px)/3);}
+}

@@ -1,10 +1,11 @@
 use reqwest::Url;
 
 #[tauri::command]
-pub async fn play_completion_sound() -> Result<(), String> {
+pub async fn play_completion_sound(app:tauri::AppHandle,sound_id:Option<String>) -> Result<(), String> {
     #[cfg(windows)]
     {
-        return tokio::task::spawn_blocking(super::completion_sound::play)
+        let sound=super::completion_sound::load(&app,sound_id.as_deref().unwrap_or("default"))?;
+        return tokio::task::spawn_blocking(move||super::completion_sound::play(sound))
         .await
         .map_err(|error| error.to_string())?;
     }
@@ -73,4 +74,9 @@ pub fn open_url(url: String) -> Result<(), String> {
             .map_err(|error| error.to_string())?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn import_completion_sound(app:tauri::AppHandle,data:String)->Result<String,String>{
+    tokio::task::spawn_blocking(move||super::completion_sound::import(&app,data)).await.map_err(|e|e.to_string())?
 }

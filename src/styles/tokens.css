@@ -109,9 +109,7 @@
   --text-2: #43454a;
   --muted: #6d7178;
   --disabled: #9aa0a6;
-  --ember: #d9742c;
-  --ember-strong: #e08a2e;
-  --ember-soft: rgba(217, 116, 44, 0.12);
+
   --st-completed: #2d8046;
   --st-failed: #c9302f;
   --st-cancelled: #c9302f;

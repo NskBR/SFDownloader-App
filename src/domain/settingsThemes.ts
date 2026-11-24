@@ -8,6 +8,7 @@ export interface SettingsThemePreset {
   isGradient: boolean;
   stops: [string, string] | null;
   accentColor?: AccentColor;
+  light?:boolean;
 }
 
 export const settingsThemePresets: SettingsThemePreset[] = [
@@ -25,6 +26,10 @@ export const settingsThemePresets: SettingsThemePreset[] = [
   { id: "aurora", name: "Aurora Boreal", bg: "linear-gradient(135deg, #102a29, #160e2c)", accent: "linear-gradient(90deg,#10b981,#8b5cf6)", accentColor: "gradient_aurora", isGradient: true, stops: ["#102a29", "#160e2c"] },
   { id: "sunset", name: "Horizonte Solar", bg: "linear-gradient(135deg, #321426, #211009)", accent: "linear-gradient(90deg,#f97316,#ec4899)", accentColor: "gradient_sunset", isGradient: true, stops: ["#321426", "#211009"] },
   { id: "rgb-spectrum", name: "Espectro RGB", bg: "linear-gradient(135deg, #161125, #080e16)", accent: "linear-gradient(90deg,#ec4899,#8b5cf6,#06b6d4,#10b981,#ec4899)", accentColor: "gradient_flow", isGradient: true, stops: ["#161125", "#080e16"] },
+  {id:'light-pearl',name:'Pérola',bg:'linear-gradient(135deg,#f2f5fa,#e4eaf3)',accent:'#2563eb',isGradient:true,stops:['#f2f5fa','#e4eaf3'],light:true},
+  {id:'light-sand',name:'Areia',bg:'linear-gradient(135deg,#f8f2e8,#eee3d1)',accent:'#a16207',isGradient:true,stops:['#f8f2e8','#eee3d1'],light:true},
+  {id:'light-mint',name:'Menta Clara',bg:'linear-gradient(135deg,#edf8f2,#dceee6)',accent:'#047857',isGradient:true,stops:['#edf8f2','#dceee6'],light:true},
+
 ];
 
 export function selectedSettingsThemeId(gradient: GradientConfig): string {

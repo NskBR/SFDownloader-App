@@ -33,26 +33,11 @@ O SFDownloader reúne downloads HTTP/HTTPS e BitTorrent em uma interface desktop
 
 ![Tela principal do SFDownloader](docs/images/aplicativo.png)
 
-## Progresso atual
+## Estado do projeto
 
-O progresso representa entrega funcional, cobertura de fluxos e estabilização. Não é uma garantia de que todos os cenários de rede, navegadores ou torrents já foram testados em campo.
+A versão 2.0.1 está disponível para Windows 10/11 x64. Downloads HTTP, organização, personalização e integração com navegadores estão disponíveis; o motor BitTorrent continua em beta, com cenários de interoperabilidade ainda em validação.
 
-| Área | Progresso | Estado atual |
-| --- | ---: | --- |
-| Downloads HTTP/HTTPS | **100%** | Segmentação, pausa, retomada, validação de origem, fila, prioridade, limites e agendamento. |
-| Organização e extração | **95%** | Categorias, destinos, ZIP, RAR, 7Z e TAR; testes manuais adicionais de links/reparse points no Windows ainda pendentes. |
-| Interface, temas e acessibilidade | **85%** | Temas, gradientes, escala, idiomas e janelas próprias prontos; revisão visual contínua para telas e textos extremos. |
-| Integração com navegadores | **95%** | Chromium e Firefox, captura de links, cookies/headers temporários e fallback por deep link; faltam cenários reais com blobs e páginas autenticadas. |
-| Métricas e diagnóstico | **100%** | Métricas persistentes, exportação e logs sanitizados. |
-| Segurança e privacidade | **90%** | CSP, permissões por janela, ponte local autenticada, validação de caminhos e limpeza de credenciais; faltam testes manuais de reparse points no Windows. |
-| Motor BitTorrent/P2P | **90%** | Funcional para uso beta, com matriz real de interoperabilidade ainda incompleta. |
-| Release e documentação | **75%** | Build local e versionamento prontos; licença, assinatura de código e validação final de distribuição ainda pendentes. |
-
-### Progresso geral: **89%**
-
-Estimativa de maturidade do projeto, não uma medição de cobertura de testes. A 1.1.3 amplia a personalização; as pendências de validação dos motores e da distribuição continuam.
-
-O próximo marco é concluir a validação manual de rede, torrent e extensões em versões atuais de Windows e navegadores, antes de tratar o aplicativo como release pública estável.
+A release foi verificada com 230 testes de interface e 122 testes de backend aprovados, além dos testes da extensão. Isso não substitui a validação de cada site, servidor ou swarm real.
 
 ## Recursos
 
@@ -60,7 +45,7 @@ O próximo marco é concluir a validação manual de rede, torrent e extensões 
 
 O novo fluxo abre uma janela independente ao colar um link de vídeo, Shorts ou YouTube Music na busca. Permite escolher MP4 na resolução disponível ou MP3 em 128/192/256/320 kbps, com capa e metadados. Os arquivos recebem o sufixo `-sfd` e seguem o destino e a organização por categoria configurados no aplicativo.
 
-A extensão 0.3.8 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.8 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
+A extensão 0.3.9 também oferece o botão **Baixar** no YouTube, abrindo essa mesma confirmação. As janelas de confirmação e progresso acompanham o fundo e o destaque personalizados; mostram FPS e informações do canal somente quando a origem fornece esses dados. Playlists e Mixes usam duas colunas, com opções à esquerda e filtro/lista à direita. Recarregue a extensão e a página do YouTube após atualizar o pacote. O aplicativo inclui o XPI Firefox 0.3.9 fornecido pelo mantenedor, com os arquivos de assinatura Mozilla.
 
 A janela compacta mostra a transferência na barra de progresso e informa a conversão/capa e a conclusão pelo status. As tarefas entram na fila geral, podem ser pausadas durante a transferência e retomadas usando os parciais, inclusive após reiniciar. A conclusão depende da validação do arquivo final com ffprobe. Links de playlist, incluindo vídeos com `list=`, abrem uma seleção de faixas com caixas de marcação, Ctrl+A e seleção por intervalo. Apenas as faixas escolhidas entram na fila e são salvas em uma pasta com o nome da playlist, com MP3 como padrão. A qualidade MP4 funciona como limite por vídeo, usando uma resolução nativa disponível sem ampliação. Playlists públicas de até 1.000 entradas são aceitas. Mixes oferecem até 50 faixas retornadas na consulta, mantendo a seleção fixa ao baixar. Lives e autenticação não são suportadas. Faixas indisponíveis identificadas na consulta são informadas; falhas posteriores aparecem individualmente na fila.
 
@@ -68,7 +53,13 @@ As consultas de mídia compartilham uma fila com intervalo de 5 segundos e reuti
 
 Esta função integra a versão 1.0.6. Os testes de mídia, limites e instruções de preparo estão em [Downloads de mídia](docs/media-downloads.md).
 
-Os pacotes completos incluem yt-dlp, Deno e FFmpeg/ffprobe LGPL 3, com avisos de terceiros. Os fontes das ferramentas e dependências, suas revisões, hashes e receitas de build estão no arquivo `SFDownloader_1.1.3_media-sources.zip` da [mesma release](https://github.com/NskBR/SFDownloader-App/releases/tag/v1.1.3).
+O instalador inclui yt-dlp, Deno e FFmpeg/ffprobe, com os respectivos avisos de terceiros. Consulte [Downloads de mídia](docs/media-downloads.md) para detalhes das ferramentas e licenças.
+
+### Reddit, Instagram, TikTok e Facebook
+
+Links de vídeos públicos individuais usam a janela de escolha de MP4/MP3. A extensão 0.3.9 adiciona botões dentro dos sites e oferece **Baixar desta página** no popup como alternativa quando os controles da página não são reconhecidos. Abra o vídeo ou Reel e clique no botão da extensão; ele verifica a aba ativa e funciona mesmo com a captura automática desativada.
+
+No Reddit, vídeos nativos podem usar o manifesto público identificado na página. No Facebook, são aceitos links de Reels individuais. Páginas de perfil, Stories, lives e conteúdos que exigem autenticação não são cobertos por esse fluxo. Mudanças na interface dos sites e bloqueios da plataforma podem limitar a integração.
 
 ### Novidades da 1.1.3
 
@@ -103,7 +94,7 @@ Corrige o erro “CSS inválido” dos temas na versão instalada, mantendo a po
 ### Melhorias anteriores
 
 - Janela de progresso de mídia compacta, com transferência por bytes e status de conversão/capa.
-- Som de conclusão também com o app em foco e reprodução sequencial dos avisos.
+- Som de conclusão também com o app em foco; desde a 2.0.1, os avisos podem tocar simultaneamente.
 - Correções de tooltip e arraste nas confirmações.
 - Extensão 0.3.8 com botão nos Shorts atuais, ajuste de espaçamento no Instagram e XPI Firefox assinado integrado.
 
@@ -130,7 +121,7 @@ Corrige o erro “CSS inválido” dos temas na versão instalada, mantendo a po
 - Métricas de downloads, exportação técnica e logs de diagnóstico sem credenciais.
 - Temas, cores de destaque, gradientes, escala de interface e Português (Brasil)/Inglês.
 - Integração com Chrome, Edge, Brave, Opera, Vivaldi e Firefox.
-- Atualização manual via GitHub Releases: após clicar para atualizar, o app baixa, verifica e instala silenciosamente, preservando os dados.
+- Atualização pelo Filebase: após clicar para atualizar, o app baixa o instalador pelo Worker de distribuição, verifica tamanho e SHA-256 e instala preservando os dados.
 
 ## BitTorrent/P2P — estado do motor
 
@@ -150,7 +141,15 @@ Após concluir o arquivo, a beta pausa o handle e **não mantém seeding**. Para
 
 ## Interface e personalização
 
-Configurações organizam o destino padrão, o comportamento da fila, limites, categorias, idiomas e preferências visuais.
+Configurações organizam o destino padrão, o comportamento da fila, limites, categorias, idiomas e preferências visuais. A aba **Atualização** reúne a verificação manual e o histórico de notas.
+
+- **14 temas de cores**, com galeria expansível, além dos temas personalizados e dos pacotes locais por ZIP.
+- Fundo e destaque RGB independentes. As engrenagens do tema RGB e da amostra de destaque abrem editores separados, com direção, sequência de cores, velocidades Lento/Médio/Rápido e até 12 perfis cada.
+- A engrenagem do tema Padrão abre o editor de fundo Linear/Radial, com intensidade e perfis próprios.
+- Os editores ficam à direita, mostram mudanças no aplicativo em tempo real e salvam apenas ao aplicar. Cancelar, X ou Esc restaura a configuração anterior.
+- Skeletons seguem o tema; os painéis de personalização e o modal de informações usam glass fosco.
+
+A confirmação pode exibir um cadeado vermelho para ZIP/RAR com proteção por senha confirmada por leitura parcial. Ausência do ícone significa **não verificado**, não garantia de ausência de senha. Nos downloads HTTP com erro, o menu de contexto oferece **Fornecer novo link**, com validação antes da tentativa de retomada.
 
 | Downloads e comportamento | Tema e cores |
 | --- | --- |
@@ -172,22 +171,24 @@ Para instalar, abra **Configurações → Integração com navegador**:
 
 ## Instalação e atualização
 
-1. Abra [Releases](https://github.com/NskBR/SFDownloader-App/releases) e baixe o instalador Windows `.exe`.
+1. Baixe o [instalador Windows x64 da 2.0.1](https://github.com/NskBR/SFDownloader-App/releases/download/v2.0.1/SFDownloader_2.0.1_x64-setup.exe).
 2. Execute o instalador e siga as etapas do Windows.
-3. Quando a titlebar indicar uma atualização, clique para atualizar o aplicativo.
+3. Consulte **Configurações → Atualização**, ou use o aviso na barra de título quando houver uma versão nova.
 4. O app baixa e verifica o instalador, pausa as transferências e instala silenciosamente com uma janela de progresso. Ao concluir, reabre preservando histórico, configurações e parciais.
+
+As releases do GitHub oferecem uma cópia do instalador e o checksum. A atualização dentro do aplicativo consulta o manifesto do Filebase por meio do Worker público; ela não depende das releases do GitHub.
 
 O aplicativo ainda não possui assinatura de código pública. Verifique que o instalador veio do repositório oficial antes de ignorar qualquer alerta do Windows SmartScreen.
 
 ## Segurança e privacidade
 
-Esta revisão não encontrou chaves privadas, tokens de produção, arquivos `.env`, certificados, instaladores locais ou artefatos de build rastreados pelo Git, inclusive no histórico acessível do repositório. A pasta `release/`, `dist/`, `target/` e `node_modules/` permanece ignorada.
+Credenciais de publicação devem permanecer locais. O arquivo `enviar-filebase.bat`, as pastas de build e os instaladores gerados são ignorados pelo Git. O XPI Firefox assinado é rastreado porque faz parte do pacote incluído no aplicativo.
 
 - A ponte do navegador fica restrita ao loopback e exige token por processo, origem de extensão permitida e limites de payload.
 - URLs, cookies, tokens e headers sensíveis são removidos dos logs e diagnósticos exportados.
 - Caminhos recebidos pela interface são validados antes de operações de abertura, extração e remoção.
 - A CSP do WebView bloqueia conteúdo remoto não autorizado.
-- O atualizador aceita apenas instaladores de releases oficiais; a instalação começa após o usuário clicar para atualizar.
+- O atualizador usa o manifesto configurado de distribuição e confere o tamanho e o SHA-256 do instalador; a instalação começa após o usuário clicar para atualizar.
 
 O principal risco residual é inerente à extensão: uma extensão maliciosa que já tenha permissões concedidas pelo usuário pode tentar solicitar capturas locais. Revise extensões instaladas e permissões do navegador. Consulte o [modelo de ameaças](docs/THREAT_MODEL.md), a [política de privacidade da extensão](browser-extension/PRIVACY.md) e a [auditoria de dependências](docs/DEPENDENCY_AUDIT.md).
 
@@ -227,7 +228,11 @@ Para o backend no Windows:
 npm run release
 ```
 
-Os instaladores e o ZIP portátil completo são copiados para `release/v<versão>/`, uma pasta local ignorada pelo Git. Releases anteriores são preservadas. O ZIP inclui as ferramentas necessárias para mídia; o `.exe` avulso precisa da pasta `media-tools` ao lado para esse recurso. A distribuição é feita manualmente; o repositório não publica builds por GitHub Actions.
+Também é possível executar `build.bat`. A versão do aplicativo é definida em `package.json`; o script sincroniza os arquivos do Tauri e Rust. A versão da extensão é mantida separadamente nos manifestos Chromium e Firefox.
+
+A build gera o instalador NSIS `SFDownloader_<versão>_x64-setup.exe` e `SHA256SUMS.txt` em `release/v<versão>/`, ignorada pelo Git. Não é gerado um pacote portátil para distribuição. A extensão é regenerada antes do empacotamento; para Firefox, o XPI assinado deve corresponder aos arquivos atuais.
+
+Para publicar no Filebase, configure as credenciais somente no `enviar-filebase.bat` local e execute-o após a build. O publicador envia o setup, as notas de `docs/release-notes/<versão>.txt` e o manifesto; verifica o download público e o hash antes de concluir. O pacote de fontes de mídia não é enviado por esse comando. A publicação no GitHub é separada; não há publicação automática por GitHub Actions.
 
 ## Estrutura
 

@@ -2,7 +2,7 @@ import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
 import {it,expect,vi,afterEach} from 'vitest';
 import {BrowserIntegrationWizard} from './BrowserIntegrationWizard';
 vi.mock('@tauri-apps/api/core',()=>({invoke:vi.fn(async(command:string)=>command==='browser_extension_status'?false:'C:/extension')}));
-vi.mock('../services/downloadService',()=>({browserExtensionDiagnostics:vi.fn(async()=>({connected:false,listening:true,port:17831,error:null})),revealInFolder:vi.fn(),openFile:vi.fn()}));
+vi.mock('../services/downloadService',()=>({browserExtensionConnected:vi.fn(async()=>false),browserExtensionDiagnostics:vi.fn(async()=>({connected:false,listening:true,port:17831,error:null})),revealInFolder:vi.fn(),openFile:vi.fn()}));
 afterEach(cleanup);
 it('guides installation one step at a time with progress and back controls',async()=>{
  const close=vi.fn();render(<BrowserIntegrationWizard onClose={close}/>);

@@ -13,7 +13,15 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 2.0.1.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 2.0.3.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+
+## Novidades da 2.0.3
+
+- Correção do aviso de versão da extensão que alternava entre reconhecida e não identificada.
+- Uma conferência de versão por atualização do app, com resultado salvo e acompanhamento da conexão separado.
+- Verificação manual no último passo do assistente. A extensão continua na **0.4.0**, com XPI Firefox assinado incluído.
+
+[Notas completas da 2.0.3](docs/release-notes/2.0.3.txt).
 
 ## Novidades da 2.0.2
 
@@ -47,7 +55,7 @@ O SFDownloader reúne downloads HTTP/HTTPS e BitTorrent em uma interface desktop
 
 ## Estado do projeto
 
-A versão 2.0.2 está disponível para Windows 10/11 x64. Downloads HTTP, organização, personalização e integração com navegadores estão disponíveis; o motor BitTorrent continua em beta, com cenários de interoperabilidade ainda em validação.
+A versão 2.0.3 está disponível para Windows 10/11 x64. Downloads HTTP, organização, personalização e integração com navegadores estão disponíveis; o motor BitTorrent continua em beta, com cenários de interoperabilidade ainda em validação.
 
 O projeto conta com testes automatizados de interface, backend e extensão executados no processo de release. Isso não substitui a validação de cada site, servidor ou swarm real.
 

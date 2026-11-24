@@ -1,0 +1,9 @@
+Correções
+
+• Corrigido o aviso intermitente de versão da extensão: sincronizações sem versão ou com dados inválidos não apagam mais uma identificação válida.
+• A versão da extensão é conferida uma vez por atualização do aplicativo. O resultado fica salvo entre reinicializações; se ainda não houver um relato válido, a conferência permanece pendente, sem aviso de erro.
+• O acompanhamento da conexão foi separado da comparação de versões, evitando repetir a verificação a cada consulta de status.
+• Botão Verificar versão da extensão no último passo do assistente de integração para conferir novamente após instalar ou atualizar o pacote.
+• Relatos válidos são mantidos por origem da extensão e expiram sem confirmação recente. Com várias origens ativas, o diagnóstico considera a menor versão informada.
+
+A extensão permanece na versão 0.4.0, com o mesmo XPI Firefox assinado.

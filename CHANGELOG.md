@@ -2,6 +2,13 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 2.0.3 — 24/11/2026
+
+- Corrigido o aviso intermitente da versão da extensão.
+- Checagem única por atualização do aplicativo, resultado persistido e estado da conexão separado.
+- Verificação manual no assistente de integração; extensão mantida na 0.4.0.
+- [Notas completas](docs/release-notes/2.0.3.txt).
+
 ## 2.0.2 — 24/11/2026
 
 - Cinco layouts, temas claros, ícones Sólido/Normal e personalização organizada com prévias ao vivo.

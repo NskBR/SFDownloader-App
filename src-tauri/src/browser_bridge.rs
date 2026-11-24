@@ -22,6 +22,8 @@ use uuid::Uuid;
 
 pub const BRIDGE_PORT: u16 = 17_831;
 const MAX_CONTEXTS: usize = 256;
+const EXTENSION_VERSION_TTL_SECONDS: u64 = 90;
+const MAX_EXTENSION_ORIGINS: usize = 64;
 const CONTEXT_TTL_SECONDS: u64 = 300;
 const MAX_REQUEST_BODY_BYTES: usize = 256 * 1024;
 const MAX_REQUEST_HEADER_NAMES: usize = 100;
@@ -36,11 +38,17 @@ struct HeaderContext {
 }
 
 #[derive(Clone)]
+struct ExtensionVersionReport {
+    version: String,
+    seen_at: u64,
+}
+
+#[derive(Clone)]
 pub struct BrowserBridge {
     token: String,
     contexts: Arc<Mutex<HashMap<String, HeaderContext>>>,
     last_seen: Arc<AtomicU64>,
-    extension_version: Arc<Mutex<Option<String>>>,
+    extension_versions: Arc<Mutex<HashMap<String, ExtensionVersionReport>>>,
     theme_accent: Arc<Mutex<Option<String>>>,
     theme_bg: Arc<Mutex<Option<String>>>,
     language: Arc<Mutex<Option<String>>>,
@@ -54,7 +62,7 @@ impl Default for BrowserBridge {
             token: Uuid::new_v4().to_string(),
             contexts: Arc::new(Mutex::new(HashMap::new())),
             last_seen: Arc::new(AtomicU64::new(0)),
-            extension_version: Arc::new(Mutex::new(None)),
+            extension_versions: Arc::new(Mutex::new(HashMap::new())),
             theme_accent: Arc::new(Mutex::new(None)),
             theme_bg: Arc::new(Mutex::new(None)),
             language: Arc::new(Mutex::new(None)),
@@ -92,6 +100,31 @@ impl BrowserBridge {
 
     pub fn mark_disconnected(&self) {
         self.last_seen.store(0, Ordering::SeqCst);
+        if let Ok(mut reports) = self.extension_versions.lock() { reports.clear(); }
+    }
+
+    fn record_extension_version(&self, headers: &AxumHeaderMap) {
+        let Some(version) = headers.get("x-sf-extension-version")
+            .and_then(|value| value.to_str().ok())
+            .filter(|value| extension_version_parts(value).is_some()) else { return; };
+        let origin = headers.get("origin").and_then(|value| value.to_str().ok()).unwrap_or("legacy");
+        let now = Self::now_seconds();
+        if let Ok(mut reports) = self.extension_versions.lock() {
+            reports.retain(|_, report| now.saturating_sub(report.seen_at) <= EXTENSION_VERSION_TTL_SECONDS);
+            if reports.len() < MAX_EXTENSION_ORIGINS || reports.contains_key(origin) {
+                reports.insert(origin.to_owned(), ExtensionVersionReport {version:version.to_owned(), seen_at:now});
+            }
+        }
+    }
+
+    fn reported_extension_version(&self) -> Option<String> {
+        let now = Self::now_seconds();
+        let mut reports = self.extension_versions.lock().ok()?;
+        reports.retain(|_, report| now.saturating_sub(report.seen_at) <= EXTENSION_VERSION_TTL_SECONDS);
+        // Keep the oldest active version visible when multiple browsers are connected.
+        // Unversioned syncs never erase a verified report or extend its lifetime.
+        reports.values().min_by_key(|report| extension_version_parts(&report.version))
+            .map(|report| report.version.clone())
     }
 
     fn cleanup_expired_contexts(&self) {
@@ -485,8 +518,7 @@ async fn sync(State(state): State<BridgeState>, request_headers: AxumHeaderMap) 
     if !has_trusted_bridge_origin(&request_headers) {
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
-    let reported=request_headers.get("x-sf-extension-version").and_then(|value|value.to_str().ok()).filter(|value|extension_version_parts(value).is_some()).map(str::to_owned);
-    if let Ok(mut version)=state.bridge.extension_version.lock(){*version=reported;}
+    state.bridge.record_extension_version(&request_headers);
     state.bridge.mark_seen();
     let _ = state.app.emit("browser-extension-status", true);
     let theme_accent = state
@@ -638,16 +670,19 @@ pub fn browser_extension_status(bridge: tauri::State<'_, BrowserBridge>) -> bool
 #[tauri::command]
 pub fn browser_extension_diagnostics(
     bridge: tauri::State<'_, BrowserBridge>,
+    include_version: Option<bool>,
 ) -> BrowserBridgeDiagnostics {
-    let installed=bridge.extension_version.lock().ok().and_then(|value|value.clone());
-    let available=crate::commands::browser_extension::bundled_version("chromium").ok();
-    let outdated=bridge.is_connected() && installed.as_deref().and_then(extension_version_parts).zip(available.as_deref().and_then(extension_version_parts)).map(|(installed,available)|installed<available).unwrap_or(false);
+    let connected=bridge.is_connected();
+    let check_version=include_version.unwrap_or(true);
+    let installed=if check_version && connected {bridge.reported_extension_version()} else {None};
+    let available=if check_version {crate::commands::browser_extension::bundled_version("chromium").ok()} else {None};
+    let outdated=connected && installed.as_deref().and_then(extension_version_parts).zip(available.as_deref().and_then(extension_version_parts)).map(|(installed,available)|installed<available).unwrap_or(false);
     BrowserBridgeDiagnostics {
-        installed_version: if bridge.is_connected(){installed}else{None},
+        installed_version: installed,
         available_version: available,
         outdated,
         listening: bridge.listening.load(Ordering::SeqCst),
-        connected: bridge.is_connected(),
+        connected,
         port: BRIDGE_PORT,
         error: bridge
             .startup_error
@@ -859,5 +894,52 @@ mod tests {
         let contexts = bridge.contexts.lock().unwrap();
         assert!(!contexts.contains_key("expired"));
         assert!(contexts.contains_key("active"));
+    }
+}
+
+#[cfg(test)]
+mod extension_version_tracking_tests {
+    use super::*;
+    fn headers(origin:&str,version:Option<&str>)->AxumHeaderMap {
+        let mut headers=AxumHeaderMap::new();
+        headers.insert("origin",AxumHeaderValue::from_str(origin).unwrap());
+        if let Some(version)=version {headers.insert("x-sf-extension-version",AxumHeaderValue::from_str(version).unwrap());}
+        headers
+    }
+    #[test]
+    fn unversioned_and_invalid_syncs_do_not_erase_verified_version() {
+        let bridge=BrowserBridge::default();
+        bridge.record_extension_version(&headers("chrome-extension://one",Some("0.4.0")));
+        for _ in 0..10 {
+            bridge.record_extension_version(&headers("chrome-extension://one",None));
+            bridge.record_extension_version(&headers("moz-extension://legacy",None));
+            bridge.record_extension_version(&headers("chrome-extension://one",Some("invalid")));
+            assert_eq!(bridge.reported_extension_version().as_deref(),Some("0.4.0"));
+        }
+        bridge.record_extension_version(&headers("chrome-extension://one",Some("0.4.1")));
+        assert_eq!(bridge.reported_extension_version().as_deref(),Some("0.4.1"));
+    }
+    #[test]
+    fn multiple_browsers_report_oldest_active_version_independent_of_sync_order() {
+        let bridge=BrowserBridge::default();
+        let current=headers("chrome-extension://one",Some("0.4.0"));
+        let old=headers("moz-extension://two",Some("0.3.9"));
+        for _ in 0..3 {
+            bridge.record_extension_version(&old);bridge.record_extension_version(&current);
+            assert_eq!(bridge.reported_extension_version().as_deref(),Some("0.3.9"));
+        }
+        bridge.record_extension_version(&headers("moz-extension://two",Some("0.4.0")));
+        assert_eq!(bridge.reported_extension_version().as_deref(),Some("0.4.0"));
+    }
+    #[test]
+    fn stale_versions_expire_even_when_an_unversioned_client_keeps_syncing() {
+        let bridge=BrowserBridge::default();
+        assert_eq!(bridge.reported_extension_version(),None);
+        bridge.record_extension_version(&headers("chrome-extension://one",Some("0.4.0")));
+        for report in bridge.extension_versions.lock().unwrap().values_mut(){report.seen_at=BrowserBridge::now_seconds()-EXTENSION_VERSION_TTL_SECONDS-1;}
+        bridge.record_extension_version(&headers("chrome-extension://one",None));bridge.mark_seen();
+        assert!(bridge.is_connected());assert_eq!(bridge.reported_extension_version(),None);
+        bridge.record_extension_version(&headers("chrome-extension://one",Some("0.4.0")));
+        bridge.mark_disconnected();assert_eq!(bridge.reported_extension_version(),None);
     }
 }

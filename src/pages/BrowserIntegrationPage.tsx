@@ -44,7 +44,7 @@ export function BrowserIntegrationPage() {
   useEffect(() => {
     let active = true;
     const refresh = () => {
-      void service.browserExtensionDiagnostics().then((result) => {
+      void service.browserExtensionDiagnostics(false).then((result) => {
         if (active) setBridgeStatus(result);
       }).catch(() => {});
     };

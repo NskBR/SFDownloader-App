@@ -187,8 +187,8 @@ export interface BrowserBridgeDiagnostics {
   port: number;
   error: string | null;
 }
-export const browserExtensionDiagnostics = () =>
-  invoke<BrowserBridgeDiagnostics>("browser_extension_diagnostics");
+export const browserExtensionDiagnostics = (includeVersion=true) =>
+  invoke<BrowserBridgeDiagnostics>("browser_extension_diagnostics",{includeVersion});
 export const extractionStatus = (id: string) =>
   invoke<string | null>("extraction_status", { id });
 export const openUrl = (url: string) => invoke<void>("open_url", { url });

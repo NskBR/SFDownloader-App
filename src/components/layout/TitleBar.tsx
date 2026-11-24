@@ -1,3 +1,4 @@
+import {checkExtensionVersion} from "../../services/extensionVersionCheck";
 import {WindowControlSymbols} from "../ui/WindowControlSymbols";
 import {UpdateDownloadPanel} from "../UpdateDownloadPanel";
 import {UpdateReleaseNotes} from "../UpdateReleaseNotes";
@@ -81,15 +82,20 @@ export function TitleBar({
   const [extensionConnected, setExtensionConnected] = useState<boolean | null>(null);
   const [updateProgress, setUpdateProgress] = useState<UpdateDownloadProgress>(idleUpdateProgress);
   useEffect(() => {
-    const updateStatus = () => {
-      void downloadService.browserExtensionDiagnostics().then(status=>{
-        setExtensionConnected(status.connected);
-        setExtensionWarning(status.connected?(status.outdated?`Extensão ${status.installedVersion} desatualizada. Disponível: ${status.availableVersion}.`:!status.installedVersion?'Não foi possível verificar a versão da extensão. Abra a integração para atualizar.':''):'');
-      }).catch(()=>{setExtensionConnected(false);setExtensionWarning('');});
+    let active=true,revision=0;
+    const updateStatus = async () => {
+      const current=++revision;
+      try {
+        const connected=await downloadService.browserExtensionConnected();
+        const checked=connected?await checkExtensionVersion():null;
+        if(!active||current!==revision)return;
+        setExtensionConnected(connected);
+        setExtensionWarning(checked?.outdated?`Extensão ${checked.installedVersion} desatualizada. Disponível: ${checked.availableVersion}.`:'');
+      }catch{/* A failed IPC request must not replace a successful version check. */}
     };
-    updateStatus();
-    const timer = setInterval(updateStatus, 3000);
-    return () => clearInterval(timer);
+    void updateStatus();
+    const timer = setInterval(()=>void updateStatus(), 3000);
+    return () => {active=false;clearInterval(timer);};
   }, []);
 
   useEffect(() => {

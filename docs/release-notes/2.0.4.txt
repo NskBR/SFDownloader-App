@@ -1,0 +1,49 @@
+Novidades
+
+• Extensão 0.4.1 com identificador persistente por instalação/perfil e identificação do navegador, evitando misturar Brave, Firefox e outros perfis.
+• A primeira etapa da integração lista navegadores e instâncias, com conexão, versão e estado independente: atualizada, desatualizada, não verificada ou desconectada.
+• Extensões antigas são exibidas como conexões legadas. Quando não informam a versão, ela permanece não verificada; a versão de outro navegador não é atribuída a elas.
+• Aviso de atualização recomendada da extensão em um ícone vermelho na barra de título. O clique abre um modal com X para fechar, acesso ao assistente e Remover aviso para dispensar a mensagem definitivamente.
+
+Melhorias e correções
+
+• Corrigidos os fundos excessivamente transparentes dos cards de configuração em temas com wallpapers. Os painéis agora usam a superfície do tema com opacidade mínima para leitura.
+• A categoria Layout reúne navegação, formato da janela e contorno. Ícones e controles reúne o estilo dos ícones e os botões da barra de título, mantendo prévia, Aplicar e Cancelar.
+• Desconectar uma instância não desconecta as demais. Instâncias sem resposta recente são marcadas como desconectadas e removidas da lista após expirar.
+• A checagem de versão usa cache separado por versão do aplicativo, instância e versão informada da extensão, com atualização individual quando o pacote do navegador muda.
+
+• Assistente de integração com opções de navegador compactas e conteúdo contido acima do rodapé. O botão de estado de cada extensão abre diretamente a etapa de instalação do navegador correspondente.
+
+• Extensão com atualização pendente usa botão e indicador de conexão amarelos, sem exclamação duplicada. O ícone vermelho fica reservado ao aviso importante de migração das instâncias.
+
+• Botão Rever conexões na lista da integração para consultar novamente os navegadores e suas versões, com indicador de consulta e sem confundir a ação com a atualização da extensão.
+
+• Pacotes da extensão são preparados apenas na etapa de instalação. O XPI Firefox 0.4.1 assinado está incluído; mensagens de erro têm altura limitada.
+
+• Identificação dos navegadores prioriza marcas específicas e não presume Google Chrome pela marca compartilhada do Chromium. Registros legados substituídos e sem novas sincronizações são removidos sem ocultar clientes antigos ainda ativos.
+
+• Integração simplificada em duas etapas. A instalação oferece Voltar às conexões para rever as instâncias, sem uma etapa final separada.
+
+• Nova linguagem visual dos modais: cantos arredondados regulares, hierarquia tipográfica, texto de leitura estável e ações integradas. Editores mantêm a prévia lateral; notas, informações, integração, confirmações e atualização recebem acabamentos próprios da mesma família.
+
+• Corrigida a rejeição de vídeos originalmente sem som do Twitter/X na validação final. Metadados de codec ausentes não confirmam a existência de áudio; as mensagens agora distinguem arquivo inválido, vídeo ausente, áudio esperado ausente e capa ausente.
+
+• Avisos, notas de atualização, informações do aplicativo, redefinição e substituição de link usam visual à esquerda e conteúdo à direita. Em espaços menores, a lateral é recolhida para preservar a leitura.
+
+• Erros na janela compacta de mídia substituem a faixa de métricas sem aumentar o conteúdo nem criar rolagem. A mensagem completa fica disponível nos detalhes.
+
+• Grade de downloads com margem de renderização reduzida a uma linha e sem renderizações React a cada deslocamento dentro da mesma faixa. Linhas fora da tela podem pular a pintura, preservando a densidade e o visual dos cards.
+
+
+• Espaço entre a barra de busca e os downloads reduzido, com fade suave de 8 px no topo durante a rolagem, preservando o primeiro card quando a lista está no início.
+
+• Métricas reformuladas com gráfico interativo de atividade dos últimos 14/30 dias por quantidade ou volume, tipos de arquivo, principais origens e estados dos downloads salvos. Indicadores acumulados incluem tamanho médio concluído, soma das durações e parcela concluída do volume registrado; a interface diferencia histórico retido de contadores acumulados.
+
+
+• Velocidades registradas por download em histórico mensal persistente, sem limite de curvas, com seleção dos meses salvos e média geral em dourado. O donut de status foi ampliado, com título centralizado e sem repetir a legenda dos indicadores ao lado.
+
+
+• Temas claros com campos e tabelas claros, chaves com indicadores brancos, ações suaves e cores de estado equilibradas.
+• Contorno da janela com card Sem contorno no lugar da chave de ativação.
+• Clique fora fecha os editores sem alterações. Prévias pendentes exibem aviso e animação discreta, preservando Aplicar e Cancelar.
+• Firefox com XPI 0.4.1 assinado incluído.

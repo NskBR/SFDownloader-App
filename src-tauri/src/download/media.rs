@@ -40,6 +40,8 @@ pub struct MediaPreview {
     pub file_stem: String,
     pub music: bool,
     pub has_audio: bool,
+    #[serde(default)]
+    pub audio_confirmed: bool,
     pub playlist: Option<PlaylistPreview>,
 }
 
@@ -618,6 +620,8 @@ pub fn parse_preview(
         .ok_or("Não há formatos disponíveis para este vídeo.")?;
     let mut resolutions = BTreeSet::new();
     let mut frame_rates = HashMap::<u32, f64>::new();
+    let audio_confirmed = formats.iter().any(|f| f["has_drm"].as_bool()!=Some(true)
+        && f["acodec"].as_str().is_some_and(|codec|codec!="none"&&!codec.is_empty()));
     let has_audio = formats.iter().any(|f| {
         f["has_drm"].as_bool() != Some(true)
             && (f["acodec"].as_str().is_some_and(|c| c != "none")
@@ -655,6 +659,7 @@ pub fn parse_preview(
         url,
         video_id: id,
         has_audio,
+        audio_confirmed,
         title: raw["title"]
             .as_str()
             .unwrap_or("Vídeo")
@@ -800,6 +805,7 @@ pub fn parse_playlist(raw: Value, url: String, id: String) -> Result<MediaPrevie
         channel_verified: false,
         music: true,
         has_audio: true,
+        audio_confirmed: true,
         playlist: Some(PlaylistPreview {
             entries,
             unavailable_count,
@@ -1419,7 +1425,7 @@ async fn run(
         &tools,
         &source,
         &saved.options.format,
-        preview.has_audio,
+        preview.audio_confirmed,
         Some(control),
     )
     .await?;
@@ -1547,15 +1553,14 @@ pub async fn validate_output(
         .as_str()
         .and_then(|s| s.parse::<f64>().ok())
         .unwrap_or(0.0);
-    if !result.0
-        || (!audio && (expect_audio || format == "mp3"))
-        || (format == "mp4" && !video)
-        || (format == "mp3" && !cover)
-        || !duration.is_finite()
-        || duration <= 0.0
-    {
-        return Err("O arquivo final não passou na validação de áudio, vídeo e capa.".into());
+    if !result.0 || !duration.is_finite() || duration <= 0.0 {
+        return Err("O arquivo final está inválido ou incompleto.".into());
     }
+    if format == "mp4" && !video {return Err("O arquivo final não contém uma faixa de vídeo válida.".into());}
+    if !audio && (expect_audio || format == "mp3") {
+        return Err(if format=="mp3" {"Não foi encontrada uma faixa de áudio para gerar o MP3."}else{"O arquivo final está sem o áudio informado pela origem."}.into());
+    }
+    if format == "mp3" && !cover {return Err("O MP3 foi gerado sem a capa esperada.".into());}
     Ok(())
 }
 
@@ -2146,4 +2151,26 @@ mod tests {
             "Test (1)-sfd.mp3"
         );
     }
+}
+
+#[cfg(test)]
+mod silent_social_video_tests {
+ use super::*;
+ #[tokio::test]
+ async fn silent_mp4_is_valid_without_expected_audio_but_missing_expected_audio_still_fails() {
+  let tools=Tools {dir:PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/media-tools")};
+  let root=std::env::temp_dir().join(format!("sf-silent-video-{}",uuid::Uuid::new_v4()));std::fs::create_dir_all(&root).unwrap();
+  let file=root.join("silent.mp4");let mut command=tools.command("ffmpeg");
+  command.args(["-v","error","-f","lavfi","-i","color=c=blue:s=64x64:d=0.5","-an","-c:v","mpeg4","-pix_fmt","yuv420p"]).arg(&file);
+  let output=capture(command,Duration::from_secs(30)).await.unwrap();assert!(output.0,"{}",output.2);
+  validate_output(&tools,&file,"mp4",false,None).await.unwrap();
+  assert!(validate_output(&tools,&file,"mp4",true,None).await.unwrap_err().contains("áudio informado"));
+  std::fs::remove_file(&file).unwrap();std::fs::remove_dir(&root).unwrap();
+ }
+
+ #[test]
+ fn unspecified_http_codec_does_not_confirm_audio_for_a_silent_x_video() {
+  let preview=parse_preview(json!({"id":"2125238524089692160","webpage_url":"https://x.com/chasmmmmmmmmmmm/status/2125238687785177580","duration":40.8,"formats":[{"format_id":"http-10368","ext":"mp4","height":1080},{"format_id":"hls-5701","ext":"mp4","height":1080,"vcodec":"avc1.640032","acodec":"none"}]}),"https://x.com/chasmmmmmmmmmmm/status/2125238687785177580".into(),"twitter-2125238687785177580".into(),false).unwrap();
+  assert!(!preview.audio_confirmed);assert!(preview.resolutions.contains(&1080));
+ }
 }

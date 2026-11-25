@@ -1,3 +1,4 @@
+import {DialogVisualRail} from "../DialogVisualRail";
 import {WindowOutline} from "../WindowOutline";
 import {BrowserIntegrationWizard} from "../BrowserIntegrationWizard";
 import {
@@ -382,10 +383,11 @@ export function AppShell({
       {helpOpen && createPortal(
         <div className="help-overlay" onMouseDown={() => setHelpOpen(false)}>
           <section
-            className="help-dialog"
+            className="help-dialog sf-dialog-split"
             role="dialog" aria-modal="true" aria-labelledby="about-dialog-title"
             onMouseDown={(event) => event.stopPropagation()}
           >
+            <DialogVisualRail kind="about"/>
             <header>
               <div className="help-brand">
                 <img className="help-logo" src={logo} alt="SF Downloader" />

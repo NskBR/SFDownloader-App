@@ -1,3 +1,4 @@
+import {useDialogDismissGuard} from "../ui/useDialogDismissGuard";
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {X,Plus,Trash2} from '../icons';
@@ -23,6 +24,7 @@ function RgbPreview({config}:{config:RgbConfig}) {
 export function RgbThemeDialog({config,profiles,onApply,onClose,onPreview,onCancelPreview,title='Espectro RGB'}:{title?:string;config:RgbConfig|undefined;profiles:RgbProfile[];onApply:(config:RgbConfig,profiles:RgbProfile[])=>void;onClose:()=>void;onPreview?:(config:RgbConfig)=>void;onCancelPreview?:()=>void}) {
   const dialog=useRef<HTMLDialogElement>(null);
   const applied=useRef(false);
+  const initial=useRef(JSON.stringify([normalizeRgbConfig(config),profiles]));
   const previewCallback=useRef(onPreview),cancelCallback=useRef(onCancelPreview);
   previewCallback.current=onPreview;cancelCallback.current=onCancelPreview;
   const [draft,setDraft]=useState(()=>normalizeRgbConfig(config));
@@ -33,6 +35,7 @@ export function RgbThemeDialog({config,profiles,onApply,onClose,onPreview,onCanc
   useEffect(()=>{dialog.current?.showModal();},[]);
   useEffect(()=>{previewCallback.current?.(normalizeRgbConfig(draft));},[draft]);
   useEffect(()=>()=>{if(!applied.current)cancelCallback.current?.();},[]);
+  const warning=useDialogDismissGuard(dialog,JSON.stringify([draft,saved])!==initial.current,onClose);
   const update=(patch:Partial<RgbConfig>)=>setDraft(current=>({...current,...patch}));
   const saveProfile=()=>{
     const label=name.trim(); if(!label)return;
@@ -41,7 +44,7 @@ export function RgbThemeDialog({config,profiles,onApply,onClose,onPreview,onCanc
     setMessage('Perfil preparado. Clique em Aplicar e salvar para confirmar.');
   };
   return createPortal(<dialog ref={dialog} className="rgb-dialog rgb-editor-dialog" onCancel={event=>{event.preventDefault();onClose();}} aria-labelledby="rgb-dialog-title">
-    <header><div><h2 id="rgb-dialog-title">{title}</h2><p>Crie seu próprio ritmo de cores.</p></div><button type="button" className="rgb-icon-button" onClick={onClose} aria-label="Fechar"><X size={18}/></button></header>
+    <header><div className="sf-editor-heading"><span className="sf-editor-mark sf-editor-mark--rgb" aria-hidden="true"/><div><h2 id="rgb-dialog-title">{title}</h2><p>Crie seu próprio ritmo de cores.</p></div></div><button type="button" className="rgb-icon-button" onClick={onClose} aria-label="Fechar"><X size={18}/></button></header>
     <div className="rgb-dialog-body">
       <RgbPreview config={draft}/>
       <label>Direção <output>{draft.angle}°</output><input className="rgb-direction-slider" type="range" min="0" max="360" step="15" value={draft.angle} style={{background:`linear-gradient(90deg,#af8aff ${draft.angle/3.6}%,#383640 ${draft.angle/3.6}%)`}} onChange={e=>update({angle:Number(e.target.value)})}/></label>
@@ -60,6 +63,6 @@ export function RgbThemeDialog({config,profiles,onApply,onClose,onPreview,onCanc
       <div className="rgb-profile-list">{saved.map(profile=><div key={profile.name}><button type="button" onClick={()=>{setDraft(normalizeRgbConfig(profile.config));setSelectedColor(0);setName(profile.name);setMessage('Perfil carregado na prévia.');}}>{profile.name}<span aria-hidden="true" style={{background:`linear-gradient(90deg,${profile.config.colors.join(',')})`}}/></button><button type="button" className="rgb-icon-button" aria-label={`Excluir perfil ${profile.name}`} onClick={()=>setSaved(current=>current.filter(p=>p.name!==profile.name))}><Trash2 size={14}/></button></div>)}</div>
       <p role="status">{message || 'Salve até 12 perfis. Usar o mesmo nome substitui o perfil.'}</p></fieldset>
       <p className="rgb-motion-note">O fundo permanece escuro para facilitar a leitura. A animação respeita a opção de animações do app e a preferência de movimento reduzido do sistema.</p>
-    </div><footer><button type="button" onClick={onClose}>Cancelar</button><button type="button" className="rgb-apply" onClick={()=>{applied.current=true;onApply(normalizeRgbConfig(draft),saved);onClose();}}>Aplicar e salvar</button></footer>
+    </div>{warning}<footer><button type="button" onClick={onClose}>Cancelar</button><button type="button" className="rgb-apply" onClick={()=>{applied.current=true;onApply(normalizeRgbConfig(draft),saved);onClose();}}>Aplicar e salvar</button></footer>
   </dialog>,document.body);
 }

@@ -1,6 +1,10 @@
+import {clearSpeedHistory} from "../services/speedHistory";
+import {MetricsInsights} from "../components/MetricsInsights";
+import type {DownloadTask} from "../domain/download";
+import "../styles/metrics-dashboard.css";
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RotateCcw, RefreshCw, Download, Upload, AlertTriangle, X } from "lucide-react";
-import { getMetrics, resetMetrics, exportMetrics, importMetrics } from "../services/downloadService";
+import { getMetrics, resetMetrics, exportMetrics, importMetrics, listDownloads } from "../services/downloadService";
 import type { MetricsSnapshot } from "../domain/metrics";
 import { useTranslation } from "../i18n";
 
@@ -95,14 +99,18 @@ export function MetricsPage() {
   const { t } = useTranslation();
   const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tasks,setTasks]=useState<DownloadTask[]>([]);
+  const [historyError,setHistoryError]=useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    void getMetrics()
-      .then(setMetrics)
-      .catch(() => setMetrics(null));
+    setLoading(true);setError(null);setHistoryError(false);
+    void Promise.allSettled([getMetrics(),listDownloads()]).then(([totals,history])=>{
+      if(totals.status==='fulfilled')setMetrics(totals.value);else setError('Não foi possível consultar os contadores. Tente novamente.');
+      if(history.status==='fulfilled')setTasks(history.value);else setHistoryError(true);
+    }).finally(()=>setLoading(false));
   }, []);
 
   useEffect(load, [load]);
@@ -111,9 +119,10 @@ export function MetricsPage() {
     setResetting(true);
     try {
       await resetMetrics();
+      await clearSpeedHistory();
       setConfirmReset(false);
       load();
-    } finally {
+    } catch {setError('Não foi possível redefinir as métricas.');} finally {
       setResetting(false);
     }
   };
@@ -197,6 +206,7 @@ export function MetricsPage() {
           <button
             className="reset-btn"
             onClick={load}
+            disabled={loading}
             title={t.metrics.refreshTooltip}
             aria-label={t.metrics.refresh}
           >
@@ -215,6 +225,8 @@ export function MetricsPage() {
         </div>
       </header>
 
+      <div className="metrics-dashboard-scroll">
+      {error&&<p role="alert" className="metrics-dashboard-error">{error}</p>}
       <div className="metrics-body">
         <div className="metrics-chart-card">
           <h2 className="metrics-panel-title">{t.metrics.downloadStatus}</h2>
@@ -223,22 +235,7 @@ export function MetricsPage() {
             centerLabel={t.metrics.downloadedCenter}
             centerValue={formatBytes(completedBytes)}
           />
-          <ul className="donut-legend">
-            {segments.map((segment) => {
-              const pct =
-                statusTotal > 0
-                  ? Math.round((segment.value / statusTotal) * 100)
-                  : 0;
-              return (
-                <li key={segment.label}>
-                  <span className="legend-dot" style={{ background: segment.color }} />
-                  {segment.label}
-                  <b>{formatBytes(segment.value)}</b>
-                  <span className="legend-pct">{pct}%</span>
-                </li>
-              );
-            })}
-          </ul>
+
         </div>
 
         <div className="metrics-stats">
@@ -266,6 +263,10 @@ export function MetricsPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="metrics-derived"><article><span>Tamanho médio concluído</span><strong>{completedCount?formatBytes(completedBytes/completedCount):'—'}</strong></article><article><span>Tempo acumulado de downloads concluídos</span><strong>{totalDurationMs>0?`${Math.floor(totalDurationMs/3600000)}h ${Math.floor(totalDurationMs/60000)%60}min`:'—'}</strong><small>Soma das durações; não é tempo de uso do app.</small></article><article><span>Parcela concluída do volume registrado</span><strong>{statusTotal?`${Math.round(completedBytes/statusTotal*100)}%`:'—'}</strong><small>Percentual de bytes, não de tentativas.</small></article></div>
+      <MetricsInsights tasks={tasks} loading={loading} error={historyError} formatBytes={formatBytes}/>
       </div>
 
       {!metrics && (

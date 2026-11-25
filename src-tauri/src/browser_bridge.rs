@@ -39,8 +39,22 @@ struct HeaderContext {
 
 #[derive(Clone)]
 struct ExtensionVersionReport {
-    version: String,
+    version: Option<String>,
     seen_at: u64,
+    last_seen: u64,
+    browser_name: String,
+    legacy: bool,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserInstance {
+    id: String,
+    browser_name: String,
+    version: Option<String>,
+    connected: bool,
+    outdated: bool,
+    legacy: bool,
 }
 
 #[derive(Clone)]
@@ -103,28 +117,76 @@ impl BrowserBridge {
         if let Ok(mut reports) = self.extension_versions.lock() { reports.clear(); }
     }
 
+    fn extension_peer_identity(headers: &AxumHeaderMap) -> (String, String, bool) {
+        let origin=headers.get("origin").and_then(|v|v.to_str().ok()).unwrap_or("legacy");
+        let instance=headers.get("x-sf-instance-id").and_then(|v|v.to_str().ok()).and_then(|v|Uuid::parse_str(v).ok());
+        let user_agent=headers.get("user-agent").and_then(|v|v.to_str().ok()).unwrap_or("");
+        let reported=headers.get("x-sf-browser-name").and_then(|v|v.to_str().ok());
+        let brands=headers.get("sec-ch-ua").and_then(|v|v.to_str().ok()).unwrap_or("");
+        let browser=match reported {
+            _ if brands.contains("Brave")=>"Brave",
+            _ if user_agent.contains("OPR/")||brands.contains("Opera")=>"Opera",
+            _ if user_agent.contains("Edg/")||brands.contains("Microsoft Edge")=>"Microsoft Edge",
+            Some(name @ ("Firefox"|"Brave"|"Google Chrome"|"Microsoft Edge"|"Opera"|"Vivaldi"|"Chromium"))=>name,
+            _ if user_agent.contains("Firefox/")||origin.starts_with("moz-extension://")=>"Firefox",
+            _ if user_agent.contains("Edg/")=>"Microsoft Edge",
+            _ if user_agent.contains("OPR/")=>"Opera",
+            _=>"Chromium",
+        };
+        let legacy=instance.is_none();
+        let id=instance.map(|id|format!("{}:{}",origin,id)).unwrap_or_else(||format!("legacy:{}:{}",origin,browser));
+        (id,browser.to_owned(),legacy)
+    }
+
     fn record_extension_version(&self, headers: &AxumHeaderMap) {
-        let Some(version) = headers.get("x-sf-extension-version")
-            .and_then(|value| value.to_str().ok())
-            .filter(|value| extension_version_parts(value).is_some()) else { return; };
-        let origin = headers.get("origin").and_then(|value| value.to_str().ok()).unwrap_or("legacy");
-        let now = Self::now_seconds();
-        if let Ok(mut reports) = self.extension_versions.lock() {
-            reports.retain(|_, report| now.saturating_sub(report.seen_at) <= EXTENSION_VERSION_TTL_SECONDS);
-            if reports.len() < MAX_EXTENSION_ORIGINS || reports.contains_key(origin) {
-                reports.insert(origin.to_owned(), ExtensionVersionReport {version:version.to_owned(), seen_at:now});
-            }
+        let version=headers.get("x-sf-extension-version").and_then(|v|v.to_str().ok())
+            .filter(|value|extension_version_parts(value).is_some());
+        let (id,browser_name,legacy)=Self::extension_peer_identity(headers);
+        let now=Self::now_seconds();
+        if let Ok(mut reports)=self.extension_versions.lock() {
+            reports.retain(|_,report|now.saturating_sub(report.last_seen)<=300);
+            if reports.len()>=MAX_EXTENSION_ORIGINS&&!reports.contains_key(&id){return;}
+            let report=reports.entry(id).or_insert_with(||ExtensionVersionReport {version:None,seen_at:0,last_seen:now,browser_name:browser_name.clone(),legacy});
+            report.last_seen=now;report.browser_name=browser_name;
+            if let Some(version)=version {report.version=Some(version.to_owned());report.seen_at=now;}
         }
     }
 
+    fn disconnect_extension(&self, headers: &AxumHeaderMap) {
+        let (id,_,_)=Self::extension_peer_identity(headers);
+        if let Ok(mut reports)=self.extension_versions.lock() {
+            reports.remove(&id);
+            let now=Self::now_seconds();
+            let last=reports.values().filter(|r|now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS).map(|r|r.last_seen).max().unwrap_or(0);
+            self.last_seen.store(last,Ordering::SeqCst);
+        }
+    }
+
+    fn extension_instances(&self, available:Option<&str>)->Vec<BrowserInstance> {
+        let now=Self::now_seconds();
+        let Ok(mut reports)=self.extension_versions.lock() else{return Vec::new();};
+        let replacements:Vec<_>=reports.iter().filter(|(_,r)|!r.legacy&&now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS)
+            .filter_map(|(id,r)|id.rsplit_once(':').map(|(origin,_)|(origin.to_owned(),r.last_seen))).collect();
+        reports.retain(|id,report| {
+            if now.saturating_sub(report.last_seen)>300{return false;}
+            if report.legacy&&now.saturating_sub(report.last_seen)>15 {
+                return !replacements.iter().any(|(origin,seen)|id.starts_with(&format!("legacy:{}:",origin))&&*seen>report.last_seen);
+            }
+            true
+        });
+        let mut instances:Vec<_>=reports.iter().map(|(id,r)|{
+            let version=if now.saturating_sub(r.seen_at)<=EXTENSION_VERSION_TTL_SECONDS {r.version.clone()}else{None};
+            let connected=now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS;
+            let outdated=connected&&version.as_deref().and_then(extension_version_parts).zip(available.and_then(extension_version_parts)).is_some_and(|(v,a)|v<a);
+            BrowserInstance{id:id.clone(),browser_name:r.browser_name.clone(),version,connected,outdated,legacy:r.legacy}
+        }).collect();
+        instances.sort_by(|a,b|a.browser_name.cmp(&b.browser_name).then(a.id.cmp(&b.id)));
+        instances
+    }
+
     fn reported_extension_version(&self) -> Option<String> {
-        let now = Self::now_seconds();
-        let mut reports = self.extension_versions.lock().ok()?;
-        reports.retain(|_, report| now.saturating_sub(report.seen_at) <= EXTENSION_VERSION_TTL_SECONDS);
-        // Keep the oldest active version visible when multiple browsers are connected.
-        // Unversioned syncs never erase a verified report or extend its lifetime.
-        reports.values().min_by_key(|report| extension_version_parts(&report.version))
-            .map(|report| report.version.clone())
+        self.extension_instances(None).into_iter().filter(|p|p.connected)
+            .filter_map(|p|p.version).min_by_key(|v|extension_version_parts(v))
     }
 
     fn cleanup_expired_contexts(&self) {
@@ -274,6 +336,7 @@ struct BrowserDownloadEvent {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowserBridgeDiagnostics {
+    instances: Vec<BrowserInstance>,
     installed_version: Option<String>,
     available_version: Option<String>,
     outdated: bool,
@@ -395,7 +458,7 @@ fn cors_headers(request_headers: &AxumHeaderMap) -> AxumHeaderMap {
     );
     headers.insert(
         "access-control-allow-headers",
-        AxumHeaderValue::from_static("content-type, x-sf-extension-version"),
+        AxumHeaderValue::from_static("content-type, x-sf-extension-version, x-sf-instance-id, x-sf-browser-name"),
     );
     headers.insert(
         "access-control-allow-private-network",
@@ -508,8 +571,8 @@ async fn disconnect(State(state): State<BridgeState>, request_headers: AxumHeade
     if !has_trusted_bridge_origin(&request_headers) {
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
-    state.bridge.mark_disconnected();
-    let _ = state.app.emit("browser-extension-status", false);
+    state.bridge.disconnect_extension(&request_headers);
+    let _ = state.app.emit("browser-extension-status", state.bridge.is_connected());
     (headers, Json(serde_json::json!({ "ok": true }))).into_response()
 }
 
@@ -678,6 +741,7 @@ pub fn browser_extension_diagnostics(
     let available=if check_version {crate::commands::browser_extension::bundled_version("chromium").ok()} else {None};
     let outdated=connected && installed.as_deref().and_then(extension_version_parts).zip(available.as_deref().and_then(extension_version_parts)).map(|(installed,available)|installed<available).unwrap_or(false);
     BrowserBridgeDiagnostics {
+        instances: bridge.extension_instances(if check_version {available.as_deref()} else {None}),
         installed_version: installed,
         available_version: available,
         outdated,
@@ -942,4 +1006,46 @@ mod extension_version_tracking_tests {
         bridge.record_extension_version(&headers("chrome-extension://one",Some("0.4.0")));
         bridge.mark_disconnected();assert_eq!(bridge.reported_extension_version(),None);
     }
+}
+
+#[cfg(test)]
+mod browser_instances_tests {
+ use super::*;
+ fn peer(id:&str,name:&str,version:Option<&str>)->AxumHeaderMap {
+  let mut h=AxumHeaderMap::new();h.insert("origin",AxumHeaderValue::from_static("chrome-extension://same"));
+  h.insert("x-sf-instance-id",AxumHeaderValue::from_str(id).unwrap());h.insert("x-sf-browser-name",AxumHeaderValue::from_str(name).unwrap());
+  if let Some(v)=version{h.insert("x-sf-extension-version",AxumHeaderValue::from_str(v).unwrap());}h
+ }
+ #[test]
+ fn same_extension_origin_keeps_profiles_separate_and_disconnects_only_one() {
+  let bridge=BrowserBridge::default();let a=peer("11111111-1111-4111-8111-111111111111","Brave",Some("0.4.1"));let b=peer("22222222-2222-4222-8222-222222222222","Google Chrome",Some("0.4.0"));
+  bridge.record_extension_version(&a);bridge.record_extension_version(&b);bridge.mark_seen();
+  let all=bridge.extension_instances(Some("0.4.1"));assert_eq!(all.len(),2);assert!(all.iter().find(|p|p.browser_name=="Google Chrome").unwrap().outdated);assert!(!all.iter().find(|p|p.browser_name=="Brave").unwrap().outdated);
+  bridge.disconnect_extension(&b);assert!(bridge.is_connected());assert_eq!(bridge.extension_instances(Some("0.4.1")).len(),1);
+ }
+ #[test]
+ fn legacy_firefox_never_borrows_the_version_of_brave() {
+  let bridge=BrowserBridge::default();bridge.record_extension_version(&peer("11111111-1111-4111-8111-111111111111","Brave",Some("0.4.1")));
+  let mut old=AxumHeaderMap::new();old.insert("origin",AxumHeaderValue::from_static("moz-extension://old"));bridge.record_extension_version(&old);
+  let all=bridge.extension_instances(Some("0.4.1"));let firefox=all.iter().find(|p|p.browser_name=="Firefox").unwrap();assert!(firefox.legacy);assert_eq!(firefox.version,None);assert!(!firefox.outdated);
+ }
+}
+
+#[cfg(test)]
+mod instance_migration_tests {
+ use super::*;
+ #[test]
+ fn cleans_inactive_legacy_record_but_preserves_a_legacy_client_still_syncing() {
+  let bridge=BrowserBridge::default();let mut old=AxumHeaderMap::new();old.insert("origin",AxumHeaderValue::from_static("chrome-extension://same"));
+  bridge.record_extension_version(&old);
+  for r in bridge.extension_versions.lock().unwrap().values_mut(){r.last_seen=BrowserBridge::now_seconds()-20;}
+  let mut new=old.clone();new.insert("x-sf-instance-id",AxumHeaderValue::from_static("11111111-1111-4111-8111-111111111111"));new.insert("x-sf-extension-version",AxumHeaderValue::from_static("0.4.1"));
+  bridge.record_extension_version(&new);assert_eq!(bridge.extension_instances(None).len(),1);
+  bridge.record_extension_version(&old);assert_eq!(bridge.extension_instances(None).len(),2);
+ }
+ #[test]
+ fn request_brand_corrects_generic_report_without_changing_instance_identity() {
+  let mut h=AxumHeaderMap::new();h.insert("origin",AxumHeaderValue::from_static("chrome-extension://same"));h.insert("x-sf-instance-id",AxumHeaderValue::from_static("11111111-1111-4111-8111-111111111111"));h.insert("x-sf-browser-name",AxumHeaderValue::from_static("Google Chrome"));h.insert("sec-ch-ua",AxumHeaderValue::from_static("Brave"));
+  let (id,name,_)=BrowserBridge::extension_peer_identity(&h);assert_eq!(name,"Brave");h.insert("sec-ch-ua",AxumHeaderValue::from_static("Opera"));let (other,name,_)=BrowserBridge::extension_peer_identity(&h);assert_eq!(id,other);assert_eq!(name,"Opera");
+ }
 }

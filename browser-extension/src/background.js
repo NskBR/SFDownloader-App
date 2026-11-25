@@ -185,6 +185,32 @@ function updateExtensionIcon(connected, language = bridge.language) {
   } catch {}
 }
 
+let browserIdentityPromise=null;
+async function bridgeIdentityHeaders(){
+  if(!browserIdentityPromise)browserIdentityPromise=(async()=>{
+    const stored=await storageGet(["sfBrowserInstanceId"]);
+    let id=stored.sfBrowserInstanceId;
+    if(typeof id!=="string"||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id)){
+      id=crypto.randomUUID();await chrome.storage.local.set({sfBrowserInstanceId:id});
+    }
+    let name="Chromium";
+    const manifest=chrome.runtime.getManifest();
+    const ua=navigator.userAgent||"";
+    const brands=navigator.userAgentData?.brands||[];
+    if(manifest.browser_specific_settings||ua.includes("Firefox/"))name="Firefox";
+    else {
+      let brave=false;try{brave=!!(navigator.brave&&await navigator.brave.isBrave());}catch{}
+      if(brave||brands.some(b=>b.brand==="Brave"))name="Brave";
+      else if(ua.includes("Edg/")||brands.some(b=>/Microsoft Edge/i.test(b.brand)))name="Microsoft Edge";
+      else if(ua.includes("OPR/")||brands.some(b=>/Opera/i.test(b.brand)))name="Opera";
+      else if(ua.includes("Vivaldi/")||brands.some(b=>/Vivaldi/i.test(b.brand)))name="Vivaldi";
+      // Chromium derivatives may advertise Google Chrome; that brand alone is not proof.
+    }
+    return {"x-sf-instance-id":id,"x-sf-browser-name":name};
+  })().catch(error=>{browserIdentityPromise=null;throw error;});
+  return {...await browserIdentityPromise,"x-sf-extension-version":chrome.runtime.getManifest().version};
+}
+
 let syncPromise = null;
 
 function syncBridge() {
@@ -195,7 +221,7 @@ function syncBridge() {
     disabledExtensionsState = disabledExtensions || [];
     if (!captureEnabledState) {
       if (bridge.connected) {
-        try { await fetch(`${BRIDGE}/disconnect`, { method: "POST" }); } catch {}
+        try { await fetch(`${BRIDGE}/disconnect`, { method: "POST",headers:await bridgeIdentityHeaders() }); } catch {}
       }
       bridge.connected = false;
       saveBridgeToStorage();
@@ -204,7 +230,7 @@ function syncBridge() {
     }
 
     try {
-      const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store", headers:{"x-sf-extension-version":chrome.runtime.getManifest().version} });
+      const response = await fetch(`${BRIDGE}/sync`, { cache: "no-store", headers:await bridgeIdentityHeaders() });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       bridge = {
@@ -572,7 +598,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     void (async () => {
       // Updating must work even when automatic download capture is switched off.
-      const sync = await fetch(`${BRIDGE}/sync`,{cache:"no-store",headers:{"x-sf-extension-version":chrome.runtime.getManifest().version}});
+      const sync = await fetch(`${BRIDGE}/sync`,{cache:"no-store",headers:await bridgeIdentityHeaders()});
       if (!sync.ok) throw new Error("app-unavailable");
       const data = await sync.json();
       const response = await fetch(`${BRIDGE}/extension/update`,{

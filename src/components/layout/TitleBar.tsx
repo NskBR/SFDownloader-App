@@ -1,8 +1,9 @@
-import {checkExtensionVersion} from "../../services/extensionVersionCheck";
+import {ExtensionInstancesNotice} from "../ExtensionInstancesNotice";
+import {readBrowserConnections,browserConnectionWarning} from "../../services/extensionVersionCheck";
 import {WindowControlSymbols} from "../ui/WindowControlSymbols";
 import {UpdateDownloadPanel} from "../UpdateDownloadPanel";
 import {UpdateReleaseNotes} from "../UpdateReleaseNotes";
-import { AlertTriangle, Minus, Square, Maximize, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "../icons";
+import { Minus, Square, Maximize, X, Puzzle, Sparkles, Download, LoaderCircle, PackageCheck, Settings, BarChart3, Info } from "../icons";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -86,11 +87,11 @@ export function TitleBar({
     const updateStatus = async () => {
       const current=++revision;
       try {
-        const connected=await downloadService.browserExtensionConnected();
-        const checked=connected?await checkExtensionVersion():null;
+        const snapshot=await readBrowserConnections();
+        const connected=snapshot.connected;
         if(!active||current!==revision)return;
         setExtensionConnected(connected);
-        setExtensionWarning(checked?.outdated?`Extensão ${checked.installedVersion} desatualizada. Disponível: ${checked.availableVersion}.`:'');
+        setExtensionWarning(browserConnectionWarning(snapshot.instances));
       }catch{/* A failed IPC request must not replace a successful version check. */}
     };
     void updateStatus();
@@ -271,17 +272,18 @@ export function TitleBar({
           </div>
         )}
 
+        <ExtensionInstancesNotice/>
         <div className="nodrag titlebar-integration">
           <button
             className={`titlebar-theme-btn titlebar-extension-button ${extensionWarning?"extension-needs-update":""}`}
             onClick={() => window.dispatchEvent(new Event("sf-open-integration"))}
             title={extensionWarning || `${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
-            aria-label={`${t.titlebar.browserIntegration} — ${extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected}`}
+            aria-label={`${t.titlebar.browserIntegration} — ${extensionWarning || (extensionConnected ? t.titlebar.extensionConnected : t.titlebar.extensionDisconnected)}`}
           >
             <Puzzle size={16} />
-            <span className="titlebar-extension-label">{t.titlebar.extensionLabel}</span>{extensionWarning&&<AlertTriangle size={13} className="extension-version-warning"/>}
+            <span className="titlebar-extension-label">{t.titlebar.extensionLabel}</span>
             <span
-              className={`sidebar-status-dot ${extensionConnected ? "connected" : "disconnected"}`}
+              className={`sidebar-status-dot ${extensionWarning ? "needs-update" : extensionConnected ? "connected" : "disconnected"}`}
               aria-hidden="true"
             />
           </button>

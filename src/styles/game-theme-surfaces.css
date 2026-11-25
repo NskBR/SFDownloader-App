@@ -43,3 +43,14 @@ html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame :i
 }
 /* Existing glass button rules use --surface/--surface-2, including hover states.
    Window controls and the three footer icons keep their transparent hit areas. */
+
+/* Settings need a real tinted surface: white-03 over a wallpaper is almost transparent. */
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .cfg-card {
+  background:var(--game-surface,#1c2027) !important;
+  background:color-mix(in srgb,var(--game-surface,#1c2027) clamp(86%,var(--test-theme-panel,85%),98%),transparent) !important;
+  border-color:color-mix(in srgb,var(--text,#f3f4f6) 14%,transparent);
+}
+html.window-type-main[data-test-theme="true"][data-test-preset] .window-frame .cfg-card :is(.cfg-input,.cfg-select,.custom-select-trigger) {
+  background:color-mix(in srgb,var(--game-raised,#303741) 92%,transparent);
+  color:var(--text,#f3f4f6);
+}

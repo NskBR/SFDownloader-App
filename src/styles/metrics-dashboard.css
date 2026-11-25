@@ -1,0 +1,71 @@
+/* Metrics distinguish lifetime counters from the retained task history. */
+.metrics-page {max-width:1400px;min-height:0;}
+.metrics-dashboard-scroll {flex:1;min-height:0;overflow-y:auto;padding:0 8px 20px 0;display:flex;flex-direction:column;gap:14px;}
+.metrics-dashboard-scroll .metrics-body {flex:none;overflow:visible;min-height:320px;grid-template-columns:260px minmax(0,1fr);}
+.metrics-dashboard-scroll .metrics-chart-card {width:auto;justify-content:center;min-width:0;}
+.metrics-dashboard-scroll .metrics-grid {grid-template-rows:repeat(3,minmax(66px,auto));}
+.metrics-dashboard-scroll :is(.metrics-chart-card,.metric-card,.metric-card--hero) {backdrop-filter:none;background:var(--surface);}
+.metrics-derived {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+.metrics-derived article {padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);display:flex;flex-direction:column;gap:8px;}
+.metrics-derived span {font-size:11px;color:var(--text-2);}.metrics-derived strong {font-size:23px;letter-spacing:-.025em;}.metrics-derived small {font-size:10px;color:var(--text-2);line-height:1.5;}
+.metrics-history-insights {display:flex;flex-direction:column;gap:14px;}
+.insights-source {margin-top:10px;}.insights-source h2 {font-size:19px;margin:0 0 6px;letter-spacing:-.02em;}.insights-source p {margin:0;font:11px/1.6 "Segoe UI",sans-serif;color:var(--text-2);max-width:85ch;}
+.metrics-history-insights article {padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-width:0;}
+.metrics-history-insights article > header {display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}.metrics-history-insights header > div:first-child {display:flex;align-items:center;gap:8px;}.metrics-history-insights header svg {color:var(--ember-solid);}.metrics-history-insights h3 {font-size:13px;margin:0;}.metrics-history-insights header small {font-size:10px;color:var(--text-2);}
+.insight-switch {display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:8px;}.insight-switch button {padding:5px 8px;background:transparent;color:var(--text-2);font-size:10px;border-radius:5px;}.insight-switch button[aria-pressed=true] {background:var(--ember-soft);color:var(--text);}
+.insight-activity-summary {display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:18px 0 14px;}.insight-activity-summary > strong {font-size:28px;letter-spacing:-.025em;display:flex;align-items:baseline;gap:9px;}.insight-activity-summary strong span {font-size:11px;color:var(--text-2);font-weight:400;letter-spacing:0;}.insight-activity-summary > b {font-size:14px;color:var(--text-2);}.insight-activity-summary .insight-switch {margin-left:auto;}
+.insight-bars {display:flex;align-items:stretch;gap:5px;height:145px;border-bottom:1px solid var(--line);background:repeating-linear-gradient(to top,transparent 0,transparent 35px,var(--line-soft) 35px,var(--line-soft) 36px);}
+.insight-bars button {flex:1;min-width:0;display:flex;align-items:flex-end;padding:0 2px;background:transparent;position:relative;border-radius:5px 5px 0 0;}
+.insight-bars button::after {content:"";position:absolute;bottom:0;left:2px;right:2px;height:2px;background:var(--line);}
+.insight-bars i {width:100%;min-width:2px;background:var(--ember-solid);border-radius:4px 4px 0 0;opacity:.65;}.insight-bars button:hover i,.insight-bars button[aria-pressed=true] i {opacity:1;}.insight-bars button:hover {background:var(--ember-soft);}
+.insight-axis {display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px;font:10px/1.5 "Segoe UI",sans-serif;color:var(--text-2);}.insight-axis p {margin:0;text-align:center;}
+.insight-breakdowns {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.insight-rank {display:grid;gap:16px;margin-top:20px;}.insight-rank > div {position:relative;display:flex;justify-content:space-between;gap:10px;padding-bottom:8px;font:12px/1.4 "Segoe UI",sans-serif;}.insight-rank span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}.insight-rank b {color:var(--text-2);font-weight:500;}.insight-rank > div::after {content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--surface-2);border-radius:3px;}.insight-rank i {position:absolute;left:0;bottom:0;height:3px;background:var(--ember-solid);border-radius:3px;z-index:1;opacity:.75;}
+.insight-empty {font-size:12px;color:var(--text-2);padding:16px 0;}.insight-queue > div {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:20px;}.insight-queue > div > span {display:flex;flex-direction:column;gap:6px;font-size:10px;color:var(--text-2);}.insight-queue b {font-size:21px;color:var(--text);}.metrics-dashboard-error {color:var(--st-failed);font-size:12px;}
+.metrics-history-insights button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:3px;}
+@container(max-width:850px){.metrics-dashboard-scroll .metrics-body {grid-template-columns:210px minmax(0,1fr);}.metrics-derived {gap:8px;}.metrics-derived article {padding:12px;}.insight-queue > div {grid-template-columns:repeat(3,minmax(0,1fr));}}
+@container(max-width:620px){.metrics-dashboard-scroll .metrics-body {grid-template-columns:minmax(0,1fr);}.metrics-derived,.insight-breakdowns {grid-template-columns:minmax(0,1fr);}.metrics-dashboard-scroll .metrics-chart-card {display:flex;}.insight-activity-summary > strong {font-size:23px;}.insight-activity-summary .insight-switch {margin-left:0;}}
+
+/* Compact overview; charts carry the hierarchy, rather than a wall of empty counters. */
+.metrics-header {align-items:flex-end;}.metrics-header h1 {font-size:27px;letter-spacing:-.035em;}.metrics-header p {font:11px/1.5 "Segoe UI",sans-serif;max-width:62ch;}.metrics-actions .reset-btn {height:30px;padding:0 9px;font:500 10px "Segoe UI",sans-serif;}
+.metrics-dashboard-scroll {gap:12px;}
+.metrics-dashboard-scroll .metrics-body {min-height:0;grid-template-columns:220px minmax(0,1fr);gap:12px;}
+.metrics-dashboard-scroll .metrics-chart-card {padding:14px;gap:8px;display:grid;grid-template-columns:82px minmax(0,1fr);align-content:center;}
+.metrics-dashboard-scroll .metrics-panel-title {grid-column:1 / -1;margin:0 0 4px;font:600 11px "Segoe UI",sans-serif;}
+.metrics-dashboard-scroll .donut-wrap {width:82px;height:82px;grid-column:1;grid-row:auto;}.metrics-dashboard-scroll .donut-wrap svg {width:82px;height:82px;}.metrics-dashboard-scroll .donut-center strong {font-size:14px;}.metrics-dashboard-scroll .donut-center span {font-size:8px;}
+.metrics-dashboard-scroll .donut-legend {grid-column:2;margin:0;gap:7px;}.metrics-dashboard-scroll .donut-legend li {font:9px/1.5 "Segoe UI",sans-serif;flex-wrap:wrap;gap:3px;}.metrics-dashboard-scroll .legend-pct {display:none;}.metrics-dashboard-scroll .legend-dot {width:5px;height:5px;}
+.metrics-dashboard-scroll .metrics-stats {gap:8px;}.metrics-dashboard-scroll .metric-card--hero {padding:12px 15px;display:flex;flex-direction:row;align-items:baseline;gap:12px;flex-wrap:wrap;border-left-width:2px;}.metrics-dashboard-scroll .metric-value--hero {font-size:27px;letter-spacing:-.035em;}.metrics-dashboard-scroll .metric-sub {margin-left:auto;font:10px "Segoe UI",sans-serif;}
+.metrics-dashboard-scroll .metrics-grid {grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:7px;}.metrics-dashboard-scroll .metric-card {min-height:0;padding:10px 12px;gap:5px;border-left-width:2px;}.metrics-dashboard-scroll .metric-value {font-size:17px;letter-spacing:-.02em;}.metrics-dashboard-scroll .metric-label {font:10px/1.3 "Segoe UI",sans-serif;}
+.metrics-derived {gap:0;border-bottom:1px solid var(--line);padding:2px 0 14px;}.metrics-derived article {background:transparent;border:0;border-radius:0;padding:8px 16px;gap:5px;}.metrics-derived article+article {border-left:1px solid var(--line);}.metrics-derived strong {font-size:20px;}.metrics-derived span {font:10px/1.4 "Segoe UI",sans-serif;}.metrics-derived small {font:9px/1.4 "Segoe UI",sans-serif;}
+.insights-source {margin-top:2px;}.insights-source h2 {font-size:20px;letter-spacing:-.025em;}.metrics-history-insights {gap:12px;}.metrics-history-insights article {padding:16px 18px;}
+.metrics-history-insights header h3 {font-family:var(--font,"Segoe UI",sans-serif);font-size:16px;letter-spacing:-.02em;}.metrics-history-insights header small {font-family:"Segoe UI",sans-serif;}
+.metrics-history-insights .insight-speed {padding:18px 20px;background:linear-gradient(125deg,var(--ember-soft),transparent 45%),var(--surface);}
+.insight-speed > header > div:first-child {display:block!important;}.insight-speed header p {font:10px/1.5 "Segoe UI",sans-serif;margin:4px 0 0;color:var(--text-2);}.insight-speed > svg {display:block;width:100%;height:auto;max-height:215px;margin-top:16px;overflow:visible;}
+.speed-average-label {display:flex;align-items:center;gap:7px;font:600 11px "Segoe UI",sans-serif;color:#d8ad52;}.speed-average-label i {width:20px;height:3px;background:#d8ad52;border-radius:4px;}
+.speed-series-legend {display:flex;gap:7px 16px;flex-wrap:wrap;margin-top:10px;}.speed-series-legend button {display:flex;align-items:center;gap:6px;padding:4px 0;background:transparent;color:var(--text-2);font:10px "Segoe UI",sans-serif;max-width:210px;}.speed-series-legend button[aria-pressed=false] {opacity:.4;}.speed-series-legend i {width:7px;height:7px;border-radius:50%;flex-shrink:0;}.speed-series-legend span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.speed-chart-note {margin:12px 0 0;color:var(--text-2);font:10px/1.55 "Segoe UI",sans-serif;max-width:100ch;}.speed-chart-empty {min-height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-bottom:1px solid var(--line);}.speed-chart-empty strong {font-size:14px;}.speed-chart-empty p {font:11px/1.5 "Segoe UI",sans-serif;color:var(--text-2);margin:8px 0;}
+.insight-activity-summary {margin:12px 0;}.insight-activity-summary > strong {font-size:24px;}.insight-bars {height:115px;}.insight-rank {gap:12px;margin-top:16px;}.insight-queue > div {margin-top:15px;}.insight-queue b {font-size:20px;}
+@container(max-width:850px){.metrics-dashboard-scroll .metrics-body {grid-template-columns:200px minmax(0,1fr);}.metrics-dashboard-scroll .metrics-grid {grid-template-columns:repeat(2,minmax(0,1fr));}.metrics-dashboard-scroll .metrics-chart-card {display:flex;flex-direction:column;align-items:center;}.metrics-dashboard-scroll .donut-legend {width:100%;}.metrics-dashboard-scroll .donut-legend li {font-size:10px;}.metrics-dashboard-scroll .metric-sub {margin-left:0;}}
+@container(max-width:620px){.metrics-dashboard-scroll .metrics-body {grid-template-columns:1fr;}.metrics-dashboard-scroll .metrics-chart-card {display:none;}.metrics-derived {grid-template-columns:1fr;}.metrics-derived article+article {border-left:0;}.metrics-dashboard-scroll .metrics-grid {grid-template-columns:repeat(3,minmax(0,1fr));}}
+
+/* Center the status graphic and place its legend beneath it. */
+.metrics-dashboard-scroll .metrics-chart-card {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+.metrics-dashboard-scroll .metrics-panel-title {width:100%;text-align:center;margin:0;}
+.metrics-dashboard-scroll .donut-wrap {width:90px;height:90px;flex-shrink:0;}.metrics-dashboard-scroll .donut-wrap svg {width:90px;height:90px;}
+.metrics-dashboard-scroll .donut-legend {width:100%;max-width:180px;display:grid;gap:5px;margin:0;padding:0;}.metrics-dashboard-scroll .donut-legend li {display:flex;align-items:center;font:9px/1.4 "Segoe UI",sans-serif;gap:5px;}.metrics-dashboard-scroll .donut-legend li b {margin-left:auto;}.metrics-dashboard-scroll .legend-pct {display:none;}
+
+.metrics-dashboard-scroll .donut-wrap {width:144px;height:144px;}.metrics-dashboard-scroll .donut-wrap svg {width:144px;height:144px;}.metrics-dashboard-scroll .donut-center strong {font-size:20px;}.metrics-dashboard-scroll .donut-center span {font-size:10px;}
+
+.speed-month-controls {display:flex;align-items:center;gap:5px;}.speed-month-controls button {display:grid;place-items:center;width:26px;height:26px;background:transparent;color:var(--text-2);border:1px solid var(--line);border-radius:6px;}.speed-month-controls button:disabled {opacity:.35;}.speed-month-controls select {font:11px "Segoe UI",sans-serif;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:6px 9px;max-width:190px;}
+.speed-month-caption {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px;}.speed-month-caption > span:last-child {font:10px "Segoe UI",sans-serif;color:var(--text-2);}.speed-series-details {margin-top:14px;font:11px/1.5 "Segoe UI",sans-serif;color:var(--text-2);}.speed-series-details summary {cursor:pointer;}.speed-series-details .speed-series-legend {max-height:160px;overflow-y:auto;}
+
+/* The larger donut must not stretch the independent counter grid. */
+.metrics-dashboard-scroll .metrics-body {align-items:start;align-content:start;}
+.metrics-dashboard-scroll .metrics-stats {align-self:start;flex:0 0 auto;justify-content:flex-start;}
+.metrics-dashboard-scroll .metrics-stats .metrics-grid {flex:0 0 auto;grid-auto-rows:min-content;grid-template-rows:none;align-content:start;align-items:start;}
+.metrics-dashboard-scroll .metrics-stats .metric-card {height:auto;min-height:0;flex:none;justify-content:flex-start;}
+.metrics-dashboard-scroll .metrics-chart-card {align-self:start;height:auto;min-height:0;}
+.metrics-dashboard-scroll .metrics-chart-card .donut-legend {display:none;}
+
+/* Match the status card to the compact counter block. */
+.metrics-dashboard-scroll .donut-wrap {width:128px;height:128px;}.metrics-dashboard-scroll .donut-wrap svg {width:128px;height:128px;}

@@ -1,3 +1,4 @@
+import {DialogVisualRail} from "../DialogVisualRail";
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {X,Link2} from 'lucide-react';
@@ -17,7 +18,8 @@ export function ReplaceDownloadLinkDialog({task,onClose,onSaved}:{task:DownloadT
     catch(cause){setError(ipcErrorMessage(cause,'Não foi possível validar o novo link.'));}
     finally{setBusy(false);}
   };
-  return createPortal(<dialog ref={dialog} className="rgb-dialog replace-link-dialog" aria-labelledby="replace-link-title" onCancel={e=>{e.preventDefault();if(!busy)onClose();}}>
+  return createPortal(<dialog ref={dialog} className="rgb-dialog replace-link-dialog sf-dialog-split" aria-labelledby="replace-link-title" onCancel={e=>{e.preventDefault();if(!busy)onClose();}}>
+<DialogVisualRail kind="link"/>
     <header><div><h2 id="replace-link-title">Fornecer novo link</h2><p>{task.fileName}</p></div><button type="button" className="rgb-icon-button" disabled={busy} onClick={onClose} aria-label="Fechar"><X size={18}/></button></header>
     <form onSubmit={e=>{e.preventDefault();void submit();}}><div className="rgb-dialog-body"><p>Cole um novo link direto para o mesmo arquivo. O aplicativo valida o tamanho e compara os bytes iniciais disponíveis antes de substituir o endereço.</p><label>Novo link<input autoFocus type="url" placeholder="https://…" value={url} onChange={e=>setUrl(e.target.value)} disabled={busy} required/></label>{error && <p className="replace-link-error" role="alert">{error}</p>}</div>
     <footer><button type="button" disabled={busy} onClick={onClose}>Cancelar</button><button type="submit" className="rgb-apply" disabled={busy || !url.trim()}><Link2 size={14}/> {busy?'Validando…':'Salvar link e retomar'}</button></footer></form>

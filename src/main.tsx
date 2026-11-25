@@ -18,6 +18,7 @@ import { applyExternalSettings, loadSettings, SETTINGS_STORAGE_KEY } from "./ser
 import { applyThemeSettings } from "./services/theme";
 import type { AppSettings } from "./domain/settings";
 import "./styles/app.css";
+import "./styles/dialog-language.css";
 
 // Prevent only the browser default; custom React context-menu handlers still run.
 document.addEventListener("contextmenu", event => event.preventDefault());

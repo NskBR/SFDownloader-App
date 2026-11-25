@@ -5053,3 +5053,32 @@ html:is([data-navigation-position="left"],[data-navigation-position="right"]) .s
 
 .titlebar .titlebar-extension-button.extension-needs-update {box-shadow:inset 0 0 0 1px #e6ad3980;background:color-mix(in srgb,#e6ad39 12%,var(--surface));}
 .titlebar .extension-version-warning {color:#e6ad39;flex-shrink:0;}
+
+.titlebar .extension-instance-alert {color:#ef4444!important;background:transparent;width:30px;height:30px;padding:6px;flex-shrink:0;}
+.titlebar .extension-instance-alert:hover {background:rgb(239 68 68 / .12);}
+/* A compact connection illustration gives this notice its own composition. */
+.extension-instance-dialog {position:fixed;inset:0;margin:auto;width:min(600px,calc(100vw - 40px));max-height:calc(100dvh - 40px);padding:0;border:1px solid var(--line);border-radius:16px;background:var(--game-surface,var(--panel));color:var(--text);box-shadow:0 24px 80px #0007;overflow:auto;}
+.extension-instance-dialog[open] {display:grid;grid-template-columns:160px minmax(0,1fr);}.extension-instance-dialog::backdrop {background:#0008;backdrop-filter:blur(7px);}
+.extension-instance-dialog .instance-notice-close {position:absolute;right:12px;top:12px;z-index:1;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:7px;background:transparent;color:var(--text-2);}.instance-notice-close:hover {background:var(--surface-2);color:var(--text);}
+.instance-notice-art {display:flex;flex-direction:column;align-items:center;justify-content:center;padding:34px 16px 24px;background:color-mix(in srgb,var(--ember-solid) 7%,var(--game-surface,var(--panel)));color:var(--ember-solid);}
+.instance-notice-hub {display:grid;place-items:center;width:58px;height:58px;border:1px solid color-mix(in srgb,var(--ember-solid) 40%,transparent);border-radius:12px;background:var(--ember-soft);}
+.instance-notice-wire {height:34px;width:66px;border-left:1px solid color-mix(in srgb,var(--ember-solid) 45%,transparent);border-right:1px solid color-mix(in srgb,var(--ember-solid) 45%,transparent);border-top:1px solid color-mix(in srgb,var(--ember-solid) 45%,transparent);border-radius:8px 8px 0 0;margin-top:15px;position:relative;}.instance-notice-wire::before {content:"";position:absolute;left:50%;top:-16px;height:15px;border-left:1px solid color-mix(in srgb,var(--ember-solid) 45%,transparent);}
+.instance-notice-peers {display:flex;gap:22px;}.instance-notice-peers > span {position:relative;display:grid;place-items:center;width:43px;height:43px;border:1px solid var(--line);border-radius:12px;background:var(--game-raised,var(--surface));color:var(--text);}.instance-notice-peers i {position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--ember-solid);color:var(--panel);}
+.instance-notice-art p {font:500 11px/1.5 "Segoe UI",sans-serif;text-align:center;color:var(--text-2);margin:20px 0 0;}
+.instance-notice-copy {padding:34px 32px 28px;min-width:0;}.instance-notice-version {display:inline-block;font:600 10px/1.4 "Segoe UI",sans-serif;color:var(--ember-solid);margin-bottom:10px;}.extension-instance-dialog h2 {margin:0 0 16px;font-family:var(--font,"Segoe UI",sans-serif);font-size:28px;font-weight:700;line-height:1.12;letter-spacing:-.025em;}.instance-notice-copy p {font:400 12px/1.7 "Segoe UI",sans-serif;color:var(--text-2);margin:0 0 14px;}.instance-notice-copy strong {font-weight:600;color:var(--text);}.instance-notice-copy .instance-notice-recommendation {font-size:11px;}
+.instance-notice-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:22px;}.extension-instance-dialog .instance-notice-primary {display:inline-flex;align-items:center;justify-content:center;gap:12px;padding:10px 14px;border:1px solid var(--ember-solid);border-radius:8px;background:var(--ember-soft);color:var(--text);font:600 12px/1.4 "Segoe UI",sans-serif;}.instance-notice-primary:hover {background:color-mix(in srgb,var(--ember-solid) 25%,var(--panel));}.extension-instance-dialog .instance-notice-dismiss {padding:6px 0;border:0;background:transparent;color:var(--text-2);font:400 11px/1.4 "Segoe UI",sans-serif;}.instance-notice-dismiss:hover {color:var(--text);text-decoration:underline;}.extension-instance-dialog button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:3px;}
+@media(max-width:520px){.extension-instance-dialog[open]{grid-template-columns:1fr;}.instance-notice-art {display:none;}.instance-notice-copy {padding:32px 24px 24px;}.extension-instance-dialog h2 {font-size:25px;}}
+
+.titlebar-extension-button .sidebar-status-dot.needs-update {background:#e6ad39;}
+
+/* Offscreen grid rows remain measured but skip paint until approaching the viewport. */
+.virtual-downloads.view-grid .virtual-downloads-row {content-visibility:auto;contain-intrinsic-size:auto 100px;}
+.virtual-downloads.view-grid .virtual-downloads-row:focus-within {content-visibility:visible;}
+
+
+/* Tighten the toolbar/list seam; fade only after scrolling, preserving the first card. */
+.flux-header.downloads-toolbar {margin-bottom:4px;}
+.cards-scroll-container.virtual-downloads[data-scrolled="true"] {
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.55) 3px,#000 8px,#000 100%);
+ mask-image:linear-gradient(to bottom,transparent 0,rgba(0,0,0,.55) 3px,#000 8px,#000 100%);
+}

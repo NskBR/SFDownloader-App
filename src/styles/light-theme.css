@@ -1,7 +1,7 @@
 /* Semantic light palette. No dark translucent fill is reused on light surfaces. */
 html[data-theme="light"] {
- --text:#202936!important; --text-strong:#202936!important; --white:#202936;
- --text-2:#495568!important; --text-3:#5e6a7b; --muted:#596577!important; --disabled:#768194;
+ --text:#374151!important; --text-strong:#374151!important; --white:#374151;
+ --text-2:#536174!important; --text-3:#5e6a7b; --muted:#596577!important; --disabled:#768194;
  --line:rgba(45,60,80,.19)!important; --line-soft:rgba(45,60,80,.1)!important;
  --white-03:rgba(35,50,70,.03); --white-04:rgba(35,50,70,.04); --white-06:rgba(35,50,70,.06); --white-08:rgba(35,50,70,.08); --white-10:rgba(35,50,70,.1); --white-12:rgba(35,50,70,.12); --white-15:rgba(35,50,70,.15); --white-20:rgba(35,50,70,.2);
  --st-completed:#087649!important; --st-failed:#be263b!important; --st-cancelled:#be263b!important; --st-paused:#8a5500!important;
@@ -56,8 +56,35 @@ html[data-theme="light"] ::-webkit-scrollbar-track { background:rgba(35,50,70,.0
 @media(forced-colors:active) { html[data-theme="light"] { --app-scrollbar-colors:auto; } }
 
 /* Personal colors use the same readable surfaces as named light presets. */
-html[data-theme="light"] .theme-editor-preview[data-light="true"] section { color:#202936!important; text-shadow:none; }
-html[data-theme="light"] .theme-editor-preview[data-light="true"] i { border-color:#20293626;background:#2029360d; }
-.theme-editor-preview[data-light="true"] section { color:#202936; text-shadow:none; }
-.theme-editor-preview[data-light="true"] i { border-color:#20293626;background:#2029360d; }
-html[data-theme="light"] :is(.cfg-card,.cfg-theme-tile,.download-card,.rgb-dialog,.help-dialog,.ctx-menu) { --muted:#596577; --text-2:#495568; }
+html[data-theme="light"] .theme-editor-preview[data-light="true"] section { color:#374151!important; text-shadow:none; }
+html[data-theme="light"] .theme-editor-preview[data-light="true"] i { border-color:#37415126;background:#3741510d; }
+.theme-editor-preview[data-light="true"] section { color:#374151; text-shadow:none; }
+.theme-editor-preview[data-light="true"] i { border-color:#37415126;background:#3741510d; }
+html[data-theme="light"] :is(.cfg-card,.cfg-theme-tile,.download-card,.rgb-dialog,.help-dialog,.ctx-menu) { --muted:#596577; --text-2:#536174; }
+
+/* Light controls use their own materials; --white is a text token here. */
+html[data-theme="light"] {
+ --st-completed:#398168!important;
+ --st-failed:#b45161!important; --st-cancelled:#b45161!important;
+ --st-paused:#946e32!important;
+ --accent-danger:#b45161; --accent-warning:#946e32; --accent-info:#577ba6;
+ --light-action-fill:color-mix(in srgb,var(--ember-solid) 13%,var(--panel));
+ --light-action-line:color-mix(in srgb,var(--ember-solid) 30%,var(--line));
+}
+html[data-theme="light"] .toggle {background:#d5d9df!important;}
+html[data-theme="light"] .toggle.toggle--on {background:color-mix(in srgb,var(--ember-solid) 72%,#60788a)!important;}
+html[data-theme="light"] .toggle span {background:#fff!important;box-shadow:0 1px 3px #35435a26;}
+html[data-theme="light"] .cfg-cat-input {background:var(--panel)!important;color:var(--text)!important;border-color:var(--line)!important;}
+html[data-theme="light"] .cfg-cat-input:focus {border-color:var(--accent-ink)!important;}
+html[data-theme="light"] .cfg-cat-table-wrap {background:var(--panel)!important;border-color:var(--line);}
+html[data-theme="light"] .cfg-cat-table th {background:var(--surface-2);color:var(--text-2);border-color:var(--line);}
+html[data-theme="light"] .cfg-cat-table td {color:var(--text);border-color:var(--line-soft);}
+html[data-theme="light"] .cfg-tip-graphic {background:var(--light-action-fill);color:var(--accent-ink);border-color:var(--light-action-line);box-shadow:none;}
+html[data-theme="light"] :is(.cfg-btn-add-cat,.dw-btn-primary,.download-window-actions button.primary,.progress-actions button.resume,.media-button.media-primary,.confirm-start,.btn-primary) {
+ background:var(--light-action-fill)!important;color:var(--accent-ink)!important;border:1px solid var(--light-action-line)!important;box-shadow:none;
+}
+html[data-theme="light"] :is(.cfg-btn-add-cat,.dw-btn-primary,.download-window-actions button.primary,.progress-actions button.resume,.media-button.media-primary,.confirm-start,.btn-primary):hover:not(:disabled) {
+ background:color-mix(in srgb,var(--ember-solid) 21%,var(--panel))!important;filter:none;
+}
+html[data-theme="light"] .cfg-btn-add-cat:disabled {opacity:1;background:var(--surface-2)!important;border-color:var(--line)!important;color:var(--disabled)!important;}
+html[data-theme="light"] .dw-window.dw-complete .dw-donut > svg circle:nth-of-type(2) {filter:none;}

@@ -1,3 +1,4 @@
+import {webcrypto} from "node:crypto";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
@@ -35,6 +36,7 @@ async function loadBackground(
   };
   const cookieUrls = [];
   const posted = [];
+  const syncRequests = [];
   const createdTabs = [];
   const iconCalls = [];
   const cancelledDownloads = [];
@@ -96,6 +98,7 @@ async function loadBackground(
   };
   const fetch = async (url, options = {}) => {
     if (url.endsWith("/sync")) {
+      syncRequests.push(options);
       if (testOptions.failSync) throw new Error("App closed");
       return {
         ok: true,
@@ -114,12 +117,13 @@ async function loadBackground(
     chrome,
     console,
     fetch,
-    navigator: { userAgent: "test-agent" },
+    navigator: testOptions.navigator||{ userAgent: "test-agent" },
+    crypto:webcrypto,
     setInterval() { return 0; },
     setTimeout() { return 0; },
   });
   await sendMessage(listeners.message.first(), { type: "bridge-status" });
-  return { cookieUrls, listeners, posted, storageState, createdTabs, iconCalls, cancelledDownloads, erasedDownloads };
+  return { cookieUrls, listeners, posted, storageState, createdTabs, iconCalls, cancelledDownloads, erasedDownloads, syncRequests };
 }
 
 function sendMessage(listener, message, sender = {}) {
@@ -444,4 +448,23 @@ test("disabled capture prevents manual media dispatch", async () => {
   assert.equal((await sendMessage(listeners.message.first(), { type: "youtube-download", url }, { url })).ok, false);
   assert.equal(posted.filter(p => p.url.endsWith("/download")).length, 0);
   assert.deepEqual(createdTabs, []);
+});
+
+test("identifies Brave and preserves the installation instance across background restarts",async()=>{
+ const state={captureEnabled:true};
+ const first=await loadBackground(state,{navigator:{userAgent:'Chrome/130',brave:{isBrave:async()=>true}}});
+ const a=first.syncRequests[0].headers;
+ assert.equal(a['x-sf-browser-name'],'Brave');assert.match(a['x-sf-instance-id'],/^[a-f0-9-]{36}$/);
+ const reopened=await loadBackground(state,{navigator:{userAgent:'Chrome/130',userAgentData:{brands:[{brand:'Brave'}]}}});
+ assert.equal(reopened.syncRequests[0].headers['x-sf-instance-id'],a['x-sf-instance-id']);
+ const other=await loadBackground({captureEnabled:true},{firefox:true});
+ assert.equal(other.syncRequests[0].headers['x-sf-browser-name'],'Firefox');
+ assert.notEqual(other.syncRequests[0].headers['x-sf-instance-id'],a['x-sf-instance-id']);
+});
+
+test("Opera branding wins over a shared Chrome brand and generic Chromium is not mislabeled",async()=>{
+ const opera=await loadBackground({captureEnabled:true},{navigator:{userAgent:'Chrome/130',userAgentData:{brands:[{brand:'Google Chrome'},{brand:'Opera'}]}}});
+ assert.equal(opera.syncRequests[0].headers['x-sf-browser-name'],'Opera');
+ const unknown=await loadBackground({captureEnabled:true},{navigator:{userAgent:'Chrome/130',userAgentData:{brands:[{brand:'Google Chrome'}]}}});
+ assert.equal(unknown.syncRequests[0].headers['x-sf-browser-name'],'Chromium');
 });

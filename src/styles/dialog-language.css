@@ -1,0 +1,111 @@
+/* SF dialog language: one silhouette, clear reading hierarchy, contextual composition.
+   No positioning overrides: preview drawers and compact download sheets keep their flows. */
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.integration-wizard,.help-dialog,.update-notes-dialog,.update-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog,.dw-cancel-sheet,.integr-dialog) {
+ --dialog-reading-font:"Segoe UI",Tahoma,sans-serif;
+ border-radius:16px !important;
+ border-color:color-mix(in srgb,var(--text) 14%,transparent);
+ color:var(--text);
+ box-shadow:0 24px 72px rgb(0 0 0 / .32);
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.integration-wizard,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog,.integr-dialog) > header {
+ border-bottom:0 !important;
+ background:transparent !important;
+ padding:24px 24px 14px;
+ gap:14px;
+ align-items:flex-start;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.integration-wizard,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog,.integr-dialog) :is(h2,.help-heading h2,.cancel-dialog > header > span) {
+ font-family:var(--font,"Segoe UI",sans-serif);
+ font-size:24px;
+ font-weight:700;
+ line-height:1.14;
+ letter-spacing:-.025em;
+ text-wrap:balance;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.integration-wizard,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.integr-dialog) > header p {
+ font:400 12px/1.55 var(--dialog-reading-font);
+ color:var(--text-2);
+ margin:8px 0 0;
+ max-width:48ch;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog) > footer,
+html .replace-link-dialog > form > footer {
+ border-top:0 !important;
+ background:transparent !important;
+ padding:14px 24px 22px;
+ gap:10px;
+ flex-shrink:0;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog) :is(footer button,.personalization-panel-actions button) {
+ border-radius:8px;
+ min-height:35px;
+ font:600 12px/1.4 var(--dialog-reading-font);
+ padding:9px 14px;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog,.cancel-dialog,.confirm-duplicate-dialog) footer button:first-child:not(:last-child):not(.reset-app-hold) {
+ background:transparent;
+ border-color:var(--line);
+ color:var(--text-2);
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog) > header > button,
+html .update-notes-heading > button {
+ flex-shrink:0;width:28px;height:28px;padding:5px;border-radius:7px;
+ background:transparent;color:var(--text-2);border:0;
+}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog) > header > button:hover {background:var(--surface-2);color:var(--text);}
+html :is(.personalization-panel-body,.rgb-dialog-body,.border-custom-body,.help-body,.reset-app-body) {
+ padding-left:24px;padding-right:24px;
+ font-family:var(--dialog-reading-font);
+ font-size:12px;line-height:1.55;
+}
+html :is(.personalization-panel-body,.rgb-dialog-body,.border-custom-body) :is(legend,label,.cfg-card-subtitle,.border-settings p,.window-controls-picker p) {font-family:var(--dialog-reading-font);}
+html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.help-dialog,.update-notes-dialog,.reset-app-dialog,.speed-limit-dialog) button:focus-visible {outline:2px solid var(--ember-solid);outline-offset:3px;}
+/* Editors: a small material sample in the heading, rather than another generic icon box. */
+.sf-editor-heading {display:flex;gap:13px;align-items:flex-start;min-width:0;}
+.sf-editor-heading > div {min-width:0;}
+.sf-editor-mark {display:grid;place-items:center;width:38px;height:44px;flex:0 0 38px;border-radius:10px;color:var(--ember-solid);background:var(--ember-soft);}
+.sf-editor-mark--color {background:linear-gradient(145deg,var(--ember-solid),var(--panel));box-shadow:inset 0 0 0 1px var(--line);}
+.sf-editor-mark--rgb {background:linear-gradient(145deg,#ff5078,#8e5bff,#00cbb8);color:#fff;}
+html .personalization-panel > header h2,html .border-custom-dialog > header h2 {font-size:23px;}
+html .personalization-panel > footer > span {font:400 10px/1.5 var(--dialog-reading-font);color:var(--text-2);max-width:19ch;}
+/* Notes and information: a readable document, not a boxed form. */
+html .update-release-notes,html .cfg-history-body {font:400 13px/1.8 var(--dialog-reading-font,"Segoe UI",sans-serif);padding:4px 24px 18px;}
+html .cfg-history-body :is(h3,strong) {color:var(--text);}
+html .help-body {padding-top:4px;}
+html .help-features {gap:10px;}
+html .help-meta {padding:14px 0;background:transparent;border-radius:0;border:0;}
+/* Integration keeps its compact progress and footer, and gains the same typographic hierarchy. */
+html .integration-wizard > header {padding:19px 20px 10px;align-items:center;}
+html .integration-wizard-brand {font-family:var(--font);font-size:17px;letter-spacing:-.015em;}
+html .integration-wizard h2 {font-family:var(--font);font-size:25px;line-height:1.12;letter-spacing:-.025em;}
+html .integration-wizard-body {font-family:var(--dialog-reading-font);}
+html .integration-wizard footer {border-top:0;background:transparent;padding:12px 20px 18px;}
+html .integration-wizard footer button {border-radius:8px;font:600 12px/1.4 var(--dialog-reading-font);}
+/* Destructive confirmations: consequences remain visible and the hold-to-confirm stays intact. */
+html .reset-app-dialog {border-color:color-mix(in srgb,var(--st-failed,#ef4444) 30%,var(--line));}
+html .reset-app-body ul {padding:12px 16px 12px 30px;border-radius:10px;background:var(--surface);}
+html .reset-app-dialog .reset-app-hold {min-height:40px;}
+html .cancel-dialog > header > span {font-size:21px;}
+html .confirm-duplicate-dialog > header > span {font-family:var(--font);font-size:21px;font-weight:700;letter-spacing:-.02em;}
+html .confirm-duplicate-dialog > p {font:400 12px/1.6 var(--dialog-reading-font);padding:0 24px;}
+html .dw-cancel-sheet .dw-cancel-sheet-sep {height:0;margin:8px 0;}
+html .dw-cancel-sheet-title {font-family:var(--font);letter-spacing:-.02em;}
+/* Transfer modal keeps the purpose-built file animation, metrics and compact cancel action. */
+html .update-dialog h2 {font-family:var(--font);font-size:25px;line-height:1.15;letter-spacing:-.025em;}
+html .update-dialog :is(p,small,.update-transfer-footer) {font-family:var(--dialog-reading-font);}
+@media(max-width:520px){html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.update-notes-dialog,.reset-app-dialog) > header {padding:18px 18px 10px;}html :is(.personalization-panel-body,.rgb-dialog-body,.border-custom-body,.reset-app-body){padding-left:18px;padding-right:18px;}html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.update-notes-dialog,.reset-app-dialog) > footer {padding:12px 18px 18px;flex-wrap:wrap;}}
+@media(max-height:600px){html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.update-notes-dialog,.reset-app-dialog) > header {padding-top:16px;padding-bottom:10px;}html :is(.personalization-panel,.rgb-dialog,.border-custom-dialog,.update-notes-dialog,.reset-app-dialog) > footer {padding-bottom:14px;}}
+
+/* Informational dialogs share a visual rail; editors keep the full control width. */
+html .sf-dialog-split:is([open],section) {display:grid;grid-template-columns:145px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;}
+html :is(.update-notes-dialog,.reset-app-dialog,.replace-link-dialog,.help-dialog).sf-dialog-split {width:min(680px,calc(100vw - 40px));max-width:calc(100vw - 40px);}
+html .sf-dialog-split > :not(.sf-dialog-rail) {grid-column:2;min-width:0;}
+html .sf-dialog-split > .sf-dialog-rail {grid-column:1;grid-row:1 / 4;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 15px;align-self:stretch;background:color-mix(in srgb,var(--ember-solid) 7%,var(--game-surface,var(--panel)));color:var(--ember-solid);font-family:"Segoe UI",sans-serif;text-align:center;}
+.sf-dialog-rail-symbol {display:grid;place-items:center;width:60px;height:60px;border:1px solid color-mix(in srgb,var(--ember-solid) 35%,transparent);border-radius:14px;background:var(--ember-soft);}.sf-dialog-rail-symbol img {width:40px;height:40px;object-fit:contain;}.sf-dialog-rail-connector {height:30px;border-left:1px solid color-mix(in srgb,var(--ember-solid) 40%,transparent);}.sf-dialog-rail-secondary {display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--line);border-radius:10px;background:var(--game-raised,var(--surface));color:var(--text);}.sf-dialog-rail strong {margin-top:20px;font-size:11px;line-height:1.45;color:var(--text);}.sf-dialog-rail p {margin:6px 0 0;font:400 10px/1.5 "Segoe UI",sans-serif;color:var(--text-2);}
+html .sf-dialog-split > header {grid-row:1;}.sf-dialog-split > :is(.reset-app-body,.help-body,.update-release-notes) {grid-row:2;min-height:0;overflow-y:auto;}.sf-dialog-split > footer {grid-row:3;}
+html .sf-dialog-split.replace-link-dialog > form {grid-row:2 / 4;display:flex;flex-direction:column;min-height:0;overflow:hidden;}.sf-dialog-split.replace-link-dialog .rgb-dialog-body {min-height:0;overflow-y:auto;}.sf-dialog-split.replace-link-dialog footer {flex-shrink:0;}
+html .sf-dialog-split .help-brand > img,html .sf-dialog-split .update-notes-heading > img {display:none;}
+html .sf-dialog-split .help-brand > div > span {display:none;}
+@media(max-width:600px){html .sf-dialog-split:is([open],section) {grid-template-columns:minmax(0,1fr);}html .sf-dialog-split > .sf-dialog-rail {display:none;}html .sf-dialog-split > :not(.sf-dialog-rail) {grid-column:1;}}
+
+.dialog-unsaved-warning {flex:0 0 auto;margin:0!important;padding:9px 20px!important;font:12px/1.5 "Segoe UI",sans-serif!important;color:var(--accent-warning,#b47b32)!important;background:color-mix(in srgb,var(--accent-warning,#b47b32) 10%,var(--panel));border-top:1px solid color-mix(in srgb,var(--accent-warning,#b47b32) 25%,transparent);}

@@ -368,3 +368,9 @@ html.window-type-media, body.window-type-media { width:100%; height:100%; margin
 .media-progress-card .media-metrics-strip { margin-top:8px; padding-top:7px; padding-bottom:7px; }
 .media-progress-card .media-footer { min-height:43px; padding-top:4px; padding-bottom:4px; }
 .media-progress-card .media-body { scrollbar-gutter:auto; }
+
+/* Failure replaces the metrics row instead of adding height to the compact window. */
+.media-progress-card:not(.showing-details) .media-body {overflow:hidden;}
+.media-progress-card .media-progress-error {height:48px;min-height:48px;margin:8px 0 0;padding:8px 10px;align-items:center;}
+.media-progress-error > span {min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere;line-height:15px;}
+.media-progress-card .media-detail-error {white-space:normal;overflow-wrap:anywhere;color:var(--st-failed);}

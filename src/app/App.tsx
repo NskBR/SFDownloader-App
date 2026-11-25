@@ -1,3 +1,4 @@
+import {recordSpeed,flushSpeedHistory} from "../services/speedHistory";
 import {useScrollInertia} from "../hooks/useScrollInertia";
 import {watchUpdates} from "../services/updatePolling";
 import {prepareThemeCatalog} from "../services/themeCatalog";
@@ -78,7 +79,10 @@ export function App() {
   useEffect(() => {
     let disposed = false;
     const acceptCompletion = completionSoundGate();
+    const flush=()=>{void flushSpeedHistory().catch(error=>console.error("[METRICS] Falha ao salvar velocidades:",error));};window.addEventListener('pagehide',flush);
+    const saveTimer=window.setInterval(flush,10000);
     const listener = listen<DownloadProgress>("download-progress", ({ payload }) => {
+      if(!disposed)recordSpeed(payload);
       if (!acceptCompletion(payload) || !currentSettings.current.playSoundOnComplete) return;
       if (disposed) return;
       void invoke("play_completion_sound",{soundId:currentSettings.current.completionSound??"default"}).catch((error) => {
@@ -87,6 +91,7 @@ export function App() {
     });
     return () => {
       disposed = true;
+      window.removeEventListener('pagehide',flush);window.clearInterval(saveTimer);flush();
       void listener.then((unlisten) => unlisten());
     };
   }, []);

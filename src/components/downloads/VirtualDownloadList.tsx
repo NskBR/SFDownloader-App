@@ -18,7 +18,13 @@ export function VirtualDownloadList<T extends {id:string}>({items,view,renderIte
   rows.push({key,items:group,top:total,height});total+=height+gap;
  }
  total=Math.max(0,total-gap);
- const buffer=300;
+ // One extra grid row, rather than 300px multiplied by every column.
+ const buffer=view==='grid'?110:300;
+ const rangeRef=useRef({start:-1,end:-1});
+ const mountedStart=rows.findIndex(row=>row.top+row.height>=scroll-buffer);
+ let mountedEnd=mountedStart;
+ while(mountedEnd>=0&&mountedEnd<rows.length&&rows[mountedEnd].top<=scroll+size.height+buffer)mountedEnd++;
+ rangeRef.current={start:mountedStart,end:mountedEnd};
  const mounted=rows.filter(row=>row.top+row.height>=scroll-buffer&&row.top<=scroll+size.height+buffer);
  useLayoutEffect(()=>{
   const element=viewport.current;if(!element)return;
@@ -30,7 +36,7 @@ export function VirtualDownloadList<T extends {id:string}>({items,view,renderIte
  },[]);
  useLayoutEffect(()=>{
   const next=`${view}:${columns}:${items.map(item=>item.id).join(',')}`;
-  if(signature.current!==next){signature.current=next;if(viewport.current)viewport.current.scrollTop=0;setScroll(0);}
+  if(signature.current!==next){signature.current=next;if(viewport.current){viewport.current.scrollTop=0;viewport.current.dataset.scrolled="false";}setScroll(0);}
  },[items,view,columns]);
  useLayoutEffect(()=>{
   const element=viewport.current;if(!element)return;
@@ -43,7 +49,15 @@ export function VirtualDownloadList<T extends {id:string}>({items,view,renderIte
   });
   element.querySelectorAll('[data-row-key]').forEach(row=>observer.observe(row));return()=>observer.disconnect();
  },[mounted.map(row=>row.key).join(','),columns,view]);
- return <div ref={viewport} className={`cards-scroll-container view-${view} virtual-downloads`} onScroll={event=>setScroll(event.currentTarget.scrollTop)}>
+ return <div ref={viewport} className={`cards-scroll-container view-${view} virtual-downloads`} onScroll={event=>{
+   const next=event.currentTarget.scrollTop;
+   event.currentTarget.dataset.scrolled=next>1?"true":"false";
+   const start=rows.findIndex(row=>row.top+row.height>=next-buffer);
+   let end=start;
+   while(end>=0&&end<rows.length&&rows[end].top<=next+size.height+buffer)end++;
+   // Scrolling within the same row range needs no React update.
+   if(start!==rangeRef.current.start||end!==rangeRef.current.end){rangeRef.current={start,end};setScroll(next);}
+  }}>
   <div className="virtual-downloads-canvas" style={{height:total,position:'relative',flexShrink:0}}>
    {mounted.map(row=><div key={row.key} data-row-key={`${view}:${columns}:${row.key}`} className="virtual-downloads-row" style={{position:'absolute',top:row.top,left:0,right:0,display:'grid',gridTemplateColumns:`repeat(${columns},minmax(0,1fr))`,gap}}>{row.items.map(renderItem)}</div>)}
   </div>

@@ -2,6 +2,13 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 2.0.4 — 24/11/2026
+
+- Identificação e versões independentes por instalação/perfil da extensão 0.4.1.
+- Lista de conexões na integração e aviso dispensável na barra de título.
+- Cards dos temas com superfície legível e categorias Layout e Ícones e controles reorganizadas.
+- [Notas completas](docs/release-notes/2.0.4.txt).
+
 ## 2.0.3 — 24/11/2026
 
 - Corrigido o aviso intermitente da versão da extensão.

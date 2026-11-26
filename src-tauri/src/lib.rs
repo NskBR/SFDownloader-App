@@ -201,7 +201,7 @@ pub fn run() {
                 database::Database::initialize(&data_dir).map_err(std::io::Error::other)?;
             let recovered_ids = database.recovered_ids().to_vec();
             let runtime = download::runtime::DownloadRuntime::default();
-            let browser_bridge = browser_bridge::BrowserBridge::default();
+            let browser_bridge = browser_bridge::BrowserBridge::with_disabled_instances(data_dir.join("disabled-browser-instances.json")).map_err(std::io::Error::other)?;
             app.manage(database.clone());
             app.manage(runtime.clone());
             app.manage(browser_bridge.clone());
@@ -314,6 +314,7 @@ pub fn run() {
             commands::fonts::read_custom_font,
             create_category_folders,
             browser_bridge::browser_extension_status,
+            browser_bridge::set_browser_instance_enabled,
             browser_bridge::browser_extension_diagnostics,
             browser_bridge::update_extension_theme,
             commands::context_menu::show_download_context_menu,
@@ -346,6 +347,8 @@ pub fn run() {
             commands::windows::open_complete_window,
             commands::windows::show_ready_window,
             commands::transfer::update_speed_limit,
+            commands::transfer::update_torrent_upload_limit,
+            commands::transfer::torrent_connection_details,
             commands::transfer::update_download_priority,
             commands::transfer::prioritize_download,
             commands::transfer::move_download_queue_item,

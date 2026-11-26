@@ -245,29 +245,21 @@ impl TorrentManager {
         );
         let only_files = (!task.torrent_selected_file_indexes.is_empty())
             .then(|| task.torrent_selected_file_indexes.clone());
-        let handle = match self
-            .start_torrent_handle_configured(
-                &session,
-                &source,
-                save_path,
-                paused,
-                only_files.clone(),
-            )
-            .await
+        let handle = match crate::download::torrent_session::add_handle_with_limits(
+            &session,&source,save_path,paused,only_files.clone(),librqbit::limits::LimitsConfig{
+                upload_bps:std::num::NonZeroU32::new(task.speed_limit_upload.clamp(0,u32::MAX as i64) as u32),
+                ..Default::default()
+            }).await
         {
             Ok(handle) => handle,
             Err(cache_error) if source != task.original_url => {
                 let _ = std::fs::remove_file(
                     crate::download::torrent_session::cached_torrent_path(&info_hash),
                 );
-                self.start_torrent_handle_configured(
-                    &session,
-                    &task.original_url,
-                    save_path,
-                    paused,
-                    only_files,
-                )
-                .await
+                crate::download::torrent_session::add_handle_with_limits(
+                    &session,&task.original_url,save_path,paused,only_files,
+                    librqbit::limits::LimitsConfig{upload_bps:std::num::NonZeroU32::new(task.speed_limit_upload.clamp(0,u32::MAX as i64) as u32),..Default::default()}
+                ).await
                 .map_err(|source_error| {
                     format!(
                         "Cache do torrent inválido ({cache_error}); a fonte original também falhou: {source_error}"

@@ -19,6 +19,7 @@ export interface DownloadTask {
   speedCurrent: number;
   speedAverage: number;
   speedLimitDownload: number;
+  speedLimitUpload?: number;
   /** False also covers tasks persisted before the inheritance marker existed. */
   speedLimitInherited?: boolean;
   createdAt: string;
@@ -28,6 +29,7 @@ export interface DownloadTask {
   infoHash?: string | null;
   seeds?: number;
   peers?: number;
+  trackers?: number;
   uploadSpeed?: number;
   totalUploaded?: number;
   priority: number;
@@ -63,13 +65,16 @@ export interface ParsedTorrentMeta {
 }
 
 export interface DownloadProgress {
+  diskWriteSpeed?: number;
   id: string;
   downloaded: number;
   total: number | null;
   speed: number;
   uploadSpeed?: number;
+  totalUploaded?: number;
   seeds?: number;
   peers?: number;
+  trackers?: number;
   status: DownloadStatus;
   error: string | null;
 }

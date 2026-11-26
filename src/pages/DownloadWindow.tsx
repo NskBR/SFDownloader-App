@@ -190,6 +190,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [downloaded, setDownloaded] = useState(0);
   const [speed, setSpeed] = useState(0);
+  const [diskWriteSpeed,setDiskWriteSpeed]=useState<number|null>(null);
   const [status, setStatus] = useState<DownloadStatus>("pending");
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -230,7 +231,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
           ? 370
           : status === "failed" || status === "cancelled" || error
             ? 222
-            : 220;
+            : status === "downloading" ? 238 : 220;
       const [innerSize, scaleFactor] = await Promise.all([
         appWindow.innerSize(),
         appWindow.scaleFactor(),
@@ -322,6 +323,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
             : payload.downloaded;
         });
 
+        setDiskWriteSpeed(payload.status==="downloading"?payload.diskWriteSpeed??null:null);
         setSpeed((prev) => {
           if (payload.status === "downloading" && payload.speed === 0) {
             return prev;
@@ -572,6 +574,7 @@ export function DownloadWindow({ downloadId }: { downloadId: string }) {
                       )}
                     </p>
                   )}
+                  {isActive && <span className="download-disk-write" title="Bytes gravados pelo aplicativo nos arquivos; pode incluir cache do Windows.">Escrita · {diskWriteSpeed===null?"—":`${bytes(diskWriteSpeed)}/s`}</span>}
                 </div>
 
                 {!isCompleted && !isFailed && (

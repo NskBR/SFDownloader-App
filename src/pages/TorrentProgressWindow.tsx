@@ -1,3 +1,7 @@
+import {TorrentPeerDetails,peerRatio,type ConnectionDetails} from "../components/torrent/TorrentPeerDetails";
+import {invoke} from "@tauri-apps/api/core";
+import {TorrentTelemetryTooltip} from "../components/torrent/TorrentTelemetryTooltip";
+import {TorrentPeerStatus} from "../components/torrent/TorrentPeerStatus";
 import {
   AlertTriangle,
   Ban,
@@ -9,6 +13,7 @@ import {
   FileText,
   FolderOpen,
   Gauge,
+  HardDriveDownload,
   Minus,
   Pause,
   Play,
@@ -51,6 +56,7 @@ const eta = (seconds: number) => {
   return `${hours}h${minutes}m`;
 };
 
+const formatRemaining=(seconds:number)=>{if(!Number.isFinite(seconds)||seconds<0)return "Calculando…";const total=Math.ceil(seconds),hours=Math.floor(total/3600),minutes=Math.floor(total%3600/60),rest=total%60;return [hours?`${hours} h`:"",minutes?`${minutes} min`:"",rest||!hours&&!minutes?`${rest} s`:""].filter(Boolean).join(" ");};
 const smoothedDownloadSpeed = (previous: number, next: number, status: DownloadStatus) => {
   if (status !== "downloading") return 0;
   if (next <= 0) return previous * 0.82;
@@ -70,6 +76,8 @@ function Donut({ value, status }: { value: number; status: DownloadStatus }) {
       ? "var(--st-failed)"
       : status === "paused"
       ? "var(--st-paused)"
+      : status === "checking_files"
+      ? "var(--st-checking)"
       : "url(#dw-donut-gradient)";
 
   return (
@@ -115,9 +123,14 @@ interface TorrentProgressPayload {
   id: string;
   downloaded: number;
   verifiedBytes?: number;
+  verificationTotal?: number;
+  verificationSpeed?: number;
+  verificationReadBytes?: number;
+  diskWriteSpeed?: number;
   total: number | null;
   speed: number;
   uploadSpeed?: number;
+  totalUploaded?: number;
   seeds?: number;
   peers?: number;
   trackers?: number;
@@ -166,15 +179,80 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   const [task, setTask] = useState<DownloadTask | null>(null);
   const [downloaded, setDownloaded] = useState(0);
   const [verifiedBytes, setVerifiedBytes] = useState(0);
+  const [verificationTotal,setVerificationTotal]=useState(0);
+  const [verificationSpeed,setVerificationSpeed]=useState(0);
+  const [verificationReadBytes,setVerificationReadBytes]=useState<number|null>(null);
   const [speed, setSpeed] = useState(0);
+  const [diskWriteSpeed,setDiskWriteSpeed]=useState<number|null>(null);
   const [uploadSpeed, setUploadSpeed] = useState(0);
+  const [totalUploaded,setTotalUploaded]=useState(0);
   const [peers, setPeers] = useState(0);
   const [trackers, setTrackers] = useState(0);
   const [status, setStatus] = useState<DownloadStatus>("pending");
+  const [verificationComplete,setVerificationComplete]=useState(false);
+  const previousVerificationStatus=useRef<DownloadStatus>("pending");
+  const verificationCompletionTimer=useRef<ReturnType<typeof setTimeout>>();
+  useEffect(()=>{
+    const previous=previousVerificationStatus.current;
+    previousVerificationStatus.current=status;
+    if(previous==="checking_files" && (status==="downloading" || status==="connecting")){
+      setVerificationComplete(true);
+      clearTimeout(verificationCompletionTimer.current);
+      verificationCompletionTimer.current=setTimeout(()=>setVerificationComplete(false),800);
+    }else if(!["downloading","connecting"].includes(status)){
+      clearTimeout(verificationCompletionTimer.current);
+      setVerificationComplete(false);
+    }
+  },[status]);
+  useEffect(()=>()=>clearTimeout(verificationCompletionTimer.current),[]);
+
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsTab,setDetailsTab]=useState<"download"|"peers">("download");
+  const detailsPanel=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if(!detailsOpen)return;
+    const area=detailsPanel.current?.firstElementChild as HTMLElement|null;
+    if(!area)return;
+    const wheel=(event:WheelEvent)=>{
+      if(event.ctrlKey || event.shiftKey || Math.abs(event.deltaX)>Math.abs(event.deltaY))return;
+      if(area.scrollHeight<=area.clientHeight)return;
+      event.preventDefault();event.stopPropagation();
+      const unit=event.deltaMode===1?16:event.deltaMode===2?area.clientHeight:1;
+      area.scrollTop+=event.deltaY*unit*0.4;
+    };
+    area.addEventListener("wheel",wheel,{passive:false});
+    return()=>area.removeEventListener("wheel",wheel);
+  },[detailsOpen,detailsTab]);
+
+  const [connectionDetails,setConnectionDetails]=useState<ConnectionDetails|null>(null);
+  const [connectionError,setConnectionError]=useState(false);
+  useEffect(()=>{
+    if(!detailsOpen)return;
+    let disposed=false;
+    let previous:{time:number;details:ConnectionDetails}|null=null;
+    let timer:ReturnType<typeof setTimeout>;
+    const refresh=async()=>{
+      try{const details=await invoke<NonNullable<typeof connectionDetails>>("torrent_connection_details",{id:downloadId});if(!disposed){
+        const now=performance.now();
+        for(const [address,peer] of Object.entries(details.peers)){
+          const before=previous?.details.peers[address];const seconds=previous?(now-previous.time)/1000:0;
+          if(before&&seconds>0){peer.downloadRate=Math.max(0,peer.counters.fetched_bytes-before.counters.fetched_bytes)/seconds;peer.uploadRate=Math.max(0,peer.counters.uploaded_bytes-before.counters.uploaded_bytes)/seconds;}
+        }
+        previous={time:now,details};setConnectionDetails(details);setConnectionError(false);
+      }}
+      catch{if(!disposed)setConnectionError(true);}
+      if(!disposed)timer=setTimeout(()=>void refresh(),2000);
+    };
+    void refresh();return()=>{disposed=true;clearTimeout(timer);};
+  },[detailsOpen,downloadId]);
+
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const transportLock=useRef(false);
+  const [transportAction,setTransportAction]=useState<"pausing"|"resuming"|null>(null);
+  const transportLabel=transportAction==="resuming" ? (t.common.back==="Voltar"?"Retomando…":"Resuming…") : (t.common.back==="Voltar"?"Pausando…":"Pausing…");
+
   const [copied, setCopied] = useState(false);
   const appWindow = getCurrentWindow();
   const mainRef = useRef<HTMLElement>(null);
@@ -206,7 +284,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
           ? 370
           : status === "failed" || status === "cancelled" || error
             ? 228
-            : 232;
+            : status === "checking_files" ? 252 : 232;
       const [innerSize, scaleFactor] = await Promise.all([
         appWindow.innerSize(),
         appWindow.scaleFactor(),
@@ -252,6 +330,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
           setSpeed((prev) => smoothedDownloadSpeed(prev, found.speedCurrent, found.status));
 
           setUploadSpeed(found.uploadSpeed ?? 0);
+          setTotalUploaded(found.totalUploaded ?? 0);
           setPeers(found.peers ?? 0);
           setStatus((prev) => (prev === "pending" ? found.status : prev));
         } else {
@@ -278,12 +357,17 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
       });
 
       if (payload.verifiedBytes !== undefined) setVerifiedBytes(payload.verifiedBytes);
+      setVerificationTotal(payload.verificationTotal??0);
+      setVerificationReadBytes(payload.verificationReadBytes??null);
+      setDiskWriteSpeed(payload.status==="downloading"||payload.status==="connecting"?payload.diskWriteSpeed??null:null);
+      setVerificationSpeed(payload.status==="checking_files"?payload.verificationSpeed??0:0);
 
       setSpeed((prev) =>
         smoothedDownloadSpeed(prev, payload.speed, payload.status as DownloadStatus),
       );
 
       if (payload.uploadSpeed !== undefined) setUploadSpeed(payload.uploadSpeed);
+      if (payload.totalUploaded !== undefined) setTotalUploaded(payload.totalUploaded);
       if (payload.peers !== undefined) setPeers(payload.peers);
       if (payload.trackers !== undefined) setTrackers(payload.trackers);
 
@@ -315,6 +399,10 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
   }, [downloadId, task === null]);
 
   const pauseResume = async () => {
+    if(transportLock.current || busy)return;
+    transportLock.current=true;
+    const resuming=!["pending","connecting","checking_files","downloading"].includes(status);
+    setTransportAction(resuming?"resuming":"pausing");
     setError(null);
     const taskId = task?.id ?? downloadId;
     try {
@@ -327,7 +415,14 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
         setStatus("downloading");
       }
     } catch (cause) {
-      setError(String(cause));
+      if(resuming && String(cause).includes("Este download já está ativo.")){
+        setStatus("downloading");
+      }else{
+        setError(String(cause));
+      }
+    } finally {
+      transportLock.current=false;
+      setTransportAction(null);
     }
   };
 
@@ -384,9 +479,9 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
     isRunning = ["pending", "connecting", "checking_files", "downloading"].includes(status),
     isFailed = status === "failed" || status === "cancelled",
     // Durante verificação, mostramos progresso de verificação no donut
-    verifyProgress = isChecking && total > 0 ? Math.min(100, (verifiedBytes / total) * 100) : 0,
+    verifyProgress = isChecking && verificationTotal > 0 ? Math.min(100, (verifiedBytes / verificationTotal) * 100) : 0,
     downloadProgress = total > 0 ? Math.min(100, (downloaded / total) * 100) : 0,
-    progress = isChecking ? verifyProgress : (isCompleted ? 100 : downloadProgress),
+    progress = verificationComplete ? 100 : isChecking ? verifyProgress : (isCompleted ? 100 : downloadProgress),
     remaining = isActive && speed > 0 && total > downloaded ? (total - downloaded) / speed : -1,
     destination = task.finalPath.replace(/[\\/][^\\/]*$/, ""),
     fileType = task.extension?.trim().toUpperCase() || "TORRENT",
@@ -401,7 +496,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
       : error;
 
   return (
-    <main ref={mainRef} className={`dw-window torrent-download-window status-${status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
+    <main ref={mainRef} className={`dw-window torrent-download-window status-${verificationComplete ? "checking_files" : status} ${isCompleted ? "dw-complete" : "dw-progress"}${cancelOpen ? " cancel-open" : ""}`}>
       <header className="dw-title" data-tauri-drag-region>
         <span className="dw-title-text" data-tauri-drag-region>
           <TitleDownloadIcon status={status} />
@@ -426,15 +521,16 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
         <>
           <section className="dw-body">
             <div className="dw-left">
-              <Donut value={isCompleted ? 100 : progress} status={status} />
+              <Donut value={isCompleted ? 100 : progress} status={verificationComplete ? "checking_files" : status} />
             </div>
 
             <div className="dw-right">
               <div className="dw-right-top">
                 <div className="dw-right-info">
                   {!error && (
-                    <p className="dw-origin">
+                    <p className="dw-origin torrent-origin-telemetry">
                       <Globe size={14} aria-hidden="true" /> <span className="dw-origin-domain">P2P BitTorrent</span>
+                      {!isChecking && !isCompleted && <TorrentTelemetryTooltip className="torrent-disk-write" label="Escrita nos arquivos" title="Escrita nos arquivos" rows={[["Taxa atual",isRunning&&diskWriteSpeed!==null?`${bytes(diskWriteSpeed)}/s`:"—"]]} note="Bytes gravados pelo aplicativo. Pode incluir cache do Windows."><HardDriveDownload aria-hidden="true"/><span className="torrent-stat-value">Escrita · {isRunning&&diskWriteSpeed!==null?`${bytes(diskWriteSpeed)}/s`:"—"}</span></TorrentTelemetryTooltip>}
                     </p>
                   )}
 
@@ -453,32 +549,25 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
 
                   {!isCompleted && !error && (
                     <div className="dw-meta" aria-live="polite">
-                      {isChecking ? (
+                      {transportAction ? <span className="dw-meta-item" role="status">{transportLabel}</span> : isChecking || verificationComplete ? (
                         <span className="dw-meta-item dw-meta-checking">
                           <ScanSearch aria-hidden="true" />
-                          {t.downloadWindow.checkingIntegrity}
+                          <span>{verificationComplete ? (t.common.back === "Voltar" ? "Verificação concluída" : "Verification complete") : t.downloadWindow.checkingIntegrity}{!verificationComplete && <small className="torrent-verification-speed" title="Taxa de verificação dos arquivos locais; pode incluir leitura em cache.">Leitura · {bytes(verificationSpeed)}/s{verificationReadBytes!==null&&` · ${bytes(verificationReadBytes)} lidos`}</small>}</span>
                         </span>
                       ) : (
                         <div className="dw-meta-stats">
-                          <span className="dw-meta-item" title={t.torrentWindow.downloadSpeed}>
+                          <TorrentTelemetryTooltip label={t.torrentWindow.downloadSpeed} title="Velocidade de transferência" rows={[["Download",isActive?`${bytes(speed)}/s`:"0 B/s"],["Upload",isActive?`${bytes(uploadSpeed)}/s`:"0 B/s"]]}>
                             <Download aria-hidden="true" />
-                            {isActive ? `${bytes(speed)}/s` : "0 B/s"}
-                          </span>
-                          <span className="dw-meta-item" title={t.torrentWindow.peers}>
-                            <Users aria-hidden="true" />
-                            {peers}
-                          </span>
-                          <span className="dw-meta-item" title={t.downloadWindow.remainingTime}>
+                            <span className="torrent-stat-value">{isActive ? `${bytes(speed)}/s` : "0 B/s"}</span>
+                          </TorrentTelemetryTooltip>
+                          <TorrentPeerStatus peers={peers} trackers={trackers} totalUploaded={bytes(totalUploaded)}/>
+                          <TorrentTelemetryTooltip label={t.downloadWindow.remainingTime} title="Tempo restante" rows={[["Estimativa",isActive&&remaining>=0?formatRemaining(remaining):statusLabels[status]],["Falta baixar",total>0?bytes(Math.max(0,total-downloaded)):"—"]]} note="Estimativa baseada na velocidade atual; pode variar.">
                             <Clock3 aria-hidden="true" />
-                            {eta(remaining)}
-                          </span>
-                          {!isActive && (
-                            <span className="dw-meta-item dw-inline-status">
-                              {statusLabels[status]}
-                            </span>
-                          )}
+                            <span className="torrent-stat-value">{isActive?eta(remaining):statusLabels[status]}</span>
+                          </TorrentTelemetryTooltip>
                         </div>
                       )}
+
                     </div>
                   )}
 
@@ -496,7 +585,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 </div>
 
                 {!isCompleted && !isFailed && (
-                      <button className="dw-btn-ghost dw-transport" title={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} aria-label={isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} onClick={() => void pauseResume()}>
+                      <button className="dw-btn-ghost dw-transport" disabled={busy || transportAction!==null} aria-busy={transportAction!==null} title={transportAction?transportLabel:isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} aria-label={transportAction?transportLabel:isRunning ? t.downloads.pauseDownload : t.downloads.resumeDownload} onClick={() => void pauseResume()}>
                         {isRunning ? <Pause /> : <Play />}
                       </button>
                     )}
@@ -508,7 +597,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               </div>
 
               {!isCompleted && (
-                <div className={`dw-bar${isActive ? " dw-bar--active" : ""}${isChecking ? " dw-bar--checking" : ""}${status === "paused" ? " dw-bar--paused" : ""}${isFailed ? " dw-bar--failed" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
+                <div className={`dw-bar${isActive ? " dw-bar--active" : ""}${isChecking || verificationComplete ? " dw-bar--checking" : ""}${status === "paused" ? " dw-bar--paused" : ""}${isFailed ? " dw-bar--failed" : ""}`} role="progressbar" aria-valuenow={Math.round(progress)}>
                   <i style={{ width: `${progress}%` }} />
                 </div>
               )}
@@ -576,15 +665,28 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
               {t.common.back}
             </button>
             <span className="dw-details-header-title">{t.torrentWindow.detailsTitle}</span>
+          <div className="torrent-details-tabs nodrag" role="tablist" aria-label={t.torrentWindow.detailsTitle}>
+            {(["download","peers"] as const).map(tab=><button key={tab} type="button" role="tab" id={`torrent-tab-${tab}`} aria-selected={detailsTab===tab} aria-controls={`torrent-panel-${tab}`} onClick={()=>setDetailsTab(tab)} onKeyDown={event=>{if(["ArrowLeft","ArrowRight","Home","End"].includes(event.key)){event.preventDefault();const next=event.key==="Home"?"download":event.key==="End"?"peers":tab==="download"?"peers":"download";setDetailsTab(next);document.getElementById(`torrent-tab-${next}`)?.focus();}}} tabIndex={detailsTab===tab?0:-1}>{tab==="download"?<Download size={14}/>:<Users size={14}/>} {tab==="download"?"Download":"Peers"}</button>)}
+          </div>
             <button type="button" className="dw-details-close nodrag" aria-label={t.common.close} title={t.common.close} onClick={() => void appWindow.close()}><X size={16}/></button>
           </div>
 
-          <div className="dw-details-compact-body">
-            <div className="dw-details-card">
+          <div ref={detailsPanel} className="dw-details-compact-body torrent-details-panel" role="tabpanel" id={`torrent-panel-${detailsTab}`} aria-labelledby={`torrent-tab-${detailsTab}`}>
+
+            {detailsTab==="peers" ? <div className="dw-details-card torrent-connection-details">
+              <TorrentPeerDetails details={connectionDetails} error={connectionError} formatBytes={bytes}/>
+            </div> : <div className="dw-details-card">
+              <div className="dw-detail-row"><span className="dw-detail-label">Info hash</span><span className="dw-detail-val">{task.infoHash || "—"}</span></div>
+              <div className="dw-detail-row"><span className="dw-detail-label">Recebido / total</span><span className="dw-detail-val">{bytes(downloaded)} / {bytes(total)}</span></div>
+              <div className="dw-detail-row"><span className="dw-detail-label">Total enviado</span><span className="dw-detail-val">{bytes(totalUploaded)}</span></div>
+              <div className="dw-detail-row"><span className="dw-detail-label">Ratio (enviado / recebido)</span><span className="dw-detail-val">{peerRatio(downloaded,totalUploaded)}</span></div>
+              <div className="dw-detail-row"><span className="dw-detail-label">Tempo estimado</span><span className="dw-detail-val">{remaining>=0?formatRemaining(remaining):"—"}</span></div>
               <div className="dw-detail-row">
                 <span className="dw-detail-label">{t.torrentWindow.downloadSpeed}</span>
                 <span className="dw-detail-val">{bytes(speed)}/s</span>
               </div>
+              <div className="dw-detail-row"><span className="dw-detail-label">Escrita nos arquivos</span><span className="dw-detail-val">{isRunning&&diskWriteSpeed!==null?`${bytes(diskWriteSpeed)}/s`:"—"}</span></div>
+              {isChecking&&<div className="dw-detail-row"><span className="dw-detail-label">Leitura na verificação</span><span className="dw-detail-val">{bytes(verificationSpeed)}/s</span></div>}
               <div className="dw-detail-row">
                 <span className="dw-detail-label">{t.torrentWindow.uploadSpeed}</span>
                 <span className="dw-detail-val">{bytes(uploadSpeed)}/s</span>
@@ -601,7 +703,7 @@ export function TorrentProgressWindow({ downloadId }: { downloadId: string }) {
                 <span className="dw-detail-label">{t.downloadWindow.destinationFolder}</span>
                 <span className="dw-detail-val">{destination}</span>
               </div>
-            </div>
+            </div>}
           </div>
         </div>
       )}

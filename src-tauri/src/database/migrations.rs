@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS global_download_schedule (
 INSERT OR IGNORE INTO global_download_schedule(id) VALUES(1);
 "#;
 
+const MIGRATION_015:&str="ALTER TABLE download_tasks ADD COLUMN speed_limit_upload INTEGER NOT NULL DEFAULT 0;";
+
 pub fn run(connection: &mut Connection) -> Result<()> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     if version < 1 {
@@ -227,6 +229,12 @@ pub fn run(connection: &mut Connection) -> Result<()> {
         transaction.execute_batch("PRAGMA user_version = 14")?;
         transaction.commit()?;
     }
+    if version < 15 {
+        let transaction=connection.transaction()?;
+        transaction.execute_batch(MIGRATION_015)?;
+        transaction.execute_batch("PRAGMA user_version = 15")?;
+        transaction.commit()?;
+    }
     Ok(())
 }
 
@@ -263,6 +271,7 @@ mod tests {
             MIGRATION_012,
             MIGRATION_013,
             MIGRATION_014,
+            MIGRATION_015,
         ];
         for migration in migrations.iter().take(version as usize) {
             connection.execute_batch(migration).unwrap();
@@ -274,7 +283,7 @@ mod tests {
 
     #[test]
     fn every_supported_legacy_schema_upgrades_to_the_current_version() {
-        for version in 0..14 {
+        for version in 0..15 {
             let mut connection = Connection::open_in_memory().unwrap();
             if version > 0 {
                 apply_schema_through(&connection, version);
@@ -283,7 +292,7 @@ mod tests {
             let final_version: i64 = connection
                 .query_row("PRAGMA user_version", [], |row| row.get(0))
                 .unwrap();
-            assert_eq!(final_version, 14, "legacy schema v{version}");
+            assert_eq!(final_version, 15, "legacy schema v{version}");
             connection
                 .query_row(
                     "SELECT priority,queue_order FROM download_tasks LIMIT 1",

@@ -51,14 +51,15 @@ export function useDownloads(settings: AppSettings) {
                 const nextDownloaded = isActive && !(i.downloadType === "media" && payload.status === "completed")
                   ? Math.max(i.totalDownloaded, payload.downloaded)
                   : payload.downloaded;
-                const nextSpeed = payload.status === "downloading" && payload.speed === 0
-                  ? i.speedCurrent
-                  : payload.speed;
+                const nextSpeed = payload.speed;
                 return {
                   ...i,
                   totalDownloaded: nextDownloaded,
                   fileSize: payload.total ?? i.fileSize,
                   speedCurrent: nextSpeed,
+                  peers: payload.peers ?? i.peers,
+                  totalUploaded: payload.totalUploaded ?? i.totalUploaded,
+                  trackers: payload.trackers ?? i.trackers,
                   status: payload.status,
                   completedAt:
                     payload.status === "completed"
@@ -164,6 +165,10 @@ export function useDownloads(settings: AppSettings) {
       );
     }
   };
+  const setUploadLimit=async(id:string,speedLimit:number)=>{
+    await service.updateTorrentUploadLimit(id,speedLimit);
+    setDownloads(items=>items.map(item=>item.id===id?{...item,speedLimitUpload:speedLimit}:item));
+  };
   const setSchedule = async (id: string, schedule: import("../domain/download").DownloadScheduleInput) => {
     try {
       const task = await service.updateDownloadSchedule(id, schedule);
@@ -242,6 +247,7 @@ export function useDownloads(settings: AppSettings) {
     pause,
     resume,
     setSpeedLimit,
+    setUploadLimit,
     setPriority,
     setSchedule,
     bypassSchedule,

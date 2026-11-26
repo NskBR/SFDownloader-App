@@ -47,3 +47,12 @@ describe("sortDownloads", () => {
     expect(sorted.map((item) => item.id)).toEqual(["urgent", "normal"]);
   });
 });
+
+it.each(["date","size","status","queue"] as const)("keeps running downloads first regardless of %s direction",key=>{
+ const downloads=[task("done",{status:"completed",fileSize:100}),task("active-small",{status:"downloading",fileSize:10}),task("paused",{status:"paused",fileSize:50}),task("active-large",{status:"downloading",fileSize:20})];
+ for(const direction of ["asc","desc"] as const){
+  const sorted=sortDownloads(downloads,{key,direction});
+  expect(sorted.slice(0,2).every(item=>item.status==="downloading")).toBe(true);
+ }
+ expect(sortDownloads(downloads,{key:"size",direction:"desc"}).map(item=>item.id)).toEqual(["active-large","active-small","done","paused"]);
+});

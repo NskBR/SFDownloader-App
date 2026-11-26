@@ -18,6 +18,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+pub(crate) fn emit_transfer_progress(app: &AppHandle, control: &TaskControl, progress: DownloadProgress) {
+    #[derive(Serialize, Clone)]
+    struct DiskProgress { #[serde(flatten)] progress: DownloadProgress, #[serde(rename="diskWriteSpeed")] disk_write_speed: f64 }
+    let _=app.emit("download-progress",DiskProgress{progress,disk_write_speed:control.disk_write_speed()});
+}
+
 pub(crate) const UI_UPDATE_INTERVAL: Duration = Duration::from_millis(200);
 pub(crate) const PERSIST_INTERVAL: Duration = Duration::from_secs(1);
 const CHUNK_PERSIST_INTERVAL: Duration = Duration::from_secs(2);
@@ -587,13 +593,13 @@ async fn download_piece(
                 let data = next.map_err(|error| error.to_string())?; let remaining = (length - chunk.downloaded_bytes).min(response_length-response_downloaded).max(0) as usize;
                 if data.len() > remaining { return Err("O servidor enviou mais bytes do que declarou no Content-Range.".into()); }
                 let slice = &data[..];
-                file.write_all(slice).await.map_err(|error| error.to_string())?; chunk.downloaded_bytes += slice.len() as i64; response_downloaded += slice.len() as i64;
+                file.write_all(slice).await.map_err(|error| error.to_string())?; control.record_disk_write(slice.len()); chunk.downloaded_bytes += slice.len() as i64; response_downloaded += slice.len() as i64;
                 control.throttle(slice.len()).await;
                 let aggregate = total_downloaded.fetch_add(slice.len() as i64, Ordering::Relaxed) + slice.len() as i64;
                 let elapsed = started.elapsed();
                 if claim_interval(&progress_gate, elapsed, UI_UPDATE_INTERVAL) {
                     let speed = (aggregate - session_offset).max(0) as f64 / elapsed.as_secs_f64().max(0.001);
-                    let _ = app.emit("download-progress", DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
+                    emit_transfer_progress(&app, &control, DownloadProgress { id: task.id.clone(), downloaded: aggregate, total: task.file_size, speed, status: DownloadStatus::Downloading, error: None });
                 }
                 if last_save.elapsed() >= CHUNK_PERSIST_INTERVAL {
                     let speed = (aggregate - session_offset).max(0) as f64
@@ -970,6 +976,7 @@ mod tests {
             max_connections: 1,
             max_parallel_downloads: 1,
             speed_limit_download: 0,
+            speed_limit_upload: 0,
             speed_limit_inherited: false,
             etag: etag.map(str::to_owned),
             last_modified: last_modified.map(str::to_owned),

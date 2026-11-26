@@ -20,6 +20,8 @@ export function BrowserIntegrationWizard({onClose}:{onClose:()=>void}) {
   const [copied,setCopied]=useState(false);
   const [instances,setInstances]=useState<BrowserInstance[]>([]);
   const [refreshing,setRefreshing]=useState(false);
+  const [toggling,setToggling]=useState(false);
+  const toggleLock=useRef(false);
   const dialog=useRef<HTMLElement>(null);
   const title=useRef<HTMLHeadingElement>(null);
   useEffect(()=>{
@@ -52,6 +54,11 @@ export function BrowserIntegrationWizard({onClose}:{onClose:()=>void}) {
     return()=>{active=false;window.clearInterval(timer);};
   },[]);
   const refreshConnections=async()=>{if(refreshing)return;setRefreshing(true);setError('');try{showConnections(await readBrowserConnections(true));}catch(e){setError(String(e));}finally{setRefreshing(false);}};
+  const toggleConnections=async(peers:BrowserInstance[],enabled:boolean)=>{
+    if(toggleLock.current)return;toggleLock.current=true;setToggling(true);setError('');
+    try{for(const peer of peers)await invoke('set_browser_instance_enabled',{id:peer.id,enabled});showConnections(await readBrowserConnections());}
+    catch(e){setError(String(e));}finally{toggleLock.current=false;setToggling(false);}
+  };
   const openInstanceInstall=(peer:BrowserInstance)=>{setBrowser(peer.browserName==='Firefox'?'firefox':'chromium');setStep(1);setError('');};
   const run=(action:()=>Promise<unknown>)=>{setError('');void action().catch(e=>setError(String(e)));};
   const copy=()=>run(async()=>{await navigator.clipboard.writeText('chrome://extensions');setCopied(true);});
@@ -61,7 +68,7 @@ export function BrowserIntegrationWizard({onClose}:{onClose:()=>void}) {
       <header><span className="integration-wizard-brand"><Puzzle size={20}/>Integração com o navegador</span><button type="button" onClick={onClose} aria-label="Fechar"><X size={18}/></button></header>
       <div className="integration-wizard-progress"><span>Etapa {step+1} de 2</span><progress max={2} value={step+1} aria-label="Progresso da instalação"/></div>
       <div className="integration-wizard-body"><div className="integration-wizard-heading"><h2 id="integration-wizard-title" ref={title} tabIndex={-1}>{headings[step]}</h2></div>
-      {step===0 && <><BrowserConnectionsList instances={instances} onInstall={openInstanceInstall} onRefresh={()=>void refreshConnections()} refreshing={refreshing}/><p>Vamos configurar a extensão em poucos passos.</p><div className="integration-wizard-browsers">{(['chromium','firefox'] as const).map(value=><button type="button" key={value} aria-pressed={browser===value} onClick={()=>setBrowser(value)}>{value==='chromium'?<Chrome size={28}/>:<Flame size={28}/>}<strong>{value==='chromium'?'Chrome e derivados':'Firefox'}</strong><small>{value==='chromium'?'Chrome, Edge, Brave e outros':'Instalação com XPI assinado'}</small></button>)}</div></>}
+      {step===0 && <><BrowserConnectionsList toggling={toggling} onToggle={peer=>void toggleConnections([peer],!!peer.disabled)} onToggleAll={enabled=>void toggleConnections(instances,enabled)} instances={instances} onInstall={openInstanceInstall} onRefresh={()=>void refreshConnections()} refreshing={refreshing}/><p>Vamos configurar a extensão em poucos passos.</p><div className="integration-wizard-browsers">{(['chromium','firefox'] as const).map(value=><button type="button" key={value} aria-pressed={browser===value} onClick={()=>setBrowser(value)}>{value==='chromium'?<Chrome size={28}/>:<Flame size={28}/>}<strong>{value==='chromium'?'Chrome e derivados':'Firefox'}</strong><small>{value==='chromium'?'Chrome, Edge, Brave e outros':'Instalação com XPI assinado'}</small></button>)}</div></>}
       {step===1 && (browser==='chromium'?<><p>Cole o endereço abaixo no navegador e ative o <strong>Modo do desenvolvedor</strong>. Depois arraste a extensão para essa página.</p><button type="button" className="integration-wizard-address" aria-label="Copiar endereço" onClick={copy} title="Copiar endereço"><code>chrome://extensions</code>{copied?<Check size={17}/>:<Copy size={17}/>}</button><button type="button" className="integration-wizard-drag" disabled={!folder} onMouseDown={e=>{if(e.button===0 && folder){e.preventDefault();run(()=>invoke('start_drag_folder',{path:folder}));}}}><ExtensionDragDemo/><strong>Arrastar extensão para o navegador</strong></button></>:<><p>Abra o pacote assinado e confirme “Adicionar” no Firefox. Depois abra a extensão e ative a captura automática.</p><button type="button" disabled={!xpi} onClick={()=>run(()=>service.openFile(xpi))}><Flame size={18}/>Instalar no Firefox</button>{xpiState==='loading'&&<p className="integration-wizard-package-note" role="status">Preparando o pacote do Firefox…</p>}{xpiState==='pending'&&<p className="integration-wizard-package-note" role="status">O pacote do Firefox aguarda assinatura. A instalação será liberada quando ele estiver disponível.</p>}{xpiState==='error'&&<details className="integration-wizard-package-error"><summary>Não foi possível preparar o pacote. Ver detalhes</summary><p>{packageError}</p></details>}</>)}
       {error && <p className="integration-wizard-error" role="alert">{error}</p>}</div>
       <footer><div>{step===1&&<button type="button" onClick={()=>{setStep(0);setError('');void refreshConnections();}}><ArrowLeft size={16}/>Voltar às conexões</button>}</div><button type="button" className="integration-wizard-next" onClick={()=>step===1?onClose():setStep(1)}>{step===1?'Concluir':'Continuar'}{step===1?<Check size={16}/>:<ArrowRight size={16}/>}</button></footer>

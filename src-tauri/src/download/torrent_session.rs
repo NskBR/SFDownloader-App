@@ -129,7 +129,13 @@ pub async fn add_handle(
     paused: bool,
     only_files: Option<Vec<usize>>,
 ) -> Result<Arc<ManagedTorrent>, String> {
+    add_handle_with_limits(session,source,output_dir,paused,only_files,Default::default()).await
+}
+pub async fn add_handle_with_limits(session:&Arc<Session>,source:&str,output_dir:&Path,paused:bool,only_files:Option<Vec<usize>>,limits:librqbit::limits::LimitsConfig)->Result<Arc<ManagedTorrent>,String>{
+    use librqbit::storage::StorageFactoryExt;
     let opts = AddTorrentOptions {
+        ratelimits: limits,
+        storage_factory: Some(super::torrent_io::MeteredStorageFactory{output_dir:output_dir.to_path_buf()}.boxed()),
         output_folder: Some(output_dir.to_string_lossy().to_string()),
         overwrite: true,
         paused,

@@ -9,7 +9,7 @@ interface Props {
 
 export function CircularProgress({
   value,
-  size = 42,
+  size = 62,
   stroke = 4,
   color = "var(--ember)",
   trackColor = "var(--line)",

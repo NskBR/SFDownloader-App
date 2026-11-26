@@ -451,3 +451,47 @@ pub async fn update_torrent_file_selection(
         .update_file_selection(&database, &info_hash, &selected_file_indexes)
         .await
 }
+
+#[tauri::command]
+pub async fn update_torrent_upload_limit(database:State<'_,Database>,id:String,speed_limit:i64)->Result<(),String>{
+    let connection=database.connect()?;
+    let task=persist_torrent_upload_limit(&connection,&id,speed_limit)?;
+    if let Some(hash)=task.info_hash {
+        let manager=crate::download::torrent::get_torrent_manager();let entries=manager.entries().read().await;
+        if let Some(entry)=entries.get(&hash){entry.handle.set_upload_limit(std::num::NonZeroU32::new(speed_limit as u32));}
+    }
+    Ok(())
+}
+
+fn persist_torrent_upload_limit(connection:&rusqlite::Connection,id:&str,speed_limit:i64)->Result<DownloadTask,String>{
+    if !(0..=u32::MAX as i64).contains(&speed_limit){return Err("Limite de upload fora do intervalo permitido (0 a 4095,99 MB/s).".into());}
+    let task=downloads::find(connection,id).map_err(|e|e.to_string())?.ok_or("Download não encontrado.")?;
+    if task.download_type!="torrent"{return Err("Limite de upload disponível apenas para torrents.".into());}
+    connection.execute("UPDATE download_tasks SET speed_limit_upload=?1,updated_at=CURRENT_TIMESTAMP WHERE id=?2",rusqlite::params![speed_limit,id]).map_err(|e|e.to_string())?;
+    Ok(task)
+}
+#[cfg(test)]
+mod torrent_upload_limit_tests {
+ use super::*;
+ #[test]
+ fn limit_is_persisted_per_torrent_and_invalid_values_do_not_overwrite_it(){
+  let mut db=rusqlite::Connection::open_in_memory().unwrap();crate::database::migrations::run(&mut db).unwrap();
+  let input:crate::database::models::CreateDownloadInput=serde_json::from_value(serde_json::json!({"fileName":"test","originalUrl":"magnet:test","savePath":"C:/Downloads","tempPath":"C:/Downloads/test.part","finalPath":"C:/Downloads/test","supportsRange":false,"deleteArchiveAfterExtract":false,"downloadType":"torrent"})).unwrap();
+  let task=downloads::create(&db,input).unwrap();assert_eq!(task.speed_limit_upload,0);
+  persist_torrent_upload_limit(&db,&task.id,32768).unwrap();assert_eq!(downloads::find(&db,&task.id).unwrap().unwrap().speed_limit_upload,32768);
+  for invalid in [-1,u32::MAX as i64+1] {assert!(persist_torrent_upload_limit(&db,&task.id,invalid).is_err());}
+  assert_eq!(downloads::find(&db,&task.id).unwrap().unwrap().speed_limit_upload,32768);
+  db.execute("UPDATE download_tasks SET download_type='http' WHERE id=?1",[&task.id]).unwrap();assert!(persist_torrent_upload_limit(&db,&task.id,1024).is_err());
+ }
+}
+
+#[tauri::command]
+pub async fn torrent_connection_details(database:State<'_,Database>,id:String)->Result<serde_json::Value,String>{
+    let task={let connection=database.connect()?;downloads::find(&connection,&id).map_err(|e|e.to_string())?.ok_or("Download não encontrado.")?};
+    if task.download_type!="torrent" {return Err("Download não é um torrent.".into());}
+    let manager=crate::download::torrent::get_torrent_manager();
+    let entries=manager.entries().read().await;
+    let entry=task.info_hash.as_ref().and_then(|hash|entries.get(hash));
+    let peers=entry.and_then(|entry|entry.handle.live()).map(|live|live.per_peer_stats_snapshot(Default::default()).peers);
+    Ok(serde_json::json!({"peers":peers.unwrap_or_default(),"active":entry.and_then(|entry|entry.handle.live()).is_some()}))
+}

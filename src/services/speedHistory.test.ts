@@ -20,3 +20,17 @@ it('keeps more than six downloads and separates samples at a month boundary',asy
  const rows=readSpeedHistory();expect(rows).toHaveLength(41);
  expect(rows.filter(r=>r.month===speedMonth(january))).toHaveLength(40);expect(rows.filter(r=>r.month===speedMonth(february))).toHaveLength(1);
 });
+
+it('records actual progress and never invents percentages for old or unknown-size samples',async()=>{
+ const {recordSpeed,readSpeedHistory,comparisonSpeedSamples}=await import('./speedHistory');
+ recordSpeed({id:'a',status:'downloading',speed:100,downloaded:25,total:100} as DownloadProgress,10000);
+ expect(readSpeedHistory()[0].points[0].progress).toBe(25);
+ expect(comparisonSpeedSamples([{time:1,speed:10}])).toEqual([]);
+});
+it('averages measured percentage buckets with equal weight per download and preserves pauses',async()=>{
+ const {comparisonSpeedSamples,averageProgressSpeeds}=await import('./speedHistory');
+ const a=comparisonSpeedSamples([{time:0,speed:10,progress:0},{time:2000,speed:30,progress:0.1},{time:10000,speed:60,progress:50}]);
+ expect(a).toEqual([{progress:0,speed:20,segment:0},{progress:50,speed:60,segment:1}]);
+ const b=comparisonSpeedSamples([{time:900000,speed:40,progress:0},{time:902000,speed:100,progress:50}]);
+ expect(averageProgressSpeeds([a,b])).toEqual([{progress:0,speed:30,segment:0},{progress:50,speed:80,segment:0}]);
+});

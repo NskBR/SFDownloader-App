@@ -13,7 +13,17 @@
 </div>
 
 > [!IMPORTANT]
-> **Versão atual: 2.0.4.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+> **Versão atual: 2.0.5.** O SFDownloader está em beta para **Windows 10/11 64 bits**. Recursos HTTP estão prontos para uso cotidiano; o motor BitTorrent/P2P segue em estabilização e deve ser usado com validação do arquivo final.
+
+## Novidades da 2.0.5
+
+- Torrent: correções de seleção de pastas, verificação de integridade, retomada e alocação de arquivos; limite de upload por torrent.
+- Detalhes em abas, lista de peers com progresso, velocidades, ratio e ordenação, além de mini painéis de telemetria.
+- Conexões da extensão podem ser desativadas por instância ou em conjunto, com a escolha salva no aplicativo.
+- Downloads em andamento no topo e curvas mensais de velocidade comparadas pelo progresso de 0 a 100%.
+- Extensão mantida na **0.4.1**, com o XPI Firefox assinado incluído.
+
+[Notas da 2.0.5](docs/release-notes/2.0.5.txt).
 
 ## Novidades da 2.0.4
 

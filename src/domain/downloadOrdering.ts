@@ -27,7 +27,12 @@ export function sortDownloads(
   const queueRank = (item: DownloadTask) =>
     (3 - Math.max(0, Math.min(3, item.priority ?? 1))) * 1_000_000 +
     item.queueOrder;
+  const inProgress = (item: DownloadTask) =>
+    ["downloading", "connecting", "checking_files", "assembling", "extracting"].includes(item.status);
   return [...downloads].sort((left, right) => {
+    const activeFirst = Number(inProgress(right)) - Number(inProgress(left));
+    if (activeFirst !== 0) return activeFirst;
+
     const values: Record<DownloadSortKey, [string | number, string | number]> =
       {
         status: [statusOrder[left.status] ?? 9, statusOrder[right.status] ?? 9],

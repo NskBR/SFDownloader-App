@@ -194,6 +194,7 @@ mod tests {
             max_connections: 1,
             max_parallel_downloads: 1,
             speed_limit_download: 0,
+            speed_limit_upload: 0,
             speed_limit_inherited: false,
             etag: None,
             last_modified: None,

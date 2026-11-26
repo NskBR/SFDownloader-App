@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DownloadTask } from "../domain/download";
 import { defaultSettings } from "../domain/settings";
@@ -31,6 +31,7 @@ function hookState(error: string | null, downloads: DownloadTask[] = []) {
     pause: vi.fn(),
     resume: vi.fn(),
     setSpeedLimit: vi.fn(),
+    setUploadLimit: vi.fn(),
     setPriority: vi.fn(),
     moveQueueItem: vi.fn(),
     prioritize: vi.fn(),
@@ -38,6 +39,17 @@ function hookState(error: string | null, downloads: DownloadTask[] = []) {
 }
 
 describe("DownloadsPage empty and error states", () => {
+  it("offers a separate persisted upload limit only for torrents",async()=>{
+    const task={id:'torrent',fileName:'example.torrent',downloadType:'torrent',fileSize:1024,totalDownloaded:100,status:'downloading',originalUrl:'magnet:?xt=urn:btih:test',speedCurrent:100,speedAverage:100,speedLimitUpload:524288,createdAt:'2026-11-25T00:00:00Z'} as DownloadTask;
+    const state=hookState(null,[task]);useDownloads.mockReturnValue(state);
+    const {container}=render(<DownloadsPage settings={{...defaultSettings,rootDownloadFolder:'C:/Downloads'}} onSave={vi.fn()} filter="downloads"/>);
+    fireEvent.contextMenu(container.querySelector('.download-card')!,{clientX:100,clientY:100});
+    fireEvent.click(screen.getByRole('button',{name:/Limit upload|Limitar upload/}));
+    expect(screen.getByRole('dialog')).toBeTruthy();expect(within(screen.getByRole('dialog')).getByRole('textbox')).toHaveProperty('value','0.5');
+    fireEvent.change(within(screen.getByRole('dialog')).getByRole('textbox'),{target:{value:'0,1'}});fireEvent.click(screen.getByRole('button',{name:/Save changes|Salvar alterações/i}));
+    await waitFor(()=>expect(state.setUploadLimit).toHaveBeenCalledWith('torrent',104858));expect(state.setSpeedLimit).not.toHaveBeenCalled();
+  });
+
   it.each(["cyberpunk", "cs2", "custom"] as const)("keeps Ctrl/Shift clicks and Ctrl+A working with the %s theme", (theme) => {
     const downloads = ["one", "two", "three"].map((id) => ({
       id, fileName: `${id}.zip`, fileSize: 1024, totalDownloaded: 1024,

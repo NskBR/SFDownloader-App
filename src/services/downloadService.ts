@@ -178,7 +178,7 @@ export const updateGlobalDownloadSchedule = (scheduleInput: GlobalDownloadSchedu
   invoke<GlobalDownloadSchedule>("update_global_download_schedule", { scheduleInput });
 export const browserExtensionConnected = () =>
   invoke<boolean>("browser_extension_status");
-export interface BrowserInstance {id:string;browserName:string;version:string|null;connected:boolean;outdated:boolean;legacy:boolean}
+export interface BrowserInstance {id:string;browserName:string;version:string|null;connected:boolean;disabled?:boolean;outdated:boolean;legacy:boolean}
 export interface BrowserBridgeDiagnostics {
   instances?:BrowserInstance[];
   installedVersion?:string|null;
@@ -357,3 +357,5 @@ export interface DiagnosticReport {
 export const getDiagnosticReport = () => invoke<DiagnosticReport>("get_diagnostic_report");
 export const clearDebugLogs = () => invoke<void>("clear_debug_logs");
 export const openDebugWindow = () => invoke<void>("open_debug_window");
+
+export const updateTorrentUploadLimit=(id:string,speedLimit:number)=>invoke<void>("update_torrent_upload_limit",{id,speedLimit});

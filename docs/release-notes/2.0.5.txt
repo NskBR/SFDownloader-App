@@ -1,0 +1,27 @@
+Novidades
+
+• Limite de upload por torrent no menu de contexto, com opções predefinidas e valor personalizado. A configuração permanece salva após pausar, retomar ou reabrir o aplicativo.
+• Detalhes do torrent organizados nas abas Download e Peers, integradas à barra superior para aproveitar melhor o espaço.
+• Lista de peers conectados com IP e porta, cliente, progresso anunciado, identificação de seeder ou leecher, velocidades de download e upload, dados recebidos e enviados, ratio, transporte e erros.
+• Ordenação dos peers por velocidade de download, velocidade de upload, progresso, volume recebido, volume enviado ou endereço. Informações indisponíveis permanecem identificadas como desconhecidas; criptografia não é presumida pelo tipo de transporte.
+• Ratio e total enviado também disponíveis nos detalhes gerais do torrent.
+• Peers e trackers nos cards dos torrents, com ícones próprios. No modo lista, aparecem após o tempo restante; na grade, ocupam uma linha separada.
+• Mini painéis para conexões, velocidades, tempo restante e escrita. O painel de conexões também mostra o total enviado.
+• Controle individual para ativar ou desativar a conexão de cada instância da extensão. Botões Ativar todas e Desativar todas para as instâncias detectadas. O bloqueio fica salvo após reiniciar e não interrompe downloads já iniciados.
+• Métricas mensais de velocidade com curvas comparadas pelo progresso de cada download, de 0 a 100%, e média geral destacada. Medições antigas sem informação de progresso não geram curvas artificiais.
+
+Correções e melhorias
+
+• Corrigida a conclusão prematura de torrents ao selecionar pastas internas. A conclusão depende das peças válidas, sem confundir leitura de verificação com conteúdo baixado.
+• Verificação de integridade otimizada para regiões comprovadamente vazias de arquivos esparsos, preservando a comparação dos hashes. Arquivos antigos totalmente pré-alocados ainda podem exigir uma primeira leitura completa.
+• Novos torrents deixam de reservar antecipadamente todo o espaço lógico dos arquivos. A seleção de peças prioriza um arquivo por vez, respeitando os arquivos selecionados.
+• A verificação mostra velocidade e volume de leitura. A escrita nos arquivos é medida separadamente da velocidade de rede; as medições podem incluir o cache do sistema operacional.
+• Verificação passa a usar violeta, distinguindo-se da pausa em amarelo. Ao terminar com retomada solicitada, mostra 100% e Verificação concluída brevemente antes de voltar ao progresso do download.
+• Corrigida a retomada solicitada durante a verificação: ao concluir a checagem, o motor respeita a intenção mais recente, sem exigir outro clique para começar a baixar.
+• Torrents ativos continuam como Baixando mesmo com velocidade zero, sem alternar para Na fila.
+• Pausar e retomar mostram o estado da operação imediatamente e bloqueiam cliques repetidos. A resposta de download já ativo não é mais apresentada como falha de retomada.
+• Downloads em andamento permanecem no topo da lista e da grade, preservando a ordenação escolhida dentro de cada grupo.
+• Espaços estáveis para valores de velocidade, tempo e progresso reduzem deslocamentos dos ícones e controles. Rodapé, indicadores circulares e informações dos cards receberam ajustes de alinhamento e legibilidade.
+• Mini painéis abrem somente pelo ícone e permanecem abertos enquanto o mouse estiver dentro deles. Mantido o acesso por teclado.
+• Detalhes dos torrents com texto em escala legível, espaçamentos mais compactos, rolagem menos sensível e foco discreto no seletor de ordenação.
+• Controles de instâncias da extensão mais compactos, com ações gerais junto ao título da seção.

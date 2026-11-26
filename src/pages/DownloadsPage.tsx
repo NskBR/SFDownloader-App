@@ -1,3 +1,5 @@
+import { TorrentPeerStatus } from "../components/torrent/TorrentPeerStatus";
+import {Upload, Server} from "lucide-react";
 import {VirtualDownloadList} from "../components/downloads/VirtualDownloadList";
 import {Pause as AnimatedPause,Play as AnimatedPlay} from "../components/icons";
 import {ReplaceDownloadLinkDialog} from "../components/downloads/ReplaceDownloadLinkDialog";
@@ -179,6 +181,9 @@ export function DownloadsPage({
   const [copiedSourceId, setCopiedSourceId] = useState<string | null>(null);
   const [speedLimitDialog, setSpeedLimitDialog] = useState<DownloadTask | null>(null);
   const [speedLimitValue, setSpeedLimitValue] = useState("0");
+  const [speedLimitDirection,setSpeedLimitDirection]=useState<"download"|"upload">("download");
+  const [speedLimitError,setSpeedLimitError]=useState("");
+  const [savingSpeedLimit,setSavingSpeedLimit]=useState(false);
   const {
     contextMenu: ctxMenu,
     setContextMenu: setCtxMenu,
@@ -197,6 +202,7 @@ export function DownloadsPage({
     pause,
     resume,
     setSpeedLimit,
+    setUploadLimit,
     setPriority,
     setSchedule,
     bypassSchedule,
@@ -207,12 +213,18 @@ export function DownloadsPage({
   const saveSpeedLimit = async () => {
     if (!speedLimitDialog) return;
     const mebibytes = parseSpeedLimitMebibytesPerSecond(speedLimitValue);
-    if (mebibytes === null) {
-      setError(t.downloads.speedLimitInvalid);
-      return;
+    const bytesPerSecond=mebibytes===null?NaN:Math.round(mebibytes*1024*1024);
+    if (mebibytes===null||(speedLimitDirection==="upload"&&(bytesPerSecond>0xffffffff||(mebibytes>0&&bytesPerSecond===0)))) {
+      setSpeedLimitError(speedLimitDirection==="upload"?t.downloads.uploadLimitInvalid:t.downloads.speedLimitInvalid);return;
     }
-    await setSpeedLimit(speedLimitDialog.id, Math.round(mebibytes * 1024 * 1024));
-    setSpeedLimitDialog(null);
+    if(savingSpeedLimit)return;
+    setSavingSpeedLimit(true);setSpeedLimitError("");
+    try{
+      if(speedLimitDirection==="upload")await setUploadLimit(speedLimitDialog.id,bytesPerSecond);
+      else await setSpeedLimit(speedLimitDialog.id,bytesPerSecond);
+      setSpeedLimitDialog(null);
+    }catch(cause){setSpeedLimitError(String(cause));}finally{setSavingSpeedLimit(false);}
+
   };
 
   const handleMenuAction = useCallback(
@@ -225,8 +237,12 @@ export function DownloadsPage({
         case "resume":
           resume(downloadId);
           break;
-        case "limit": {
-          const current = dl?.speedLimitDownload ?? 0;
+        case "limit":
+        case "limit-upload": {
+          const upload=action==="limit-upload";
+          if(upload&&dl?.downloadType!=="torrent")break;
+          setSpeedLimitDirection(upload?"upload":"download");setSpeedLimitError("");
+          const current = (upload?dl?.speedLimitUpload:dl?.speedLimitDownload) ?? 0;
           if (dl) {
             setSpeedLimitValue(current > 0 ? String(current / 1024 / 1024) : "0");
             setSpeedLimitDialog(dl);
@@ -620,11 +636,11 @@ export function DownloadsPage({
     );
     if (remainingSeconds <= 0) return "—";
     if (remainingSeconds < 60)
-      return `${remainingSeconds}s ${t.downloads.remaining}`;
+      return `${remainingSeconds}s`;
     const minutes = Math.floor(remainingSeconds / 60);
     const seconds = remainingSeconds % 60;
-    if (minutes < 60) return `${minutes}m ${seconds}s ${t.downloads.remaining}`;
-    return `${Math.floor(minutes / 60)}h ${minutes % 60}m ${t.downloads.remaining}`;
+    if (minutes < 60) return `${minutes}m ${seconds}s`;
+    return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
   };
 
   const activeDownloads = downloads.filter((d) => d.status === "downloading");
@@ -715,7 +731,7 @@ export function DownloadsPage({
               const isPaused = item.status === "paused";
               const isDownloading = item.status === "downloading";
 
-              const statusClass = isDownloading
+              const statusClass = item.status === "checking_files" ? "checking" : isDownloading
                 ? "downloading"
                 : isPaused
                   ? "paused"
@@ -726,7 +742,7 @@ export function DownloadsPage({
                       : item.status === "failed"
                         ? "failed"
                         : "waiting";
-              const statusLabel = item.downloadType === "media" && item.status === "assembling"
+              const statusLabel = item.status === "checking_files" ? t.downloadWindow.checkingFiles : item.downloadType === "media" && item.status === "assembling"
                 ? (settings.language === "pt-BR" ? "Finalizando mídia" : "Finalizing media")
                 : isDownloading
                 ? t.downloads.statusDownloading
@@ -845,7 +861,7 @@ export function DownloadsPage({
                       </button>
                     )}
 
-                    <div className="card-info-row">
+                    <div className={`card-info-row${isDownloading?" is-transferring":""}`}>
                       {isDownloading ? (
                         <>
                           <span className="meta-size">
@@ -855,14 +871,14 @@ export function DownloadsPage({
                           <span className="meta-sep" aria-hidden>
                             ·
                           </span>
-                          <span className="meta-speed">
-                            {bytes(item.speedCurrent)}/s
+                          <span className="meta-speed" title={`${t.common.speed}: ${bytes(item.speedCurrent)}/s`}>
+                            <span className="transfer-stat-label">{t.common.speed}:</span> {bytes(item.speedCurrent)}/s
                           </span>
                           <span className="meta-sep" aria-hidden>
                             ·
                           </span>
-                          <span className="meta-eta accent">
-                            {formatTimeRemaining(item)}
+                          <span className="meta-eta accent" title={`${t.downloadWindow.remainingTime}: ${formatTimeRemaining(item)}`}>
+                            <span className="transfer-stat-label">{t.downloadWindow.remainingTime}:</span> {formatTimeRemaining(item)||"—"}
                           </span>
                         </>
                       ) : isCompleted ? (
@@ -918,9 +934,15 @@ export function DownloadsPage({
                                   "{position}",
                                   String(queuePosition),
                                 )
-                              : t.downloads.statusWaiting)}
+                              : item.status === "checking_files" ? t.downloadWindow.checkingFiles : t.downloads.statusWaiting)}
                         </span>
                       )}
+                      {item.downloadType === "torrent" && !isCompleted && !isFailed && (
+                      <span className="card-torrent-connections" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()}>
+                        <TorrentPeerStatus peers={item.peers ?? 0} trackers={item.trackers ?? 0} totalUploaded={bytes(item.totalUploaded ?? 0)}/>
+                        <span className="card-tracker-count"><Server size={13} aria-hidden="true"/>{item.trackers ?? 0} trackers</span>
+                      </span>
+                    )}
                     </div>
 
                     {(isDownloading || isPaused) && (
@@ -1020,11 +1042,11 @@ export function DownloadsPage({
       </section>
 
       {/* Discreete Footer */}
-      <footer className="flux-footer">
+      <footer className="flux-footer downloads-footer">
         <div className="footer-left">
           <ArrowDown />
-          <span>
-            <strong>{bytes(totalSpeed)}/s</strong> {t.downloads.currentSpeed}
+          <span className="footer-speed-summary">
+            <span>{t.downloads.currentSpeed}</span><strong title={`${bytes(totalSpeed)}/s`}>{bytes(totalSpeed)}/s</strong>
           </span>
         </div>
 
@@ -1090,21 +1112,22 @@ export function DownloadsPage({
             <header>
               <span className="speed-limit-dialog-icon"><Gauge size={18} /></span>
               <div>
-                <h2 id="speed-limit-dialog-title">{t.downloads.speedLimit}</h2>
+                <h2 id="speed-limit-dialog-title">{speedLimitDirection==="upload"?t.downloads.uploadLimit:t.downloads.speedLimit}</h2>
                 <p title={speedLimitDialog.fileName}>{speedLimitDialog.fileName}</p>
               </div>
               <button type="button" onClick={() => setSpeedLimitDialog(null)} aria-label={t.common.close}><X size={17} /></button>
             </header>
             <label className="speed-limit-dialog-field">
-              <span>{t.downloads.speedLimitPrompt}</span>
+              <span>{speedLimitDirection==="upload"?t.downloads.uploadLimitPrompt:t.downloads.speedLimitPrompt}</span>
               <div><input autoFocus inputMode="decimal" value={speedLimitValue} onChange={(event) => setSpeedLimitValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveSpeedLimit(); }} /><b>MB/s</b></div>
             </label>
             <div className="speed-limit-dialog-presets">
-              {[0, 1, 5, 10, 25].map((value) => <button key={value} type="button" className={Number(speedLimitValue) === value ? "active" : ""} onClick={() => setSpeedLimitValue(String(value))}>{value === 0 ? t.settings.downloadsTab.noLimit : `${value} MB/s`}</button>)}
+              {(speedLimitDirection==="upload"?[0,0.1,0.5,1,5]:[0,1,5,10,25]).map((value) => <button key={value} type="button" className={Number(speedLimitValue) === value ? "active" : ""} onClick={() => setSpeedLimitValue(String(value))}>{value === 0 ? t.settings.downloadsTab.noLimit : `${value} MB/s`}</button>)}
             </div>
+            {speedLimitError&&<p role="alert" className="speed-limit-error">{speedLimitError}</p>}
             <footer>
               <button type="button" className="speed-limit-dialog-cancel" onClick={() => setSpeedLimitDialog(null)}>{t.common.cancel}</button>
-              <button type="button" className="speed-limit-dialog-save" onClick={() => void saveSpeedLimit()}>{t.common.save}</button>
+              <button type="button" className="speed-limit-dialog-save" disabled={savingSpeedLimit} onClick={() => void saveSpeedLimit()}>{t.common.save}</button>
             </footer>
           </section>
         </div>
@@ -1132,6 +1155,7 @@ export function DownloadsPage({
           >
             <Gauge size={15} /> {t.downloads.speedLimit}
           </button>
+          {ctxMenu.item.downloadType==="torrent"&&<button className="ctx-item" onClick={()=>runMenuAction("limit-upload",ctxMenu.item)}><Upload size={15}/>{t.downloads.uploadLimit}</button>}
           {!["completed", "cancelled"].includes(ctxMenu.item.status) && (
             <button
               className="ctx-item"

@@ -2,6 +2,14 @@
 
 Todas as alterações relevantes do SFDownloader são registradas neste arquivo.
 
+## 2.0.5 — 25/11/2026
+
+- Correções de verificação, retomada, seleção de arquivos e alocação de espaço dos torrents.
+- Limite de upload por torrent e detalhes de peers com progresso, velocidades, ratio e ordenação.
+- Controles persistentes para ativar ou desativar conexões da extensão por instância ou em conjunto.
+- Downloads ativos no topo, mini painéis interativos e métricas mensais comparadas por progresso.
+- [Notas completas](docs/release-notes/2.0.5.txt).
+
 ## 2.0.4 — 24/11/2026
 
 - Identificação e versões independentes por instalação/perfil da extensão 0.4.1.

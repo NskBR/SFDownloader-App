@@ -1,5 +1,5 @@
 import type {DownloadProgress} from "../domain/download";
-export interface SpeedSample {time:number;speed:number}
+export interface SpeedSample {time:number;speed:number;progress?:number}
 export interface SpeedSeries {id:string;points:SpeedSample[]}
 interface StoredSeries extends SpeedSeries {key:string;month:string}
 let queued=new Map<string,StoredSeries>();
@@ -20,7 +20,8 @@ export function recordSpeed(progress:DownloadProgress,now=Date.now()){
  if(lastSample.get(progress.id)===time)return;lastSample.set(progress.id,time);
  const month=speedMonth(now),key=`${month}:${progress.id}`;
  let row=queued.get(key);if(!row){row={key,month,id:progress.id,points:[]};queued.set(key,row);}
- row.points.push({time,speed:progress.speed});
+ const percent=progress.total!==null&&progress.total>0&&Number.isFinite(progress.downloaded)?Math.max(0,Math.min(100,progress.downloaded/progress.total*100)):undefined;
+ row.points.push({time,speed:progress.speed,...(percent===undefined?{}:{progress:percent})});
 }
 /** Only unsaved points stay in memory. IndexedDB keeps every month's series without a curve cap. */
 export function readSpeedHistory(){return [...queued.values()];}
@@ -53,4 +54,29 @@ export function averageSpeedSamples(rows:SpeedSeries[]):SpeedSample[]{
  const times=new Map<number,{sum:number;count:number}>();
  for(const row of rows)for(const p of row.points){const value=times.get(p.time)??{sum:0,count:0};value.sum+=p.speed;value.count++;times.set(p.time,value);}
  return [...times].sort(([a],[b])=>a-b).map(([time,v])=>({time,speed:v.sum/v.count}));
+}
+
+export interface ProgressSpeedPoint {progress:number;speed:number;segment:number}
+/** Consolidate at half-percent intervals, preserving pauses and restarted transfers. */
+export function comparisonSpeedSamples(points:SpeedSample[]):ProgressSpeedPoint[]{
+ const result:ProgressSpeedPoint[]=[];let segment=0,last:SpeedSample|undefined;
+ let bucket=-1,sum=0,count=0;
+ const flush=()=>{if(count)result.push({progress:bucket/2,speed:sum/count,segment});count=0;sum=0;};
+ for(const point of points){
+  if(point.progress===undefined||!Number.isFinite(point.progress)||point.progress<0||point.progress>100)continue;
+  const next=Math.round(point.progress*2);
+  if(last&&(point.time-last.time>6000||point.progress<(last.progress??0))){flush();segment++;bucket=-1;}
+  if(next!==bucket){flush();bucket=next;}sum+=point.speed;count++;last=point;
+ }
+ flush();return result;
+}
+/** Each download gets equal weight at the same measured percentage. */
+export function averageProgressSpeeds(rows:ProgressSpeedPoint[][]):ProgressSpeedPoint[]{
+ const totals=new Map<number,{sum:number;count:number}>();
+ for(const points of rows){
+  const perDownload=new Map<number,{sum:number;count:number}>();
+  for(const p of points){const v=perDownload.get(p.progress)??{sum:0,count:0};v.sum+=p.speed;v.count++;perDownload.set(p.progress,v);}
+  for(const [progress,v] of perDownload){const total=totals.get(progress)??{sum:0,count:0};total.sum+=v.sum/v.count;total.count++;totals.set(progress,total);}
+ }
+ return [...totals].sort(([a],[b])=>a-b).map(([progress,v])=>({progress,speed:v.sum/v.count,segment:0}));
 }

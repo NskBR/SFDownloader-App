@@ -4,7 +4,7 @@ use crate::database::models::{
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use uuid::Uuid;
 
-const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,speed_limit_inherited,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at,delete_archive_after_extract,download_type,info_hash,seeds,peers,upload_speed,total_uploaded,priority,queue_order,scheduled_start_at,daily_schedule_start_minute,daily_schedule_end_minute,scheduled_weekdays,pause_outside_schedule,skip_schedule_once,scheduled_last_started_at,torrent_selected_file_indexes";
+const COLUMNS: &str = "id,file_name,file_size,original_url,current_url,save_path,temp_path,final_path,status,mime_type,extension,supports_range,max_connections,max_parallel_downloads,speed_limit_download,speed_limit_inherited,etag,last_modified,total_downloaded,speed_current,speed_average,created_at,updated_at,completed_at,delete_archive_after_extract,download_type,info_hash,seeds,peers,upload_speed,total_uploaded,priority,queue_order,scheduled_start_at,daily_schedule_start_minute,daily_schedule_end_minute,scheduled_weekdays,pause_outside_schedule,skip_schedule_once,scheduled_last_started_at,torrent_selected_file_indexes,speed_limit_upload";
 
 fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
     Ok(DownloadTask {
@@ -23,6 +23,7 @@ fn map_task(row: &rusqlite::Row<'_>) -> Result<DownloadTask> {
         max_connections: row.get(12)?,
         max_parallel_downloads: row.get(13)?,
         speed_limit_download: row.get(14)?,
+        speed_limit_upload: row.get("speed_limit_upload")?,
         speed_limit_inherited: row.get::<_, i64>(15)? != 0,
         etag: row.get(16)?,
         last_modified: row.get(17)?,

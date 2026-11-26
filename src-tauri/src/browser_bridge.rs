@@ -37,7 +37,7 @@ struct HeaderContext {
     created_at: u64,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct ExtensionVersionReport {
     version: Option<String>,
     seen_at: u64,
@@ -53,6 +53,7 @@ pub struct BrowserInstance {
     browser_name: String,
     version: Option<String>,
     connected: bool,
+    disabled: bool,
     outdated: bool,
     legacy: bool,
 }
@@ -68,6 +69,8 @@ pub struct BrowserBridge {
     language: Arc<Mutex<Option<String>>>,
     listening: Arc<AtomicBool>,
     startup_error: Arc<Mutex<Option<String>>>,
+    disabled_instances: Arc<Mutex<HashMap<String,ExtensionVersionReport>>>,
+    disabled_path: Option<std::path::PathBuf>,
 }
 
 impl Default for BrowserBridge {
@@ -82,11 +85,42 @@ impl Default for BrowserBridge {
             language: Arc::new(Mutex::new(None)),
             listening: Arc::new(AtomicBool::new(false)),
             startup_error: Arc::new(Mutex::new(None)),
+            disabled_instances: Arc::new(Mutex::new(HashMap::new())),
+            disabled_path: None,
         }
     }
 }
 
 impl BrowserBridge {
+
+    pub fn with_disabled_instances(path:std::path::PathBuf)->Result<Self,String>{
+        let mut bridge=Self::default();
+        let disabled:HashMap<String,ExtensionVersionReport>=match std::fs::read(&path){
+            Ok(data)=>serde_json::from_slice(&data).map_err(|e|e.to_string())?,
+            Err(e) if e.kind()==std::io::ErrorKind::NotFound=>HashMap::new(),
+            Err(e)=>return Err(e.to_string()),
+        };
+        *bridge.extension_versions.lock().map_err(|e|e.to_string())?=disabled.clone();
+        *bridge.disabled_instances.lock().map_err(|e|e.to_string())?=disabled;
+        bridge.disabled_path=Some(path);Ok(bridge)
+    }
+    fn instance_disabled(&self,headers:&AxumHeaderMap)->bool{
+        let (id,_,_)=Self::extension_peer_identity(headers);
+        self.disabled_instances.lock().map(|items|items.contains_key(&id)).unwrap_or(true)
+    }
+    fn set_instance_enabled(&self,id:&str,enabled:bool)->Result<(),String>{
+        let report=self.extension_versions.lock().map_err(|e|e.to_string())?.get(id).cloned().ok_or("Instância não encontrada.")?;
+        let mut disabled=self.disabled_instances.lock().map_err(|e|e.to_string())?;
+        let mut next=disabled.clone();
+        if enabled{next.remove(id);}else{next.insert(id.to_owned(),report);}
+        if let Some(path)=&self.disabled_path{std::fs::write(path,serde_json::to_vec(&next).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;}
+        *disabled=next;drop(disabled);
+        let reports=self.extension_versions.lock().map_err(|e|e.to_string())?;
+        let disabled=self.disabled_instances.lock().map_err(|e|e.to_string())?;
+        let now=Self::now_seconds();
+        self.last_seen.store(reports.iter().filter(|(id,r)|!disabled.contains_key(*id)&&now.saturating_sub(r.last_seen)<=90).map(|(_,r)|r.last_seen).max().unwrap_or(0),Ordering::SeqCst);
+        Ok(())
+    }
     fn now_seconds() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -112,6 +146,7 @@ impl BrowserBridge {
         self.last_seen.store(Self::now_seconds(), Ordering::SeqCst);
     }
 
+    #[cfg(test)]
     pub fn mark_disconnected(&self) {
         self.last_seen.store(0, Ordering::SeqCst);
         if let Ok(mut reports) = self.extension_versions.lock() { reports.clear(); }
@@ -144,7 +179,7 @@ impl BrowserBridge {
         let (id,browser_name,legacy)=Self::extension_peer_identity(headers);
         let now=Self::now_seconds();
         if let Ok(mut reports)=self.extension_versions.lock() {
-            reports.retain(|_,report|now.saturating_sub(report.last_seen)<=300);
+            reports.retain(|id,report|now.saturating_sub(report.last_seen)<=300 || self.disabled_instances.lock().map(|items|items.contains_key(id)).unwrap_or(false));
             if reports.len()>=MAX_EXTENSION_ORIGINS&&!reports.contains_key(&id){return;}
             let report=reports.entry(id).or_insert_with(||ExtensionVersionReport {version:None,seen_at:0,last_seen:now,browser_name:browser_name.clone(),legacy});
             report.last_seen=now;report.browser_name=browser_name;
@@ -153,6 +188,7 @@ impl BrowserBridge {
     }
 
     fn disconnect_extension(&self, headers: &AxumHeaderMap) {
+        if self.instance_disabled(headers){return;}
         let (id,_,_)=Self::extension_peer_identity(headers);
         if let Ok(mut reports)=self.extension_versions.lock() {
             reports.remove(&id);
@@ -168,6 +204,7 @@ impl BrowserBridge {
         let replacements:Vec<_>=reports.iter().filter(|(_,r)|!r.legacy&&now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS)
             .filter_map(|(id,r)|id.rsplit_once(':').map(|(origin,_)|(origin.to_owned(),r.last_seen))).collect();
         reports.retain(|id,report| {
+            if self.disabled_instances.lock().map(|items|items.contains_key(id)).unwrap_or(false){return true;}
             if now.saturating_sub(report.last_seen)>300{return false;}
             if report.legacy&&now.saturating_sub(report.last_seen)>15 {
                 return !replacements.iter().any(|(origin,seen)|id.starts_with(&format!("legacy:{}:",origin))&&*seen>report.last_seen);
@@ -176,9 +213,10 @@ impl BrowserBridge {
         });
         let mut instances:Vec<_>=reports.iter().map(|(id,r)|{
             let version=if now.saturating_sub(r.seen_at)<=EXTENSION_VERSION_TTL_SECONDS {r.version.clone()}else{None};
-            let connected=now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS;
+            let disabled=self.disabled_instances.lock().map(|items|items.contains_key(id)).unwrap_or(true);
+            let connected=!disabled&&now.saturating_sub(r.last_seen)<=EXTENSION_VERSION_TTL_SECONDS;
             let outdated=connected&&version.as_deref().and_then(extension_version_parts).zip(available.and_then(extension_version_parts)).is_some_and(|(v,a)|v<a);
-            BrowserInstance{id:id.clone(),browser_name:r.browser_name.clone(),version,connected,outdated,legacy:r.legacy}
+            BrowserInstance{id:id.clone(),browser_name:r.browser_name.clone(),version,connected,disabled,outdated,legacy:r.legacy}
         }).collect();
         instances.sort_by(|a,b|a.browser_name.cmp(&b.browser_name).then(a.id.cmp(&b.id)));
         instances
@@ -528,6 +566,7 @@ async fn update_extension(
     if !has_trusted_bridge_origin(&request_headers) {
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
+    if state.bridge.instance_disabled(&request_headers){return (headers,StatusCode::FORBIDDEN).into_response();}
     if body.len() > 1024 {
         return (headers, StatusCode::PAYLOAD_TOO_LARGE).into_response();
     }
@@ -582,6 +621,7 @@ async fn sync(State(state): State<BridgeState>, request_headers: AxumHeaderMap) 
         return (headers, StatusCode::FORBIDDEN).into_response();
     }
     state.bridge.record_extension_version(&request_headers);
+    if state.bridge.instance_disabled(&request_headers){return (headers,StatusCode::FORBIDDEN).into_response();}
     state.bridge.mark_seen();
     let _ = state.app.emit("browser-extension-status", true);
     let theme_accent = state
@@ -796,7 +836,7 @@ async fn download(
     {
         return (cors_headers, StatusCode::PAYLOAD_TOO_LARGE).into_response();
     }
-    if !is_authorized_download(&request.token, &state.bridge.token, &request.url) {
+    if state.bridge.instance_disabled(&request_headers) || !is_authorized_download(&request.token, &state.bridge.token, &request.url) {
         return (cors_headers, StatusCode::FORBIDDEN).into_response();
     }
     let mut headers = HeaderMap::new();
@@ -1047,5 +1087,33 @@ mod instance_migration_tests {
  fn request_brand_corrects_generic_report_without_changing_instance_identity() {
   let mut h=AxumHeaderMap::new();h.insert("origin",AxumHeaderValue::from_static("chrome-extension://same"));h.insert("x-sf-instance-id",AxumHeaderValue::from_static("11111111-1111-4111-8111-111111111111"));h.insert("x-sf-browser-name",AxumHeaderValue::from_static("Google Chrome"));h.insert("sec-ch-ua",AxumHeaderValue::from_static("Brave"));
   let (id,name,_)=BrowserBridge::extension_peer_identity(&h);assert_eq!(name,"Brave");h.insert("sec-ch-ua",AxumHeaderValue::from_static("Opera"));let (other,name,_)=BrowserBridge::extension_peer_identity(&h);assert_eq!(id,other);assert_eq!(name,"Opera");
+ }
+}
+
+#[tauri::command]
+pub fn set_browser_instance_enabled(app:AppHandle,bridge:tauri::State<'_,BrowserBridge>,id:String,enabled:bool)->Result<(),String>{
+    bridge.set_instance_enabled(&id,enabled)?;
+    let _=app.emit("browser-extension-status",bridge.is_connected());Ok(())
+}
+
+#[cfg(test)]
+mod disabled_instances_tests {
+ use super::*;
+ fn headers(id:&str)->AxumHeaderMap{
+  let mut h=AxumHeaderMap::new();h.insert("origin",AxumHeaderValue::from_static("chrome-extension://test"));h.insert("x-sf-instance-id",AxumHeaderValue::from_str(id).unwrap());h.insert("x-sf-browser-name",AxumHeaderValue::from_static("Brave"));h
+ }
+ #[test]
+ fn disabling_one_instance_survives_sync_disconnect_and_restart(){
+  let path=std::env::temp_dir().join(format!("sf-disabled-{}.json",Uuid::new_v4()));
+  let bridge=BrowserBridge::with_disabled_instances(path.clone()).unwrap();
+  let a=headers("11111111-1111-4111-8111-111111111111");let b=headers("22222222-2222-4222-8222-222222222222");
+  bridge.record_extension_version(&a);bridge.record_extension_version(&b);bridge.mark_seen();
+  let(id,_,_)=BrowserBridge::extension_peer_identity(&a);bridge.set_instance_enabled(&id,false).unwrap();
+  assert!(bridge.instance_disabled(&a));assert!(!bridge.instance_disabled(&b));
+  bridge.record_extension_version(&a);bridge.disconnect_extension(&a);
+  let instances=bridge.extension_instances(None);assert_eq!(instances.len(),2);assert!(!instances.iter().find(|v|v.id==id).unwrap().connected);
+  let restored=BrowserBridge::with_disabled_instances(path.clone()).unwrap();assert!(restored.instance_disabled(&a));assert_eq!(restored.extension_instances(None).len(),1);
+  restored.set_instance_enabled(&id,true).unwrap();assert!(!restored.instance_disabled(&a));
+  assert!(!BrowserBridge::with_disabled_instances(path.clone()).unwrap().instance_disabled(&a));std::fs::remove_file(path).unwrap();
  }
 }

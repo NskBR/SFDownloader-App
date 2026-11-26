@@ -62,8 +62,14 @@ pub struct TaskControl {
     delete_files: Arc<AtomicBool>,
     bandwidth: Arc<tokio::sync::Mutex<BandwidthState>>,
     bandwidth_changed: Arc<tokio::sync::Notify>,
+    disk_writes: Arc<DiskWriteMeter>,
 }
 
+#[derive(Default)]
+struct DiskWriteMeter {
+    bytes: std::sync::atomic::AtomicU64,
+    previous: std::sync::Mutex<Option<(u64,std::time::Instant)>>,
+}
 struct BandwidthState {
     started: std::time::Instant,
     transferred: i64,
@@ -81,7 +87,20 @@ impl TaskControl {
                 transferred: 0,
             })),
             bandwidth_changed: Arc::new(tokio::sync::Notify::new()),
+            disk_writes: Arc::default(),
         }
+    }
+    /// Call only after the corresponding file write succeeded.
+    pub fn record_disk_write(&self, bytes: usize) {
+        self.disk_writes.bytes.fetch_add(bytes as u64, Ordering::Relaxed);
+    }
+    pub fn disk_write_speed(&self) -> f64 {
+        let mut previous = self.disk_writes.previous.lock().unwrap_or_else(|e| e.into_inner());
+        let now = std::time::Instant::now();
+        let bytes = self.disk_writes.bytes.load(Ordering::Relaxed);
+        previous.replace((bytes, now)).filter(|(_, time)| now > *time)
+            .map(|(old, time)| bytes.saturating_sub(old) as f64 / now.duration_since(time).as_secs_f64())
+            .unwrap_or(0.0)
     }
     pub fn pause(&self) -> bool {
         if self
@@ -520,4 +539,19 @@ mod tests {
         assert!(waiter.is_finished());
         waiter.await.unwrap();
     }
+}
+
+#[cfg(test)]
+mod disk_write_tests {
+ use super::*;
+ #[test]
+ fn parallel_connections_share_one_counter_without_affecting_another_task(){
+  let task=TaskControl::new();let other=TaskControl::new();
+  let connections=(0..4).map(|_|{let c=task.clone();std::thread::spawn(move||{for _ in 0..100 {c.record_disk_write(10);}})}).collect::<Vec<_>>();
+  for connection in connections {connection.join().unwrap();}
+  assert_eq!(task.disk_writes.bytes.load(Ordering::Relaxed),4000);
+  assert_eq!(other.disk_writes.bytes.load(Ordering::Relaxed),0);
+  assert_eq!(task.disk_write_speed(),0.0);
+  assert_eq!(task.disk_write_speed(),0.0);
+ }
 }

@@ -65,6 +65,8 @@ pub struct DownloadTask {
     pub max_connections: i64,
     pub max_parallel_downloads: i64,
     pub speed_limit_download: i64,
+    #[serde(default)]
+    pub speed_limit_upload: i64,
     pub speed_limit_inherited: bool,
     pub etag: Option<String>,
     pub last_modified: Option<String>,

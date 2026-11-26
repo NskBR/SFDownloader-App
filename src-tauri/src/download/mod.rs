@@ -18,6 +18,8 @@ pub mod torrent;
 pub mod torrent_files;
 pub mod torrent_metadata;
 pub mod torrent_runner;
+pub mod torrent_io;
+pub mod torrent_sparse;
 pub mod torrent_session;
 
 pub mod schedule;

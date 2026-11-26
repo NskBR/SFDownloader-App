@@ -147,6 +147,7 @@ pub(crate) async fn transfer(
         file.write_all(&bytes)
             .await
             .map_err(|error| format!("Falha ao gravar o arquivo: {error}"))?;
+        control.record_disk_write(bytes.len());
         control.throttle(bytes.len()).await;
         downloaded += i64::try_from(bytes.len()).unwrap_or(0);
         let elapsed = started.elapsed().as_secs_f64().max(0.001);
@@ -163,8 +164,8 @@ pub(crate) async fn transfer(
             last_persist = Instant::now();
         }
         if last_ui_update.elapsed() >= UI_UPDATE_INTERVAL {
-            let _ = app.emit(
-                "download-progress",
+            crate::download::engine::emit_transfer_progress(
+                &app, &control,
                 DownloadProgress {
                     id: task.id.clone(),
                     downloaded,
